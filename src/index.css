@@ -1,0 +1,251 @@
+/* ── Fonts (self-hosted, Direction C) ─────────────────────────────────── */
+@font-face{font-family:"Figtree";font-weight:300 900;font-style:normal;font-display:swap;
+  src:url("./assets/fonts/figtree-latin-wght-normal.woff2") format("woff2");}
+@font-face{font-family:"Source Serif 4";font-weight:200 900;font-style:normal;font-display:swap;
+  src:url("./assets/fonts/source-serif-4-latin-wght-normal.woff2") format("woff2");}
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ── CSS Custom Properties ─────────────────────────────────────────────── */
+/* ── Direction C tokens (docs/design/02_DIRECTION_C.md) ───────────────────
+   Old variable names are kept and re-pointed so existing code flips to light. */
+:root {
+  --surface-page:#F5F6FA; --surface-raised:#FFFFFF; --surface-sunken:#EAEDF4; --surface-inverse:#14203D;
+  --text-primary:#14203D; --text-secondary:#3A4660; --text-tertiary:#4F5B75; --text-on-inverse:#F5F6FA;
+  --border-subtle:#DCE2EE; --border-control:#6D7B99; --focus:#14203D;
+
+  /* channel triplets so Tailwind opacity modifiers keep working */
+  --c-page:245 246 250; --c-raised:255 255 255; --c-sunken:234 237 244; --c-inverse:20 32 61;
+  --c-ink:20 32 61; --c-ink2:58 70 96; --c-ink3:79 91 117; --c-border:220 226 238; --c-control:109 123 153;
+
+  --success-solid:#12803B; --success-text:#0E6A30; --success-tint:#DFF5E6;
+  --warning-solid:#F2A60D; --warning-text:#7A4B00; --warning-tint:#FFF0D2;
+  --danger-solid:#D1291F;  --danger-text:#B01F17;  --danger-tint:#FFE6E3;
+  --info-solid:#1F57E0;    --info-text:#1948BD;    --info-tint:#E6EEFF;
+  --c-success:18 128 59; --c-success-text:14 106 48; --c-success-tint:223 245 230;
+  --c-danger:209 41 31;  --c-danger-text:176 31 23;  --c-danger-tint:255 230 227;
+  --c-info:31 87 224; --c-info-text:25 72 189; --c-info-tint:230 238 255;
+  --c-streak:232 89 12; --c-streak-text:154 58 6; --c-streak-tint:255 235 221;
+  --c-warning:242 166 13; --c-warning-text:122 75 0; --c-warning-tint:255 240 210;
+
+  --gold-fill:#FFC21A; --gold-ink:#3B2A00; --gold-text:#7A5200; --gold-tint:#FFF2CC; --gold-edge:#8A6200;
+  --c-gold:255 194 26; --c-gold-text:122 82 0; --c-gold-tint:255 242 204; --c-gold-edge:138 98 0; --c-gold-ink:59 42 0;
+  --xp-fill:#2A62EC; --xp-text:#1948BD; --xp-tint:#E6EEFF;
+  --streak-fill:#E8590C; --streak-text:#9A3A06; --streak-tint:#FFEBDD;
+  --c-epic:122 63 214; --c-epic-text:91 45 176; --c-epic-tint:240 232 253;
+  --mascot-ink:#1B2340; --mascot-belly:#FFF6E6; --mascot-cheek:#FF9E8A; --mascot-star:#FFC21A; --mascot-heart:#D6456B;
+
+  --font-ui:"Figtree",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --font-num:"Source Serif 4",Georgia,serif;
+  --r-sm:8px; --r-md:12px; --r-lg:20px;
+  --shadow-1:0 1px 2px rgba(20,32,61,.06),0 4px 14px -6px rgba(20,32,61,.12);
+  --shadow-2:0 2px 4px rgba(20,32,61,.06),0 14px 30px -12px rgba(20,32,61,.22);
+  --shadow-3:0 24px 60px -16px rgba(10,16,34,.5);
+
+  /* legacy aliases (dark names → light values) */
+  --bg-base:var(--surface-page); --bg-surface:var(--surface-raised); --bg-elevated:var(--surface-raised);
+  --bg-border:var(--border-subtle); --bg-muted:var(--surface-sunken);
+  --text-disabled:var(--text-tertiary);
+  --cyan:var(--accent); --gold:var(--gold-fill); --purple:var(--xp-fill);
+  --danger:var(--danger-solid); --success:var(--success-solid);
+  --cyan-glow:rgb(var(--c-accent) / .18); --gold-glow:rgba(255,194,26,.30); --purple-glow:rgba(42,98,236,.18);
+  --radius-card:var(--r-md);
+  --transition:200ms cubic-bezier(0.4, 0, 0.2, 1);
+
+  /* Navigation / interactive state tokens (replaces dark-theme text-slate-200/300 patterns) */
+  --nav-text:var(--text-secondary);          /* inactive nav item text */
+  --nav-text-hover:var(--text-primary);      /* hovered/focused nav item text */
+  --nav-bg-hover:rgba(20,32,61,0.06);        /* hovered nav item background */
+  --nav-bg-active:rgba(20,32,61,0.09);       /* active/selected nav item background */
+  --content-secondary:var(--text-secondary); /* secondary content text, was text-slate-300 */
+}
+
+/* Role accent. data-role is set on <html> by App.jsx (developer is the default). */
+:root,[data-role=developer]{--accent:#14803A;--on-accent:#FFFFFF;--accent-text:#0F6A2F;--accent-tint:#DFF5E6;--accent-edge:#14803A;
+  --c-accent:20 128 58;--c-on-accent:255 255 255;--c-accent-text:15 106 47;--c-accent-tint:223 245 230;}
+[data-role=director]{--accent:#4B2FC4;--on-accent:#FFFFFF;--accent-text:#4B2FC4;--accent-tint:#EEEAFD;--accent-edge:#4B2FC4;
+  --c-accent:75 47 196;--c-on-accent:255 255 255;--c-accent-text:75 47 196;--c-accent-tint:238 234 253;}
+[data-role=manager]{--accent:#1F57E0;--on-accent:#FFFFFF;--accent-text:#1948BD;--accent-tint:#E6EEFF;--accent-edge:#1F57E0;
+  --c-accent:31 87 224;--c-on-accent:255 255 255;--c-accent-text:25 72 189;--c-accent-tint:230 238 255;}
+[data-role=lead]{--accent:#0A7F76;--on-accent:#FFFFFF;--accent-text:#08695F;--accent-tint:#DDF6F3;--accent-edge:#0A7F76;
+  --c-accent:10 127 118;--c-on-accent:255 255 255;--c-accent-text:8 105 95;--c-accent-tint:221 246 243;}
+/* T-1 (D-113): the rail's active label uses the darker teal; #0A7F76 on the active tint was 3.9:1. Other roles fall back to --accent. */
+[data-role=lead]{--rail-active:var(--accent-text);}
+[data-role=designer]{--accent:#D2391F;--on-accent:#FFFFFF;--accent-text:#B42C15;--accent-tint:#FFE8E3;--accent-edge:#D2391F;
+  --c-accent:210 57 31;--c-on-accent:255 255 255;--c-accent-text:180 44 21;--c-accent-tint:255 232 227;}
+/* Tester: the prototype uses amber #F6AE14 with ink text; in the app that accent is also used as text and
+   border colour in hundreds of places, so it is the darker amber #A05C00 (5.2:1 on white) with white text. */
+[data-role=tester]{--accent:#A05C00;--on-accent:#FFFFFF;--accent-text:#7A4B00;--accent-tint:#FFF1D0;--accent-edge:#8A5600;
+  --c-accent:160 92 0;--c-on-accent:255 255 255;--c-accent-text:122 75 0;--c-accent-tint:255 241 208;}
+[data-role=admin]{--accent:#4A566B;--on-accent:#FFFFFF;--accent-text:#3A4659;--accent-tint:#E9EDF3;--accent-edge:#4A566B;
+  --c-accent:74 86 107;--c-on-accent:255 255 255;--c-accent-text:58 70 89;--c-accent-tint:233 237 243;}
+
+/* ── Base Reset ────────────────────────────────────────────────────────── */
+@layer base {
+  /* U-1 (D-130): a long option never widens a select past its column */
+  select { max-width: 100%; text-overflow: ellipsis; }
+
+  *,
+  *::before,
+  *::after {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+  }
+
+  html {
+    scroll-behavior: smooth;
+    font-size: 16px;
+    color-scheme: light;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+  }
+
+  body {
+    font-family: var(--font-ui);
+    background-color: var(--surface-page);
+    color: var(--text-primary);
+    min-height: 100dvh;
+    line-height: 1.5;
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* Scrollbar */
+  ::-webkit-scrollbar { width: 8px; height: 8px; }
+  ::-webkit-scrollbar-track { background: var(--surface-sunken); }
+  ::-webkit-scrollbar-thumb { background: var(--border-control); border-radius: 9999px; }
+  ::-webkit-scrollbar-thumb:hover { background: var(--text-tertiary); }
+
+  ::selection { background: var(--accent-tint); color: var(--text-primary); }
+
+  /* Focus ring: 2px ink ring + white halo, visible on any surface (3:1+) */
+  :focus-visible {
+    outline: 2px solid var(--focus);
+    outline-offset: 2px;
+    box-shadow: 0 0 0 4px #fff;
+    border-radius: 6px;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    font-weight: 750;
+    line-height: 1.2;
+    letter-spacing: -0.02em;
+    color: var(--text-primary);
+    text-wrap: balance;
+  }
+
+  a { color: var(--accent-text); text-underline-offset: 3px; transition: color var(--transition); }
+
+  /* Long unbroken strings (test data like "AAAA…", URLs, emails) wrap instead of pushing the page wider. */
+  h1, h2, h3, h4, h5, h6, p, li, td, th, label, dd, dt { overflow-wrap: anywhere; }
+
+  img, video { display: block; max-width: 100%; }
+  button { cursor: pointer; font-family: inherit; touch-action: manipulation; }
+
+  input, textarea, select {
+    font-family: inherit;
+    background: var(--surface-raised);
+    color: var(--text-primary);
+    border: 1px solid var(--border-control);
+    border-radius: var(--r-sm);
+    transition: border-color var(--transition), box-shadow var(--transition);
+  }
+  input::placeholder, textarea::placeholder { color: var(--text-tertiary); opacity: 1; }
+  input:focus, textarea:focus, select:focus {
+    outline: none;
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgb(var(--c-accent) / .25);
+  }
+  input:focus-visible, textarea:focus-visible, select:focus-visible { box-shadow: 0 0 0 3px rgb(var(--c-accent) / .35); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: .01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: .01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* ── Utility Layer ─────────────────────────────────────────────────────── */
+@layer utilities {
+  /* Shimmer animation helper (apply to skeleton loaders) */
+  .shimmer-bg {
+    background: linear-gradient(
+      90deg,
+      var(--surface-sunken) 25%,
+      var(--border-subtle) 50%,
+      var(--surface-sunken) 75%
+    );
+    background-size: 200% 100%;
+    animation: shimmer 2.5s linear infinite;
+  }
+
+  /* Hide scrollbar but keep scroll functionality */
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
+  /* Truncate multi-line */
+  .line-clamp-2 {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+  .line-clamp-3 {
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+}
+
+/* ── App shell: below 1024 px the sidebar becomes a drawer ───────────────── */
+.shell-toggle { display: none; }
+.shell-scrim  { display: none; }
+@media (max-width: 1023.98px) {
+  .shell-toggle { display: inline-flex; }
+  .shell-aside  { transform: translateX(-100%); transition: transform 200ms ease-out; z-index: 60 !important; }
+  .shell-aside[data-open="true"] { transform: none; box-shadow: var(--shadow-3); }
+  .shell-main   { left: 0 !important; }
+  .shell-spacer { display: none !important; }
+  .shell-scrim  { display: block; position: fixed; inset: 0; z-index: 55; background: rgba(20, 32, 61, 0.45); }
+  .shell-hide-sm { display: none !important; }
+}
+@media (max-width: 639.98px) { .shell-hide-xs { display: none !important; } }
+
+/* ── Mascot (Tally) ──────────────────────────────────────────────────────── */
+.mascot { display: block; width: var(--m, 96px); height: var(--m, 96px); overflow: visible; flex-shrink: 0; }
+.mascot .arm-r, .mascot .arm-l { transform-box: view-box; }
+.mascot .bob, .mascot .bang, .mascot .zz { transform-box: fill-box; transform-origin: center bottom; }
+@keyframes tl-bob    { 50% { transform: translateY(-3px); } }
+@keyframes tl-hop    { 0%, 100% { transform: translateY(0); } 45% { transform: translateY(-8px); } }
+@keyframes tl-wave   { 0%, 100% { transform: rotate(0); } 50% { transform: rotate(-22deg); } }
+@keyframes tl-blink  { 0%, 100% { opacity: 1; } 50% { opacity: .25; } }
+@keyframes tl-type   { 50% { transform: translateY(1.5px); } }
+@keyframes tl-zz     { 0%, 100% { transform: translateY(0); opacity: 1; } 50% { transform: translateY(-5px); opacity: .6; } }
+@keyframes tl-breathe{ 50% { transform: scale(1.02); } }
+@keyframes tl-sway   { 0%, 100% { transform: rotate(-1.5deg); } 50% { transform: rotate(1.5deg); } }
+@keyframes tl-pulse  { 50% { transform: scale(1.12); } }
+.mascot[data-pose=idle] .bob { animation: tl-bob 3.2s ease-in-out infinite; }
+.mascot[data-pose=wave] .arm-r { animation: tl-wave 1s ease-in-out infinite; transform-origin: 96px 72px; }
+.mascot[data-pose=cheer] .bob, .mascot[data-pose=celebrate] .bob { animation: tl-hop .9s ease-in-out infinite; }
+.mascot[data-pose=working] .dots circle { animation: tl-blink 1.2s infinite; }
+.mascot[data-pose=working] .dots circle:nth-child(2) { animation-delay: .2s; }
+.mascot[data-pose=working] .dots circle:nth-child(3) { animation-delay: .4s; }
+.mascot[data-pose=working] .bob { animation: tl-type .6s ease-in-out infinite; }
+.mascot[data-pose=thinking] .think circle { animation: tl-blink 1.6s infinite; }
+.mascot[data-pose=sleeping] .zz { animation: tl-zz 3s ease-in-out infinite; }
+.mascot[data-pose=sleeping] .bob { animation: tl-breathe 4s ease-in-out infinite; }
+.mascot[data-pose=encouraging] .bob { animation: tl-sway 3.6s ease-in-out infinite; }
+.mascot[data-pose=alert] .bang { animation: tl-pulse 1.4s ease-in-out infinite; }
+.mascot .twinkle { animation: tl-blink 2s infinite; }
