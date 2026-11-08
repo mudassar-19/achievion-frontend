@@ -5,7 +5,7 @@ export const API_URL = import.meta.env.VITE_API_URL ?? "http://localhost:3001";
 const BASE_URL = API_URL;
 
 // FE-023: no request may hang forever.
-const TIMEOUT_MS = 30_000;
+const TIMEOUT_MS = 60_000; // ponytail: Railway cold-start can take 30-60s on hobby tier
 const UPLOAD_TIMEOUT_MS = 120_000;
 
 // FE-021 / FE-R006: these endpoints answer 401 for "wrong credentials", not for "session expired",
