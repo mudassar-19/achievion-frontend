@@ -1,8 +1,9 @@
 import { useEffect, useState, useCallback } from "react";
+import { Link } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Search, ChevronLeft, ChevronRight,
-  Loader2, Users, Trash2, ShieldOff, ShieldCheck, AlertTriangle, Lock,
+  Loader2, Users, Trash2, ShieldOff, ShieldCheck, AlertTriangle, Lock, History,
 } from "lucide-react";
 import useOrgAuthStore from "@/stores/orgAuthStore";
 import useUiStore from "@/stores/uiStore";
@@ -118,6 +119,7 @@ export default function EmployeeList() {
   const [actionLoading,    setActionLoading]    = useState({});
   const [deleteTarget,     setDeleteTarget]      = useState(null);
   const [suspendTarget,    setSuspendTarget]     = useState(null);
+  const [suspendReason,    setSuspendReason]     = useState("");
   const [reactivateTarget, setReactivateTarget] = useState(null);
   const [pendingRoleChange, setPendingRoleChange] = useState(null); // { emp, newRole }
 
@@ -147,11 +149,11 @@ export default function EmployeeList() {
   // Reset page when filters change
   useEffect(() => { setTimeout(() => setPage(1), 0); }, [search, role, status]);
 
-  // Execute suspend — sends request to Director, does NOT change status immediately
-  async function executeSuspend(emp) {
+  // Execute suspend — sends request to Director (requires reason, 5–300 chars)
+  async function executeSuspend(emp, reason) {
     setActionLoading((p) => ({ ...p, [emp.id]: "status" }));
     try {
-      await api.patch(`/api/org/employees/${emp.id}/status`, { status: "suspended" }, { headers: authHeaders });
+      await api.patch(`/api/org/employees/${emp.id}/status`, { status: "suspended", reason }, { headers: authHeaders });
       setEmployees((prev) => prev.map((e) => e.id === emp.id ? { ...e, pendingSuspension: true } : e));
       addToast({ type: "info", message: `Suspension request for ${emp.name} sent to Director for approval.` });
     } catch (err) {
@@ -203,15 +205,9 @@ export default function EmployeeList() {
     setActionLoading((p) => ({ ...p, [deleteTarget.id]: "delete" }));
     try {
       await api.delete(`/api/org/employees/${deleteTarget.id}`, { headers: authHeaders });
-      if (deleteTarget.status === "suspended") {
-        // Suspended employees are hard-deleted immediately — remove from list
-        setEmployees((prev) => prev.filter((e) => e.id !== deleteTarget.id));
-        addToast({ type: "success", message: `${deleteTarget.name} has been deleted.` });
-      } else {
-        // Active employees go through Director approval — stay in UI with pending state
-        setEmployees((prev) => prev.map((e) => e.id === deleteTarget.id ? { ...e, pendingDeletion: true } : e));
-        addToast({ type: "info", message: `Deletion request for ${deleteTarget.name} sent to Director for approval.` });
-      }
+      // All employees go through Director approval (B-01 fix)
+      setEmployees((prev) => prev.map((e) => e.id === deleteTarget.id ? { ...e, pendingDeletion: true } : e));
+      addToast({ type: "info", message: `Deletion request for ${deleteTarget.name} sent to Director for approval.` });
       setDeleteTarget(null);
     } catch (err) {
       addToast({ type: "error", message: err.message ?? "Failed to delete employee." });
@@ -467,21 +463,62 @@ export default function EmployeeList() {
         </div>
       )}
 
-      {/* Suspend confirmation modal */}
+      {/* Suspend confirmation modal — requires reason */}
       <AnimatePresence>
         {suspendTarget && (
-          <ConfirmModal
-            icon={ShieldOff}
-            iconCls="text-amber-400"
-            iconBg="bg-amber-500/10 border-amber-500/20"
-            title="Request Suspension"
-            body={<>Suspending <strong className="text-text-primary">{suspendTarget.name}</strong> requires Director approval. A request will be sent to the Director.</>}
-            confirmLabel="Send for Approval"
-            confirmCls="bg-amber-500/15 border border-amber-500/25 text-amber-400 hover:bg-amber-500/25"
-            onConfirm={() => executeSuspend(suspendTarget)}
-            onCancel={() => setSuspendTarget(null)}
-            loading={!!actionLoading[suspendTarget?.id]}
-          />
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-ink/60 backdrop-blur-sm px-4">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="w-full max-w-sm rounded-2xl border border-ink/10 bg-gradient-to-b from-[#EAEDF4] to-[#FFFFFF] p-6 flex flex-col gap-5 shadow-2xl"
+            >
+              <div className="flex flex-col gap-2">
+                <div className="flex h-11 w-11 items-center justify-center rounded-xl border bg-amber-500/10 border-amber-500/20">
+                  <ShieldOff size={20} className="text-amber-400" strokeWidth={1.75} />
+                </div>
+                <h3 className="text-base font-black text-text-primary">Request Suspension</h3>
+                <p className="text-sm text-text-secondary leading-snug">
+                  Suspending <strong className="text-text-primary">{suspendTarget.name}</strong> requires Director approval.
+                </p>
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <label className="text-xs font-semibold text-slate-500">
+                  Reason <span className="text-rose-500">*</span>
+                  <span className="ml-1 font-normal text-slate-600">(5–300 characters)</span>
+                </label>
+                <textarea
+                  autoFocus
+                  rows={3}
+                  value={suspendReason}
+                  onChange={(e) => setSuspendReason(e.target.value)}
+                  placeholder="Explain why this employee should be suspended…"
+                  className="w-full rounded-xl border border-ink/[0.12] bg-bg-surface px-3 py-2 text-sm text-text-primary placeholder:text-slate-500 focus:outline-none focus:border-amber-400/50 transition-colors resize-none"
+                  maxLength={300}
+                />
+                <div className="flex justify-between text-xs text-slate-500">
+                  <span>{suspendReason.trim().length < 5 && suspendReason.trim().length > 0 ? `${5 - suspendReason.trim().length} more needed` : ""}</span>
+                  <span>{suspendReason.length}/300</span>
+                </div>
+              </div>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => { setSuspendTarget(null); setSuspendReason(""); }}
+                  className="flex-1 px-4 py-2.5 rounded-xl border border-ink/10 text-sm font-semibold text-slate-400 hover:text-text-primary hover:bg-ink/5 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={() => executeSuspend(suspendTarget, suspendReason)}
+                  disabled={!!actionLoading[suspendTarget?.id] || suspendReason.trim().length < 5}
+                  className="flex-1 px-4 py-2.5 rounded-xl text-sm font-bold transition-colors disabled:opacity-40 flex items-center justify-center gap-2 bg-amber-500/15 border border-amber-500/25 text-amber-400 hover:bg-amber-500/25"
+                >
+                  {!!actionLoading[suspendTarget?.id] && <Loader2 size={14} className="animate-spin" />}
+                  Send for Approval
+                </button>
+              </div>
+            </motion.div>
+          </div>
         )}
       </AnimatePresence>
 
@@ -503,20 +540,16 @@ export default function EmployeeList() {
         )}
       </AnimatePresence>
 
-      {/* Delete confirmation modal */}
+      {/* Delete confirmation modal — always goes through Director approval */}
       <AnimatePresence>
         {deleteTarget && (
           <ConfirmModal
             icon={AlertTriangle}
             iconCls="text-[#B01F17]"
             iconBg="bg-[#D1291F]/10 border-[#D1291F]/20"
-            title={deleteTarget.status === "suspended" ? "Delete Employee?" : "Delete Active Employee?"}
-            body={
-              deleteTarget.status === "suspended"
-                ? <><strong className="text-text-primary">{deleteTarget.name}</strong> will be permanently deleted. This cannot be undone.</>
-                : <>Deleting an active employee requires Director approval. A request will be sent.<br /><strong className="text-text-primary">{deleteTarget.name}</strong></>
-            }
-            confirmLabel="Delete"
+            title="Delete Employee?"
+            body={<>Deleting <strong className="text-text-primary">{deleteTarget.name}</strong> requires Director approval. A request will be sent.</>}
+            confirmLabel="Send for Approval"
             confirmCls="bg-[#D1291F]/15 border border-[#D1291F]/25 text-[#B01F17] hover:bg-[#D1291F]/25"
             onConfirm={confirmDelete}
             onCancel={() => setDeleteTarget(null)}
@@ -524,6 +557,17 @@ export default function EmployeeList() {
           />
         )}
       </AnimatePresence>
+
+      {/* S-02: Link to past (deleted) employees */}
+      <div className="flex justify-center pt-2 pb-1">
+        <Link
+          to="/org/past-employees"
+          className="inline-flex items-center gap-1.5 text-sm text-slate-500 hover:text-text-primary transition-colors"
+        >
+          <History size={13} strokeWidth={1.75} />
+          View past employees
+        </Link>
+      </div>
 
       {/* Role change confirmation modal */}
       <AnimatePresence>

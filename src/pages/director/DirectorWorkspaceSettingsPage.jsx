@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { Building2, Loader2, Zap, Check } from "lucide-react";
+import { Building2, Loader2, Zap, Check, ImageUp } from "lucide-react";
+import BrandingCard from "./BrandingCard";
 import api       from "@/lib/api";
 import useUiStore from "@/stores/uiStore";
 import { useRoleTheme } from "@/utils/roleTheme";
@@ -197,6 +198,11 @@ export default function DirectorWorkspaceSettingsPage() {
           <FieldRow label="Admin Email"  value={adminEmail} />
           <FieldRow label="Founded"      value={fmtDate(foundedDate)} />
           <FieldRow label="Members (incl. Director)" value={memberCount.toLocaleString()} />
+        </Section>
+
+        {/* ── Branding (Batch 5, D7) ───────────────────────────────────────── */}
+        <Section icon={ImageUp} title="Branding" description="Your organisation's logo." delay={0.08}>
+          <BrandingCard />
         </Section>
 
         {/* ── Gamification Rules ───────────────────────────────────────────── */}

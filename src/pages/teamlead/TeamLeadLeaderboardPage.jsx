@@ -98,7 +98,7 @@ function DetailPanel({ row, accent, onClose }) {
           <Avatar name={row.name} size={44} />
           <div>
             <p className="text-sm font-bold text-text-primary">{row.name}</p>
-            <p className="text-xs text-slate-400 capitalize">{row.role?.replace(/_/g, " ") ?? "Team Lead"}</p>
+            <p className="text-xs text-slate-400 capitalize">{(row.roleLabel || row.role)?.replace(/_/g, " ") ?? "Team Lead"}</p>
             <p className="text-[14px] text-slate-600 mt-0.5">Rank #{row.rank}</p>
           </div>
         </div>
@@ -214,7 +214,7 @@ function TableRow({ row, accent, onSelect, isSelected }) {
               <span className="shrink-0 text-[14px] font-black px-1.5 py-0.5 rounded-full border" style={{ color: accent, background: `${accent}18`, borderColor: `${accent}35` }}>YOU</span>
             )}
           </div>
-          <span className="text-[14px] text-slate-600 truncate block capitalize">{row.role?.replace(/_/g, " ") ?? "Team Lead"}</span>
+          <span className="text-[14px] text-slate-600 truncate block capitalize">{(row.roleLabel || row.role)?.replace(/_/g, " ") ?? "Team Lead"}</span>
         </div>
       </div>
 

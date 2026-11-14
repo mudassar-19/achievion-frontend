@@ -1,7 +1,7 @@
 // Resources → Assets (FR11-05): list, create / edit in a drawer, delete with a confirm dialog.
 import { useState } from "react";
 import { useSearchParams } from "react-router-dom";
-import { ExternalLink, Pencil, Trash2 } from "lucide-react";
+import { ExternalLink, Pencil, Trash2, CalendarDays } from "lucide-react";
 import api from "@/lib/api";
 import useUiStore from "@/stores/uiStore";
 import DataTable from "@/components/ui/DataTable";
@@ -11,6 +11,7 @@ import EmptyState from "@/components/ui/EmptyState";
 import ConfirmModal from "@/components/ui/ConfirmModal";
 import { fmt } from "../project/format";
 import AssetDrawer from "./AssetDrawer";
+import BookingsDrawer from "./BookingsDrawer";
 
 const TYPES = ["Tool", "License", "File link"].map((t) => ({ value: t, label: t }));
 const PAGE = 25;
@@ -34,6 +35,7 @@ export default function AssetsTab({ data, error, reload, setData, creating, setC
   const page = Math.max(1, Number(sp.get("page")) || 1);
   const [editing, setEditing] = useState(null);
   const [removing, setRemoving] = useState(null);
+  const [bookingAsset, setBookingAsset] = useState(null);
   const [busy, setBusy] = useState(false);
   const rows = (data?.assets ?? []).filter((a) => !types.length || types.includes(a.type));
 
@@ -62,7 +64,7 @@ export default function AssetsTab({ data, error, reload, setData, creating, setC
       <DataTable label="Assets" columns={columns} rows={rows.slice((page - 1) * PAGE, page * PAGE)} loading={!data && !error} error={error} onRetry={reload}
         page={page} total={rows.length} pageSize={PAGE} onPage={(n) => { const q = new URLSearchParams(sp); if (n > 1) q.set("page", String(n)); else q.delete("page"); setSp(q, { replace: true }); }}
         onRowClick={setEditing}
-        rowActions={(a) => [{ label: "Edit", icon: Pencil, onClick: () => setEditing(a) }, { label: "Delete", icon: Trash2, onClick: () => setRemoving(a) }]}
+        rowActions={(a) => [{ label: "Edit", icon: Pencil, onClick: () => setEditing(a) }, { label: "Bookings", icon: CalendarDays, onClick: () => setBookingAsset(a) }, { label: "Delete", icon: Trash2, onClick: () => setRemoving(a) }]}
         empty={types.length
           ? <EmptyState heading="No assets of this type." action={{ label: "Clear filter", onClick: () => { const q = new URLSearchParams(sp); q.delete("type"); setSp(q, { replace: true }); } }} />
           : <EmptyState heading="No tools, licences or file links yet." action={{ label: "New asset", onClick: () => setCreating(true) }} />} />
@@ -70,6 +72,7 @@ export default function AssetsTab({ data, error, reload, setData, creating, setC
         onSaved={(a, isNew) => { setData((d) => ({ ...d, assets: isNew ? [...d.assets, a].sort((x, y) => x.name.localeCompare(y.name)) : d.assets.map((x) => (x.id === a.id ? a : x)) })); addToast({ type: "success", message: isNew ? `"${a.name}" added.` : "Asset saved." }); }} />
       <ConfirmModal open={!!removing} onClose={() => setRemoving(null)} onConfirm={remove} loading={busy} destructive confirmLabel="Delete asset"
         title={`Delete "${removing?.name}"?`} body={`It is removed from every project it is linked to${removing?.projects.length ? ` (${removing.projects.length})` : ""}. This cannot be undone.`} />
+      <BookingsDrawer open={!!bookingAsset} asset={bookingAsset} onClose={() => setBookingAsset(null)} />
     </>
   );
 }

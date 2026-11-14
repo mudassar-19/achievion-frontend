@@ -8,12 +8,13 @@ import { useRoleTheme } from "@/utils/roleTheme";
 
 export default function XpLevelCard() {
   const { level, currentXp, maxXp, gold, hp } = useGamificationStore((s) => s.currentUser);
-  const xpLabel = useGamificationStore((s) => s.xpLabel);
-  const role    = useAuthStore((s) => s.user?.role);
-  const theme   = useRoleTheme();
+  const xpLabel  = useGamificationStore((s) => s.xpLabel);
+  const role     = useAuthStore((s) => s.user?.role);
+  const isViewAs = useAuthStore((s) => !!s.viewAs);
+  const theme    = useRoleTheme();
 
-  const hpPct   = Math.min(100, Math.max(0, hp));
-  const isLowHp = hp < HP_BURNOUT;
+  const hpPct   = Math.min(100, Math.max(0, hp ?? 0));
+  const isLowHp = (hp ?? 0) < HP_BURNOUT;
 
   return (
     <motion.div
@@ -66,35 +67,29 @@ export default function XpLevelCard() {
         {/* HP */}
         <div className="flex flex-col gap-1.5">
           <div className="flex items-center gap-1.5">
-            <Heart
-              size={12}
-              className={isLowHp ? "text-danger" : "text-[#0E6A30]"}
-              strokeWidth={2.5}
-            />
-            <span className="text-[14px] font-bold uppercase tracking-widest text-slate-600">
-              HP
-            </span>
-            {isLowHp && (
-              <span className="ml-auto text-[14px] font-bold text-danger">LOW</span>
-            )}
+            <Heart size={12} className={isViewAs ? "text-slate-400" : isLowHp ? "text-danger" : "text-[#0E6A30]"} strokeWidth={2.5} />
+            <span className="text-[14px] font-bold uppercase tracking-widest text-slate-600">HP</span>
+            {!isViewAs && isLowHp && <span className="ml-auto text-[14px] font-bold text-danger">LOW</span>}
           </div>
-          <div className="h-1.5 rounded-full bg-ink/5 overflow-hidden">
-            <motion.div
-              className="h-full rounded-full"
-              initial={{ width: "0%" }}
-              animate={{ width: `${hpPct}%` }}
-              transition={{ duration: 0.9, ease: [0.34, 1.56, 0.64, 1] }}
-              style={{
-                background: isLowHp ? "#D1291F" : "#12803B",
-                boxShadow: isLowHp
-                  ? "0 0 6px rgba(209,41,31,0.5)"
-                  : "0 0 6px rgba(18,128,59,0.4)",
-              }}
-            />
-          </div>
-          <span className={`text-xs font-bold ${isLowHp ? "text-danger" : "text-[#0E6A30]"}`}>
-            {hp} / 100
-          </span>
+          {isViewAs ? (
+            <span className="text-xs text-slate-400 italic">Hidden in View as</span>
+          ) : (
+            <>
+              <div className="h-1.5 rounded-full bg-ink/5 overflow-hidden">
+                <motion.div
+                  className="h-full rounded-full"
+                  initial={{ width: "0%" }}
+                  animate={{ width: `${hpPct}%` }}
+                  transition={{ duration: 0.9, ease: [0.34, 1.56, 0.64, 1] }}
+                  style={{
+                    background: isLowHp ? "#D1291F" : "#12803B",
+                    boxShadow: isLowHp ? "0 0 6px rgba(209,41,31,0.5)" : "0 0 6px rgba(18,128,59,0.4)",
+                  }}
+                />
+              </div>
+              <span className={`text-xs font-bold ${isLowHp ? "text-danger" : "text-[#0E6A30]"}`}>{hp} / 100</span>
+            </>
+          )}
         </div>
 
         {/* Gold */}

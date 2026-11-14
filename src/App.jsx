@@ -9,6 +9,7 @@ import ModalA11y from "@/components/ui/ModalA11y";
 import ImageFallback from "@/components/ui/ImageFallback";
 import ApiErrorToaster from "@/components/ui/ApiErrorToaster";
 import { ViewAsBanner } from "@/components/layout/ViewAs";
+import IdleTimeout from "@/components/ui/IdleTimeout";
 
 export default function App() {
   const initialize    = useAuthStore((s) => s.initialize);
@@ -36,6 +37,7 @@ export default function App() {
       <ImageFallback />
       <ApiErrorToaster />
       <ViewAsBanner />
+      <IdleTimeout />
     </MotionConfig>
   );
 }

@@ -52,7 +52,7 @@ function accountDesc(a) {
   switch (a.actionType) {
     case "CREATE_EMPLOYEE":  return `Creating account for ${a.payload?.name ?? "—"} (${a.payload?.role ?? ""})`;
     case "DELETE_EMPLOYEE":  return `Delete ${name}${a.payload?.reason ? ` — "${a.payload.reason}"` : ""}`;
-    case "SUSPEND_EMPLOYEE": return `Suspend ${name}`;
+    case "SUSPEND_EMPLOYEE": return `Suspend ${name}${a.payload?.reason ? ` — "${a.payload.reason.slice(0, 80)}${a.payload.reason.length > 80 ? "…" : ""}"` : ""}`;
     case "REACTIVATE_EMPLOYEE": return `Reactivate ${name}`;
     case "ROLE_CHANGE": {
       const from = a.payload?.oldRole ?? a.payload?.previousRole;

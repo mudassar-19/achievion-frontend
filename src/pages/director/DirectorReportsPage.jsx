@@ -86,6 +86,7 @@ function CustomReportsTab() {
   const [delivery,  setDelivery]  = useState(null);
   const [capacity,  setCapacity]  = useState(null);
   const [exporting, setExporting] = useState("");
+  const [exportError, setExportError] = useState("");
 
   useEffect(() => {
     api.get("/api/director/reports/portfolio").then((d) => setPortfolio(d)).catch(() => setPortfolio({ rows: [], summary: {}, total: 0 }));
@@ -93,18 +94,29 @@ function CustomReportsTab() {
     api.get("/api/director/reports/capacity").then((d) => setCapacity(d)).catch(() => setCapacity(null));
   }, []);
 
-  async function downloadCSV(type) {
-    setExporting(type);
+  // Batch 5 (D8, UC-20): PDF (logo, AI summary, chart, table) or CSV, through the API client.
+  async function download(type, format) {
+    setExporting(`${type}-${format}`); setExportError("");
     try {
-      const token = (() => { try { return JSON.parse(localStorage.getItem("achievion-auth"))?.state?.token ?? null; } catch { return null; } })();
-      const resp = await fetch(`/api/director/reports/export?type=${type}&format=csv`, { headers: token ? { authorization: `Bearer ${token}` } : {} });
-      if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
-      const text = await resp.text();
-      const url  = URL.createObjectURL(new Blob([text], { type: "text/csv" }));
-      const a    = document.createElement("a"); a.href = url; a.download = `report-${type}.csv`; a.click();
-      URL.revokeObjectURL(url);
-    } catch { /* silent */ } finally { setExporting(""); }
+      const blob = await api.download(`/api/director/reports/export?type=${type}&format=${format}`);
+      const url = URL.createObjectURL(blob);
+      const a = Object.assign(document.createElement("a"), { href: url, download: `report-${type}.${format}` });
+      document.body.append(a); a.click(); a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+    } catch (e) { setExportError(e?.message ?? "The export did not work. Try again."); }
+    finally { setExporting(""); }
   }
+  const exportButtons = (type) => (
+    <div className="flex flex-wrap items-center gap-2" data-export={type}>
+      {[["pdf", "Export PDF"], ["csv", "Export CSV"], ["xlsx", "Export Excel"]].map(([f, label]) => (
+        <button key={f} type="button" onClick={() => download(type, f)} disabled={!!exporting}
+          className="flex min-h-[36px] items-center gap-1.5 rounded-xl border border-ink/[0.1] px-3 py-1.5 text-[12px] font-bold transition-colors hover:bg-ink/[0.04] disabled:opacity-50">
+          <Download size={12} aria-hidden="true" /> {exporting === `${type}-${f}` ? "Preparing…" : label}
+        </button>
+      ))}
+      {exportError && <span role="alert" className="text-[12px] text-[#B01F17]">{exportError}</span>}
+    </div>
+  );
 
   return (
     <div className="flex flex-col gap-5">
@@ -141,10 +153,7 @@ function CustomReportsTab() {
                 </tbody>
               </table>
             </div>
-            <button onClick={() => downloadCSV("portfolio")} disabled={exporting === "portfolio"}
-              className="self-start flex items-center gap-1.5 text-[12px] font-bold px-3 py-1.5 rounded-xl border border-ink/[0.1] hover:bg-ink/[0.04] transition-colors min-h-[32px]">
-              <Download size={12} /> {exporting === "portfolio" ? "Exporting…" : "Export CSV"}
-            </button>
+            {exportButtons("portfolio")}
           </div>
         )}
       </Section>
@@ -164,10 +173,7 @@ function CustomReportsTab() {
                 </div>
               ))}
             </div>
-            <button onClick={() => downloadCSV("delivery")} disabled={exporting === "delivery"}
-              className="self-start flex items-center gap-1.5 text-[12px] font-bold px-3 py-1.5 rounded-xl border border-ink/[0.1] hover:bg-ink/[0.04] transition-colors min-h-[32px]">
-              <Download size={12} /> {exporting === "delivery" ? "Exporting…" : "Export CSV"}
-            </button>
+            {exportButtons("delivery")}
           </div>
         )}
       </Section>

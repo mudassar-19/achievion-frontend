@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { ClipboardCheck, PlusCircle, Copy, Check, Lock, AlertCircle } from "lucide-react";
@@ -26,7 +26,7 @@ const ROLE_GROUPS = [
   },
 ];
 
-const ALL_ROLES = ROLE_GROUPS.flatMap((g) => g.roles);
+const BUILTIN_ROLES = ROLE_GROUPS.flatMap((g) => g.roles);
 
 // ── Select shared class ───────────────────────────────────────────────────────
 const SELECT_CLS =
@@ -148,11 +148,18 @@ export default function CreateEmployee() {
   const navigate = useNavigate();
   const orgToken = useOrgAuthStore((s) => s.orgToken);
 
-  const [form,    setForm]    = useState(EMPTY_FORM);
-  const [errors,  setErrors]  = useState({});
-  const [apiErr,  setApiErr]  = useState("");
-  const [loading, setLoading] = useState(false);
-  const [result,  setResult]  = useState(null); // approval modal data
+  const [form,        setForm]        = useState(EMPTY_FORM);
+  const [errors,      setErrors]      = useState({});
+  const [apiErr,      setApiErr]      = useState("");
+  const [loading,     setLoading]     = useState(false);
+  const [result,      setResult]      = useState(null);
+  const [customRoles, setCustomRoles] = useState([]);
+
+  useEffect(() => {
+    api.get("/api/director/settings/custom-roles")
+      .then((d) => setCustomRoles((d?.customRoles ?? []).filter((r) => r.active)))
+      .catch(() => {});
+  }, []);
 
   const update = (field) => (e) => {
     setApiErr("");
@@ -165,7 +172,8 @@ export default function CreateEmployee() {
     if (!form.name.trim())  errs.name  = "Full name is required.";
     if (!form.email.trim()) errs.email = "Email is required.";
     else if (!/\S+@\S+\.\S+/.test(form.email)) errs.email = "Enter a valid email.";
-    if (!form.role || !ALL_ROLES.includes(form.role)) errs.role = "Select a valid role.";
+    const allRoles = [...BUILTIN_ROLES, ...customRoles.map((r) => r.label)];
+    if (!form.role || !allRoles.includes(form.role)) errs.role = "Select a valid role.";
     return errs;
   }
 
@@ -281,6 +289,13 @@ export default function CreateEmployee() {
                   ))}
                 </optgroup>
               ))}
+              {customRoles.length > 0 && (
+                <optgroup label="Custom Roles">
+                  {customRoles.map((r) => (
+                    <option key={r.key} value={r.label} className="bg-[#FFFFFF]">{r.label}</option>
+                  ))}
+                </optgroup>
+              )}
             </select>
             {errors.role && <p className="text-xs text-danger">{errors.role}</p>}
           </motion.div>

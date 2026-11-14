@@ -24,6 +24,8 @@ import { BTN } from "@/components/ui/buttons";
 import useLoad from "../manager/project/useLoad";
 import { fmt, fmtShort } from "../manager/project/format";
 import EmployeeTaskDrawer from "./EmployeeTaskDrawer";
+import EmployeeAnalytics from "./EmployeeAnalytics";
+import QuestStrip from "./QuestStrip";
 import { STATUS_CHIP, statusLabel } from "@/utils/employeePortal";
 import { Deadline } from "./MyTasksPage";
 
@@ -84,7 +86,8 @@ function Trend({ trend, accent }) {
 }
 
 export default function TodayPage() {
-  const user = useAuthStore((s) => s.user);
+  const user     = useAuthStore((s) => s.user);
+  const isViewAs = useAuthStore((s) => !!s.viewAs);
   const kind = employeeKind(user?.role) ?? "developer";
   const { accent } = useRoleTheme();
   const [sp, setSp] = useSearchParams();
@@ -163,18 +166,23 @@ export default function TodayPage() {
           </Panel>
 
           <Trend trend={d.trend} accent={accent} />
+          <EmployeeAnalytics kind={kind} accent={accent} />
         </div>
 
         <div className="flex min-w-0 flex-col gap-6">
           <Insight insight={d.insight} />
 
           <Panel title="Health" icon={Heart}>
-            <div className="flex flex-col gap-2 px-5 py-4 text-sm">
-              <p className="flex justify-between"><span className="font-semibold">{hp.label}</span><span className="tabular-nums text-text-secondary">{num(d.hp)} / 100 HP</span></p>
-              <div className="h-2 overflow-hidden rounded-full bg-ink/[0.08]" role="progressbar" aria-label="HP" aria-valuenow={d.hp} aria-valuemin={0} aria-valuemax={100}><div className="h-full rounded-full" style={{ width: `${Math.max(0, Math.min(100, d.hp))}%`, background: hp.color }} /></div>
-              {low ? <p role="status" className="text-text-primary">Your HP is low. Take short breaks and finish one task at a time. If the load is too much, tell your Team Lead in a task comment.</p>
-                : <p className="text-xs text-text-secondary">HP drops with missed deadlines and comes back as you deliver.</p>}
-            </div>
+            {isViewAs ? (
+              <p className="px-5 py-4 text-sm italic text-slate-400">Hidden in View as</p>
+            ) : (
+              <div className="flex flex-col gap-2 px-5 py-4 text-sm">
+                <p className="flex justify-between"><span className="font-semibold">{hp.label}</span><span className="tabular-nums text-text-secondary">{num(d.hp)} / 100 HP</span></p>
+                <div className="h-2 overflow-hidden rounded-full bg-ink/[0.08]" role="progressbar" aria-label="HP" aria-valuenow={d.hp} aria-valuemin={0} aria-valuemax={100}><div className="h-full rounded-full" style={{ width: `${Math.max(0, Math.min(100, d.hp))}%`, background: hp.color }} /></div>
+                {low ? <p role="status" className="text-text-primary">Your HP is low. Take short breaks and finish one task at a time. If the load is too much, tell your Team Lead in a task comment.</p>
+                  : <p className="text-xs text-text-secondary">HP drops with missed deadlines and comes back as you deliver.</p>}
+              </div>
+            )}
           </Panel>
 
           <Panel title="Your rank" icon={Trophy} action={{ label: "Leaderboard", to: "/workspace/leaderboard" }}>
@@ -197,7 +205,7 @@ export default function TodayPage() {
           </Panel>
 
           <Panel title="Quests" icon={Swords}>
-            <EmptyState heading="No active quest" body="Quests and their progress come to this card soon." action={{ label: "Open Quests", to: "/workspace/quests" }} />
+            <QuestStrip />
           </Panel>
         </div>
       </div>

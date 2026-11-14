@@ -2,15 +2,15 @@
 // 60px top bar, 64px rail that expands to 220px (hover or pin), bell dropdown, avatar menu,
 // optional AI panel slot. Colour comes only from the role accent tokens (--c-accent on [data-role]),
 // so the Director stays plum and every other role gets its own accent with the same pixels.
+import OrgLogo from "@/components/ui/OrgLogo";
 import { Outlet, NavLink, useNavigate } from "react-router-dom";
 import { useEffect, useState, useRef, useCallback } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import ToastContainer from "@/components/ui/ToastContainer";
 import useAuthStore from "@/stores/authStore";
 import api from "@/lib/api";
-import Tally from "@/components/ui/Tally";
 import { AI_W } from "./AiPanel";
-import { User, Bell, LogOut, ChevronDown, Pin, PinOff, Menu, X, CheckCheck, Shield } from "lucide-react";
+import { User, Bell, LogOut, ChevronDown, Pin, PinOff, Menu, X, CheckCheck, Shield, Sparkles } from "lucide-react";
 
 export const D_TOPBAR_H  = 60;
 export const D_RAIL_W    = 64;   // collapsed rail
@@ -93,10 +93,17 @@ function formatTime(dateStr) {
   return `${Math.floor(diff / 86400)}d ago`;
 }
 
+// Nav segments hidden during view-as (D-109 P6): privacy/communications.
+const VA_NAV_HIDDEN = ["/chat", "/notifications", "/settings", "/profile", "/announcements", "/account-settings", "/workspace-settings"];
+function filterNavForViewAs(nav) {
+  return (nav ?? []).map((g) => ({ ...g, items: (g.items ?? []).filter((it) => !VA_NAV_HIDDEN.some((s) => it.to?.includes(s))) })).filter((g) => (g.items?.length ?? 0) > 0);
+}
+
 // ── Top bar ────────────────────────────────────────────────────────────────────
 function ShellTopbar({ cfg, notifSignal, railExpanded, onToggleRail, onAiToggle, aiOpen, phone }) {
   const user     = useAuthStore((s) => s.user);
   const logout   = useAuthStore((s) => s.logout);
+  const isViewAs = useAuthStore((s) => !!s.viewAs);
   const navigate = useNavigate();
   const notifLabel  = cfg.notifLabel ?? ((n) => typeLabel(n.type));
 
@@ -110,11 +117,12 @@ function ShellTopbar({ cfg, notifSignal, railExpanded, onToggleRail, onAiToggle,
   const unreadCount = notifs.filter((n) => !n.read).length;
 
   const fetchNotifs = useCallback(async () => {
+    if (isViewAs) return; // notifications are off in view-as (D-109 P3)
     try {
       const data = await api.get("/api/notifications");
       setNotifs(data.notifications ?? []);
     } catch { /* silent */ }
-  }, []);
+  }, [isViewAs]);
 
   useEffect(() => { fetchNotifs(); }, [fetchNotifs]);
   useEffect(() => { if (notifSignal) fetchNotifs(); }, [notifSignal, fetchNotifs]);
@@ -189,6 +197,7 @@ function ShellTopbar({ cfg, notifSignal, railExpanded, onToggleRail, onAiToggle,
 
       {/* ── Identity label + role chip ── */}
       <div className="flex-1 flex items-center px-5 min-w-0">
+        <OrgLogo className="mr-2.5 h-7 max-w-[112px]" />
         <span className="text-sm font-semibold text-text-secondary truncate">
           {cfg.label ?? user?.name}
         </span>
@@ -208,22 +217,22 @@ function ShellTopbar({ cfg, notifSignal, railExpanded, onToggleRail, onAiToggle,
           <button
             type="button"
             onClick={onAiToggle}
-            title="AI Assistant (Ctrl+J)"
-            aria-label="Toggle AI Assistant"
+            title="AI Copilot (Ctrl+J)"
+            aria-label="Toggle AI Copilot"
             aria-pressed={aiOpen}
             className="flex h-9 w-9 items-center justify-center rounded-xl transition-colors hover:bg-[var(--nav-bg-hover)]"
             style={aiOpen
               ? { background: A(0.10), border: `1px solid ${A(0.25)}` }
               : { border: "1px solid transparent" }}
           >
-            <Tally pose="idle" size={26} />
+            <Sparkles size={16} strokeWidth={1.75} style={{ color: aiOpen ? ACCENT : undefined }} className={aiOpen ? "" : "text-slate-500"} />
           </button>
         )}
 
         {cfg.topbarExtra}
 
-        {/* Notification bell */}
-        <div className="relative" ref={bellRef}>
+        {/* Notification bell — hidden in view-as (D-109 P6) */}
+        {!isViewAs && <div className="relative" ref={bellRef}>
           <button
             type="button"
             onClick={() => { setBellOpen((v) => !v); setAvatarOpen(false); }}
@@ -353,7 +362,7 @@ function ShellTopbar({ cfg, notifSignal, railExpanded, onToggleRail, onAiToggle,
               </motion.div>
             )}
           </AnimatePresence>
-        </div>
+        </div>}
 
         {/* Avatar menu (the only place to sign out) */}
         <div className="relative" ref={avatarRef}>
@@ -490,8 +499,11 @@ function ShellRail({ cfg, expanded, pinned, onPin, width, onNavigate }) {
  */
 export default function PortalShell({ cfg, notifSignal, aiPanel: aiPanelProp, children }) {
   // U-1 (D-131): Settings → Preferences can switch the AI panel off.
-  const aiOff = useAuthStore((s) => s.user?.settings?.preferences?.aiPanel === false);
-  const aiPanel = aiOff ? undefined : aiPanelProp;
+  const aiOff    = useAuthStore((s) => s.user?.settings?.preferences?.aiPanel === false);
+  const isViewAs = useAuthStore((s) => !!s.viewAs);
+  const aiPanel  = (aiOff || isViewAs) ? undefined : aiPanelProp;
+  // D-109 P6: filter sensitive nav items when in view-as
+  const activeCfg = isViewAs ? { ...cfg, nav: filterNavForViewAs(cfg.nav), bottomNav: filterNavForViewAs(cfg.bottomNav ?? []) } : cfg;
   const [aiOpen, setAiOpen] = useState(false);
   const [railPinned, setRailPinned] = useState(() => {
     try {
@@ -544,7 +556,7 @@ export default function PortalShell({ cfg, notifSignal, aiPanel: aiPanelProp, ch
         Skip to content
       </a>
       <ShellTopbar
-        cfg={cfg}
+        cfg={activeCfg}
         notifSignal={notifSignal}
         railExpanded={railExpanded}
         onToggleRail={togglePin}
@@ -555,7 +567,7 @@ export default function PortalShell({ cfg, notifSignal, aiPanel: aiPanelProp, ch
 
       {phone ? (<>
         {drawer && <div aria-hidden="true" className="fixed inset-0 z-30" style={{ top: D_TOPBAR_H, background: "rgba(20,32,61,0.3)" }} onClick={() => setDrawer(false)} />}
-        <ShellRail cfg={cfg} expanded={drawer} width={drawer ? D_RAIL_EXP : 0} onNavigate={() => setDrawer(false)} />
+        <ShellRail cfg={activeCfg} expanded={drawer} width={drawer ? D_RAIL_EXP : 0} onNavigate={() => setDrawer(false)} />
       </>) : (
       /* Rail hover zone (only when not pinned) */
       <div
@@ -564,7 +576,7 @@ export default function PortalShell({ cfg, notifSignal, aiPanel: aiPanelProp, ch
         onMouseEnter={() => !railPinned && setRailHovered(true)}
         onMouseLeave={() => !railPinned && setRailHovered(false)}
       >
-        <ShellRail cfg={cfg} expanded={railExpanded} pinned={railPinned} onPin={togglePin} />
+        <ShellRail cfg={activeCfg} expanded={railExpanded} pinned={railPinned} onPin={togglePin} />
       </div>
       )}
 

@@ -1,5 +1,6 @@
 // Shared Settings page, role-aware (U-1, D-131). Sections: Account, Security, Notifications, Preferences.
 // What a role can switch comes from GET /api/auth/settings/options, so every toggle maps to a real notification type.
+import ProfileDetails from "@/components/ui/ProfileDetails";
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { User, Shield, Bell, SlidersHorizontal, Eye, EyeOff, Lock, Loader2 } from "lucide-react";
@@ -9,7 +10,6 @@ import api from "@/lib/api";
 import Page from "@/components/ui/Page";
 import PageHeader from "@/components/ui/PageHeader";
 import ErrorState from "@/components/ui/ErrorState";
-import CelebrationsChoice from "@/components/ui/CelebrationsChoice";
 import { BTN } from "@/components/ui/buttons";
 import { fmtDateTime } from "@/pages/manager/project/format";
 
@@ -128,6 +128,50 @@ function SecuritySection() {
   );
 }
 
+// ── Celebrations (localStorage, applies per browser) ─────────────────────────
+function CelebrationSettings() {
+  const celebrations    = useUiStore((s) => s.celebrations);
+  const setCelebrations = useUiStore((s) => s.setCelebrations);
+
+  const celebOptions = [
+    { value: "full",  label: "Full",  desc: "Mascot in toasts and full-screen moments." },
+    { value: "quiet", label: "Quiet", desc: "Plain toasts only, no full-screen effects." },
+    { value: "off",   label: "Off",   desc: "No celebration effects at all." },
+  ];
+
+  return (
+    <div className="flex flex-col gap-4 pt-2">
+      <h3 className="text-sm font-black text-text-primary">Celebrations</h3>
+      <p className="text-[13px] text-text-secondary -mt-2">These apply on this browser and save right away.</p>
+
+      <div className="flex flex-col gap-2 rounded-xl border border-border-subtle bg-bg-surface px-4 py-3">
+        <p className="text-[13px] text-text-secondary">Visual effects for badges and level-ups.</p>
+        <div className="flex flex-wrap gap-2 mt-1" role="radiogroup" aria-label="Celebration style">
+          {celebOptions.map((o) => (
+            <label
+              key={o.value}
+              className={[
+                "flex min-h-[36px] cursor-pointer items-center rounded-lg border px-3 text-sm font-semibold transition-colors",
+                celebrations === o.value
+                  ? "border-accent bg-accent-tint text-accent-text"
+                  : "border-border-subtle text-text-secondary hover:bg-bg-muted",
+                "focus-within:outline focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-[var(--focus)]",
+              ].join(" ")}
+            >
+              <input type="radio" name="celebrations" value={o.value} checked={celebrations === o.value}
+                onChange={() => setCelebrations(o.value)} className="sr-only" />
+              {o.label}
+            </label>
+          ))}
+        </div>
+        <p className="text-[13px] text-text-secondary mt-1">
+          {celebOptions.find((o) => o.value === celebrations)?.desc}
+        </p>
+      </div>
+    </div>
+  );
+}
+
 export default function SettingsPage() {
   const user = useAuthStore((s) => s.user);
   const setUser = useAuthStore((s) => s.setUser);
@@ -143,7 +187,8 @@ export default function SettingsPage() {
     Promise.all([api.get("/api/auth/settings/options"), api.get("/api/auth/me")]).then(([o, me]) => {
       const st = me.user?.settings ?? {};
       const notifs = Object.fromEntries(o.groups.filter((g) => !g.locked).map((g) => [g.key, st.notifications?.[g.key] !== false]));
-      const s = { name: me.user?.name ?? "", prefs: { landing: "home", dateFormat: "mdy", timeFormat: "12h", timezone: "", aiPanel: true, ...(st.preferences ?? {}) }, notifs };
+      const emailNotif = st.emailNotificationsEnabled !== false;
+      const s = { name: me.user?.name ?? "", prefs: { landing: "home", dateFormat: "mdy", timeFormat: "12h", timezone: "", aiPanel: true, ...(st.preferences ?? {}) }, notifs, emailNotif };
       setOpts(o); setSaved(s); setDraft(s);
     }).catch((e) => setError(e.message ?? "Could not load your settings."));
   }, []);
@@ -153,7 +198,7 @@ export default function SettingsPage() {
     const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
     return {
       account: draft.name.trim() !== saved.name || ACCOUNT_PREFS.some((k) => draft.prefs[k] !== saved.prefs[k]),
-      notifications: !same(draft.notifs, saved.notifs),
+      notifications: !same(draft.notifs, saved.notifs) || draft.emailNotif !== saved.emailNotif,
       preferences: ["landing", "aiPanel"].some((k) => draft.prefs[k] !== saved.prefs[k]),
     };
   }, [saved, draft]);
@@ -184,7 +229,8 @@ export default function SettingsPage() {
         settings = (await api.patch("/api/auth/settings", { preferences: prefs })).settings; next.prefs = prefs;
       }
       if (active === "notifications") {
-        settings = (await api.patch("/api/auth/settings", { notifications: draft.notifs })).settings; next.notifs = draft.notifs;
+        settings = (await api.patch("/api/auth/settings", { notifications: draft.notifs, emailNotificationsEnabled: draft.emailNotif })).settings;
+        next.notifs = draft.notifs; next.emailNotif = draft.emailNotif;
       }
       setSaved(next); setDraft((d) => ({ ...next, prefs: { ...d.prefs, ...next.prefs }, notifs: active === "notifications" ? next.notifs : d.notifs }));
       setUser({ ...user, name, settings });
@@ -193,7 +239,7 @@ export default function SettingsPage() {
   }
   function discard() {
     setDraft((d) => active === "account" ? { ...d, name: saved.name, prefs: { ...d.prefs, ...Object.fromEntries(ACCOUNT_PREFS.map((k) => [k, saved.prefs[k]])) } }
-      : active === "notifications" ? { ...d, notifs: saved.notifs } : { ...d, prefs: { ...d.prefs, landing: saved.prefs.landing, aiPanel: saved.prefs.aiPanel } });
+      : active === "notifications" ? { ...d, notifs: saved.notifs, emailNotif: saved.emailNotif } : { ...d, prefs: { ...d.prefs, landing: saved.prefs.landing, aiPanel: saved.prefs.aiPanel } });
   }
 
   const body = () => {
@@ -206,6 +252,7 @@ export default function SettingsPage() {
           <Field label="Email" htmlFor="set-email"><input id="set-email" className={input} value={user?.email ?? ""} readOnly /></Field>
           <Field label="Role" htmlFor="set-role"><input id="set-role" className={input} value={user?.role ?? ""} readOnly /></Field>
         </div>
+        <div className="mt-3"><ProfileDetails /></div>
         {opts.dateTime && (<>
           <h3 className="mt-3 text-sm font-black text-text-primary">Date and time</h3>
           <div className="grid grid-cols-1 gap-5 sm:grid-cols-3">
@@ -240,8 +287,11 @@ export default function SettingsPage() {
                 : <Toggle label={g.label} on={draft.notifs[g.key]} onChange={(v) => setDraft((d) => ({ ...d, notifs: { ...d.notifs, [g.key]: v } }))} />}
             </Row>
           ))}
+          <Row title="Email notifications" desc="Send an email for task assignments, reviews, and deadline reminders when you are offline (more than 5 minutes inactive).">
+            <Toggle label="Email notifications" on={draft.emailNotif} onChange={(v) => setDraft((d) => ({ ...d, emailNotif: v }))} />
+          </Row>
         </div>
-        {opts.celebrations && <div><p className="mb-3 text-[13px] text-text-secondary">Celebrations for level-ups and badges apply on this browser and save right away.</p><CelebrationsChoice /></div>}
+        <CelebrationSettings />
       </div>
     );
     return (

@@ -40,11 +40,16 @@ function FeatureCard({ icon: Icon, iconColor, iconBg, borderColor, title, descri
   return (
     <motion.div
       variants={fadeUp}
+      tabIndex={0}
+      role="article"
       className={[
-        "flex flex-col gap-4 rounded-2xl p-6",
+        "flex flex-col gap-4 rounded-2xl p-6 outline-none",
         "bg-gradient-to-b from-[#EAEDF4] to-[#FFFFFF]",
         "border", borderColor,
         "shadow-[0_4px_24px_rgba(0,0,0,0.4)]",
+        "focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-accent/60",
+        "active:shadow-[0_1px_6px_rgba(0,0,0,0.25)] active:scale-[0.98]",
+        "transition-[transform,box-shadow] duration-100",
       ].join(" ")}
     >
       <span className={["flex h-11 w-11 items-center justify-center rounded-xl", iconBg].join(" ")}>
@@ -52,7 +57,7 @@ function FeatureCard({ icon: Icon, iconColor, iconBg, borderColor, title, descri
       </span>
       <div className="flex flex-col gap-1.5">
         <h3 className="text-lg font-bold text-text-primary">{title}</h3>
-        <p className="text-sm text-slate-400 leading-relaxed">{description}</p>
+        <p className="text-base text-slate-400 leading-relaxed">{description}</p>
       </div>
     </motion.div>
   );
@@ -63,12 +68,17 @@ function RoleCard({ icon: Icon, iconColor, iconBg, borderColor, glowColor, role,
   return (
     <motion.div
       variants={fadeUp}
+      tabIndex={0}
+      role="article"
       whileHover={{ y: -6, transition: { type: "spring", stiffness: 300, damping: 18 } }}
       className={[
-        "relative flex flex-col gap-5 rounded-2xl p-6 overflow-hidden",
+        "relative flex flex-col gap-5 rounded-2xl p-6 overflow-hidden outline-none",
         "bg-gradient-to-b from-[#EAEDF4] to-[#FFFFFF]",
         "border", borderColor,
         "shadow-[0_4px_32px_rgba(0,0,0,0.45)]",
+        "focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-accent/60",
+        "active:shadow-[0_1px_8px_rgba(0,0,0,0.3)] active:scale-[0.98]",
+        "transition-[transform,box-shadow] duration-100",
       ].join(" ")}
     >
       <div
@@ -81,14 +91,14 @@ function RoleCard({ icon: Icon, iconColor, iconBg, borderColor, glowColor, role,
           <Icon size={24} className={iconColor} strokeWidth={1.75} />
         </span>
         <div>
-          <p className="text-[14px] font-bold uppercase tracking-widest text-slate-500">Role</p>
+          <p className="text-base font-bold uppercase tracking-widest text-slate-500">Role</p>
           <h3 className="text-base font-black text-text-primary">{role}</h3>
         </div>
       </div>
-      <p className="text-sm text-slate-400 leading-relaxed">{tagline}</p>
+      <p className="text-base text-slate-400 leading-relaxed">{tagline}</p>
       <ul className="flex flex-col gap-2">
         {perks.map((perk) => (
-          <li key={perk} className="flex items-center gap-2 text-sm text-slate-300">
+          <li key={perk} className="flex items-center gap-2 text-base text-slate-300">
             <Zap size={12} className={iconColor} strokeWidth={2.5} />
             {perk}
           </li>
@@ -195,9 +205,9 @@ export default function LandingPage() {
               </FadeUpItem>
               <FadeUpItem>
                 <Link to="/register/step-1">
-                  <Button variant="primary" size="md">
+                  <Button variant="primary" size="lg">
                     Create Your Organisation
-                    <ArrowRight size={15} strokeWidth={2.5} />
+                    <ArrowRight size={16} strokeWidth={2.5} />
                   </Button>
                 </Link>
               </FadeUpItem>

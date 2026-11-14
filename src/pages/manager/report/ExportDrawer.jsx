@@ -40,6 +40,7 @@ export default function ExportDrawer({ open, onClose, tab, query, base = "/api/m
         <div className="flex flex-wrap justify-end gap-2">
           <button type="button" className={BTN.ghost} onClick={onClose}>Cancel</button>
           <button type="button" className={BTN.secondary} disabled={!doc || !!busy} onClick={() => download("csv")}>{busy === "csv" ? "Preparing…" : "Download CSV"}</button>
+          <button type="button" className={BTN.secondary} disabled={!doc || !!busy} onClick={() => download("xlsx")}>{busy === "xlsx" ? "Preparing…" : "Download Excel"}</button>
           <button type="button" className={BTN.primary} disabled={!doc || !!busy} onClick={() => download("pdf")}><Download size={15} aria-hidden="true" />{busy === "pdf" ? "Preparing…" : "Download PDF"}</button>
         </div>
       )}>
@@ -50,6 +51,13 @@ export default function ExportDrawer({ open, onClose, tab, query, base = "/api/m
           <h3 className="text-lg font-black text-text-primary">{doc.title}</h3>
           <p className="mt-1 text-xs text-text-secondary">{doc.filters}</p>
           <p className="text-xs text-text-secondary">Generated {new Date(doc.generatedAt).toLocaleDateString(undefined, { day: "numeric", month: "long", year: "numeric" })}</p>
+          {doc.aiSummary !== undefined && (
+            <section className="mt-5" data-export-ai>
+              <h4 className="text-sm font-bold text-text-primary">AI summary</h4>
+              <p className="mt-1 text-xs leading-relaxed text-text-secondary">{doc.aiSummary ?? "AI summary not available. The PDF says so and keeps the numbers and charts."}</p>
+            </section>
+          )}
+          {doc.charts?.length > 0 && <p className="mt-4 text-xs text-text-secondary" data-export-charts>Charts in the PDF: {doc.charts.map((c) => c.title).join(", ")}.</p>}
           {doc.sections.map((s) => (
             <section key={s.heading} className="mt-5">
               <h4 className="text-sm font-bold text-text-primary">{s.heading}</h4>

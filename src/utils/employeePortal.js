@@ -30,11 +30,13 @@ export function employeeNav(kind, home) {
       { icon: "quests",       label: "Quests",          to: "/workspace/quests" },
       { icon: "leaderboard",  label: "Leaderboard",     to: "/workspace/leaderboard" },
       { icon: "achievements", label: "Achievements",    to: "/workspace/achievements" },
-      { icon: "shop",         label: "Shop and avatar", to: "/workspace/inventory" },
+      { icon: "shop",         label: "Shop",            to: "/workspace/shop" },
+      { icon: "inventory",    label: "Inventory",       to: "/workspace/inventory" },
     ] },
     { label: "Talk", items: [
       { icon: "chat",          label: "Collaboration", to: "/workspace/chat" },
       { icon: "announcements", label: "Announcements", to: "/workspace/announcements" },
+      { icon: "ai",            label: "AI assistant",  to: "/workspace/ai" }, // Batch 4 (E14, FR08-01)
     ] },
   ];
 }

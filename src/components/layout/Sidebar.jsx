@@ -54,8 +54,8 @@ export default function Sidebar() {
               >
                 {user.orgName}
               </span>
-              <span className="block text-[14px] font-medium text-slate-600 mt-0.5 tracking-wide">
-                powered by Achievion
+              <span className="block text-[11px] font-medium text-slate-500 mt-0.5 tracking-wide truncate">
+                {user?.roleLabel || role || "powered by Achievion"}
               </span>
             </>
           ) : (
@@ -76,7 +76,7 @@ export default function Sidebar() {
                 className="block text-[14px] font-bold uppercase tracking-widest mt-px"
                 style={{ color: theme.text }}
               >
-                {role || "Workspace"}
+                {user?.roleLabel || role || "Workspace"}
               </span>
             </>
           )}

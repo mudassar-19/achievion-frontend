@@ -10,11 +10,13 @@ import {
   Snowflake, CheckCircle, XCircle, Timer,
 } from "lucide-react";
 import useAuthStore     from "@/stores/authStore";
+import useGamificationStore from "@/stores/gamificationStore";
 import PageHeader from "@/components/ui/PageHeader";
 import { useRoleTheme } from "@/utils/roleTheme";
 import api              from "@/lib/api";
 import useUiStore       from "@/stores/uiStore";
 import { avatarUrl } from "@/lib/avatar";
+import { frameStyle, badgeEmoji, titleMeta } from "@/utils/shopCosmetics";
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 function fmtDate(d) {
@@ -258,9 +260,11 @@ function ScoreRing({ score, label, color, size = 80 }) {
 
 // ─── ProfilePage ─────────────────────────────────────────────────────────────
 export default function ProfilePage() {
-  const user    = useAuthStore((s) => s.user);
-  const setUser = useAuthStore((s) => s.setUser);
-  const theme   = useRoleTheme();
+  const user     = useAuthStore((s) => s.user);
+  const setUser  = useAuthStore((s) => s.setUser);
+  const isViewAs = useAuthStore((s) => !!s.viewAs);
+  const shopEquipped = useGamificationStore((s) => s.currentUser.shopEquipped ?? {});
+  const theme    = useRoleTheme();
 
   const isManager = user?.role === "Manager";
 
@@ -412,7 +416,8 @@ export default function ProfilePage() {
                     className="absolute -inset-1 rounded-full opacity-60 blur"
                     style={{ background: `conic-gradient(from 0deg, ${theme.accent}, ${theme.border}, ${theme.accent})` }}
                   />
-                  <div className="relative h-24 w-24 rounded-full overflow-hidden border-2" style={{ borderColor: theme.accent }}>
+                  <div className="relative h-24 w-24 rounded-full overflow-hidden border-2"
+                    style={{ borderColor: theme.accent, ...(frameStyle(shopEquipped?.frame) ?? {}) }}>
                     <div className="absolute inset-0 flex items-center justify-center bg-[#EAEDF4] z-0">
                       <span className="text-2xl font-black" style={{ color: theme.text }}>{initials(displayName)}</span>
                     </div>
@@ -421,6 +426,10 @@ export default function ProfilePage() {
                       alt="avatar"
                       className="relative z-10 h-full w-full object-cover"
                     />
+                    {badgeEmoji(shopEquipped?.badge) && (
+                      <span className="absolute bottom-0.5 right-0.5 z-20 text-xl leading-none"
+                        aria-label={`Equipped badge: ${shopEquipped.badge}`}>{badgeEmoji(shopEquipped.badge)}</span>
+                    )}
                   </div>
                   {!isManager && ( /* D-081: no personal level for Managers */
                   <div
@@ -450,6 +459,12 @@ export default function ProfilePage() {
                   {ident.activeTitle && (
                     <p className="text-[14px] font-semibold mt-0.5 text-center sm:text-left" style={{ color: theme.text }}>
                       ✦ {ident.activeTitle.name}
+                    </p>
+                  )}
+                  {!ident.activeTitle && titleMeta(shopEquipped?.title) && (
+                    <p className="text-[14px] font-bold mt-0.5 text-center sm:text-left"
+                      style={{ color: titleMeta(shopEquipped.title).color }}>
+                      ✦ {titleMeta(shopEquipped.title).label}
                     </p>
                   )}
 
@@ -775,7 +790,7 @@ export default function ProfilePage() {
                   { icon: Shield,    label: "Role",         value: role },
                   { icon: Building2, label: "Department",   value: department },
                   { icon: Calendar,  label: "Member Since", value: fmtDate(p.createdAt) },
-                  { icon: Star,      label: "HP",           value: `${p.hp ?? user?.hp ?? 100} / 100` },
+                  { icon: Star,      label: "HP",           value: isViewAs ? "Hidden in View as" : `${p.hp ?? user?.hp ?? 100} / 100` },
                 ].map(({ icon: Icon, label, value }) => (
                   <div key={label} className="flex items-center gap-3 py-3 border-b border-ink/[0.04]">
                     <Icon size={13} className="text-slate-600 shrink-0" strokeWidth={1.75} />

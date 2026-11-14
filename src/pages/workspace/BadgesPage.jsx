@@ -351,13 +351,13 @@ export default function BadgesPage() {
       {/* Controls */}
       <div className="flex flex-wrap items-center gap-3">
         {/* Category Tabs */}
-        <div className="flex gap-1 p-1 rounded-xl bg-ink/[0.04] border border-ink/[0.06]">
+        <div className="flex gap-1 p-1 rounded-xl bg-ink/[0.04] border border-ink/[0.06] overflow-x-auto max-w-full">
           {TABS.map(({ key, label, icon: Icon }) => (
             <button
               key={key}
               onClick={() => setTab(key)}
               className={[
-                "flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-bold transition-all duration-200",
+                "flex shrink-0 items-center gap-1.5 px-2 sm:px-4 py-2 rounded-lg text-xs font-bold transition-all duration-200",
                 tab === key
                   ? "text-accent-on shadow-md"
                   : "text-slate-500 hover:text-slate-700 hover:bg-ink/[0.05]",
@@ -371,13 +371,13 @@ export default function BadgesPage() {
         </div>
 
         {/* Status Filter */}
-        <div className="flex gap-1 p-1 rounded-xl bg-ink/[0.04] border border-ink/[0.06]">
+        <div className="flex gap-1 p-1 rounded-xl bg-ink/[0.04] border border-ink/[0.06] overflow-x-auto max-w-full">
           {STATUS_FILTERS.map(({ key, label }) => (
             <button
               key={key}
               onClick={() => setStatusFilter(key)}
               className={[
-                "px-3 py-2 rounded-lg text-xs font-bold transition-all duration-200",
+                "shrink-0 px-3 py-2 rounded-lg text-xs font-bold transition-all duration-200",
                 statusFilter === key
                   ? "bg-ink/[0.10] text-text-primary"
                   : "text-slate-500 hover:text-slate-700",

@@ -5,7 +5,6 @@ import { Eye, LogOut, Search } from "lucide-react";
 import api from "@/lib/api";
 import useAuthStore from "@/stores/authStore";
 
-const time = (d) => new Date(d).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
 
 export function ViewAsMenu() {
   const viewAs = useAuthStore((s) => s.viewAs);
@@ -71,7 +70,7 @@ export function ViewAsMenu() {
                       <span className="shrink-0 text-xs text-text-secondary">{busy === p.id ? "Opening…" : p.role}</span>
                     </button>
                   </li>
-                )) : <li className="px-2 py-3 text-xs text-text-secondary">{data.people.length ? `No ${role} matches.` : "Nobody you can view as yet. Managers see people on their own projects."}</li>}
+                )) : <li className="px-2 py-3 text-xs text-text-secondary">{data.people.length ? `No ${role} matches.` : "Nobody to view as yet."}</li>}
               </ul>
             </>
           )}
@@ -87,19 +86,31 @@ export function ViewAsBanner() {
   const user = useAuthStore((s) => s.user);
   const exitViewAs = useAuthStore((s) => s.exitViewAs);
   const [busy, setBusy] = useState(false);
+  const [remaining, setRemaining] = useState(() =>
+    viewAs?.expiresAt ? Math.max(0, Math.floor((new Date(viewAs.expiresAt) - Date.now()) / 1000)) : null
+  );
   useEffect(() => {
     if (!viewAs?.expiresAt) return undefined;
-    const t = setTimeout(() => exitViewAs(), Math.max(0, new Date(viewAs.expiresAt) - Date.now()));
-    return () => clearTimeout(t);
-  }, [viewAs, exitViewAs]);
+    const id = setInterval(() => {
+      const secs = Math.max(0, Math.floor((new Date(viewAs.expiresAt) - Date.now()) / 1000));
+      setRemaining(secs);
+      if (secs === 0) exitViewAs();
+    }, 1000);
+    return () => clearInterval(id);
+  }, [viewAs?.expiresAt, exitViewAs]);
   if (!viewAs) return null;
+  const mmss = remaining != null
+    ? `${String(Math.floor(remaining / 60)).padStart(2, "0")}:${String(remaining % 60).padStart(2, "0")}`
+    : null;
   return (
-    <div role="status" className="fixed left-1/2 top-2 z-[80] flex max-w-[calc(100vw-16px)] -translate-x-1/2 items-center gap-2.5 rounded-full border border-[#8A6200]/30 bg-[#FFF4D6] py-1.5 pl-4 pr-1.5 text-[13px] text-[#4A3200] shadow-lg">
+    <div role="status" aria-live="polite" data-view-as-banner="1" className="fixed left-1/2 top-2 z-[80] flex max-w-[calc(100vw-16px)] -translate-x-1/2 items-center gap-2.5 rounded-full border border-[#8A6200]/30 bg-[#FFF4D6] py-1.5 pl-4 pr-1.5 text-[13px] text-[#4A3200] shadow-lg">
       <Eye size={14} aria-hidden="true" className="shrink-0" />
-      <span className="min-w-0 truncate" title={viewAs.expiresAt ? `The view ends by itself at ${time(viewAs.expiresAt)}.` : undefined}>You are viewing as <strong>{viewAs.targetName ?? user?.name}</strong> ({viewAs.targetRole ?? user?.role}). Read-only.</span>
-      <button type="button" disabled={busy} onClick={() => { setBusy(true); exitViewAs(); }} title={viewAs.expiresAt ? `Ends by itself at ${time(viewAs.expiresAt)}` : undefined}
+      <span className="min-w-0 truncate">
+        Viewing as <strong>{viewAs.targetName ?? user?.name}</strong> ({viewAs.targetRole ?? user?.role}) · read-only{mmss ? ` · ${mmss}` : ""}
+      </span>
+      <button type="button" disabled={busy} onClick={() => { setBusy(true); exitViewAs(); }}
         className="flex h-8 shrink-0 items-center gap-1.5 rounded-full bg-[#4A3200] px-3 text-xs font-bold text-white transition-colors hover:bg-[#2E1F00] disabled:opacity-60">
-        <LogOut size={13} aria-hidden="true" />{busy ? "Exiting…" : "Exit view"}
+        <LogOut size={13} aria-hidden="true" />{busy ? "Exiting…" : "Exit"}
       </button>
     </div>
   );

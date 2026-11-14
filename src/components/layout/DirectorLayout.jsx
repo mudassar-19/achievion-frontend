@@ -13,8 +13,7 @@ import api from "@/lib/api";
 import {
   LayoutDashboard, FolderKanban, Users, ClipboardCheck,
   BarChart3, ScrollText, Settings, SlidersHorizontal, User, Bell, Trophy,
-  Sparkles, Volume2, VolumeX, Volume1,
-  CalendarRange, Inbox, ShieldAlert, Target, Heart, Cpu, Award, MessageSquare,
+  CalendarRange, Inbox, ShieldAlert, Target, Heart, Cpu, Award, MessageSquare, Leaf,
 } from "lucide-react";
 
 function aiContext(pathname) {
@@ -25,25 +24,6 @@ function aiContext(pathname) {
   if (pathname.includes("/portfolio")) return "Portfolio";
   if (pathname.includes("/dashboard")) return "Dashboard";
   return "Org";
-}
-
-// Director-only: celebrations Full / Quiet / Off (not part of the universal shell).
-function CelebrationsToggle() {
-  const celebrations    = useUiStore((s) => s.celebrations);
-  const setCelebrations = useUiStore((s) => s.setCelebrations);
-  const CelebIcon = celebrations === "full" ? Volume2 : celebrations === "quiet" ? Volume1 : VolumeX;
-  const celebTip  = celebrations === "full" ? "Celebrations: Full" : celebrations === "quiet" ? "Celebrations: Quiet" : "Celebrations: Off";
-  return (
-    <button
-      type="button"
-      onClick={() => setCelebrations(celebrations === "full" ? "quiet" : celebrations === "quiet" ? "off" : "full")}
-      title={celebTip}
-      className="flex h-9 w-9 items-center justify-center rounded-xl text-[color:var(--nav-text)] hover:bg-[var(--nav-bg-hover)] hover:text-[color:var(--nav-text-hover)] transition-colors"
-      aria-label={celebTip}
-    >
-      <CelebIcon size={15} strokeWidth={1.75} />
-    </button>
-  );
 }
 
 const APPROVAL_TARGET = { to: "/director/approvals", label: "Open approvals →" };
@@ -77,9 +57,10 @@ export default function DirectorLayout() {
     role: "director", portal: "Director", portalSub: "Command Portal", storageKey: "achievion-director-rail",
     nav: [
       { label: "Main", items: [
-        { icon: LayoutDashboard, label: "Home",      to: "/director", end: true },
-        { icon: FolderKanban,    label: "Portfolio", to: "/director/projects" },
-        { icon: Users,           label: "Team",      to: "/director/roles" },
+        { icon: LayoutDashboard, label: "Home",             to: "/director", end: true },
+        { icon: FolderKanban,    label: "Portfolio",        to: "/director/projects" },
+        { icon: Leaf,            label: "Progress Garden",  to: "/director/garden" },
+        { icon: Users,           label: "Team",             to: "/director/roles" },
       ] },
       { label: "Operations", items: [
         { icon: ClipboardCheck, label: "Approvals",  to: "/director/approvals", badge: pendingCount },
@@ -92,8 +73,8 @@ export default function DirectorLayout() {
         { icon: Cpu,        label: "Capacity",   to: "/director/capacity" },
         { icon: Award,      label: "Criteria",   to: "/director/success-criteria" },
         { icon: BarChart3,  label: "Reports",    to: "/director/reports" },
-        { icon: Sparkles,   label: "Ask AI",     to: "/director/ask" },
         { icon: ScrollText, label: "Audit Log",  to: "/director/audit-log" },
+        { icon: ShieldAlert, label: "Anomalies", to: "/director/anomalies" }, // Batch 5 (D9)
       ] },
       { label: "Config", items: [
         { icon: SlidersHorizontal, label: "Workspace", to: "/director/workspace-settings" },
@@ -107,7 +88,7 @@ export default function DirectorLayout() {
       { icon: Settings, label: "Settings",      to: "/director/settings" },
     ],
     notifTarget: (n) => (n.type === "approval_required" ? APPROVAL_TARGET : null),
-    topbarExtra: <><ViewAsMenu /><CelebrationsToggle /></>,
+    topbarExtra: <ViewAsMenu />,
   };
 
   return (
@@ -115,7 +96,7 @@ export default function DirectorLayout() {
       cfg={cfg}
       notifSignal={approvalSignal}
       aiPanel={({ open, onClose }) => (
-        <AiPanel open={open} onClose={onClose} topOffset={D_TOPBAR_H} context={aiContext(pathname)} />
+        <AiPanel open={open} onClose={onClose} topOffset={D_TOPBAR_H} context={aiContext(pathname)} fullScreenPath="/director/ask" />
       )}
     >
       {DF.recaps && <RecapPopup />}

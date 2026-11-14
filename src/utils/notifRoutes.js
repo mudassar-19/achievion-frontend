@@ -19,6 +19,19 @@ export function notifRedirectPath(notif, role) {
   const { type, meta = {} } = notif;
   const cat = toCategory(type);
 
+  // ── Director portal ──────────────────────────────────────────────────────
+  if (role === "Director" || role === "director") {
+    if (type === "approval_required" || type === "approval_pending") return "/director/approvals";
+    if (type === "approval_result")                                  return "/director/approvals";
+    if (type === "escalation")                                       return "/director/notifications";
+    if (type === "project_at_risk" && meta.projectId)               return `/director/projects/${meta.projectId}`;
+    if (cat === "project" && meta.projectId)                        return `/director/projects/${meta.projectId}`;
+    if (cat === "project")                                          return "/director/projects";
+    if (cat === "gamification")                                     return "/director/profile";
+    if (cat === "team")                                             return "/director/roles";
+    return "/director/notifications";
+  }
+
   // ── Team Lead portal ──────────────────────────────────────────────────────
   if (role === "Team Lead" || role === "team_lead") {
     if (type === "extension_requested" || type === "more_tries_requested") return "/teamlead/requests"; // E-3 (D-180)
@@ -32,7 +45,7 @@ export function notifRedirectPath(notif, role) {
     if (cat === "project")                          return "/teamlead/modules";
     if (cat === "task"    && meta.taskId)            return `/teamlead/tasks?task=${meta.taskId}`;
     if (cat === "task")                             return "/teamlead/tasks";
-    if (cat === "gamification")                     return "/teamlead/leaderboard";
+    if (cat === "gamification")                     return "/teamlead/badges";
     if (cat === "team")                             return "/teamlead/team";
     return "/teamlead/notifications";
   }

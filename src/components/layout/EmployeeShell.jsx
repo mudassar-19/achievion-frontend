@@ -1,12 +1,12 @@
 // Developer, Designer and Tester portal = PortalShell (E-1, Employee UX §3): same shell as the Director, Manager and
 // Team Lead; accent from [data-role=developer|designer|tester] tokens. Unlike the leads, employees keep the
-// gamification bar (level, XP, gold, streak, HP) in the top bar. No AI slot until E-8.
+// gamification bar (level, XP, gold, streak, HP) in the top bar. The AI assistant is a page in the nav (Batch 4).
 // The old WorkspaceLayout is no longer used by employees (still used by the Manager's old /workspace board and gantt).
 import { useCallback, useEffect } from "react";
 import { Link } from "react-router-dom";
 import {
-  Sun, ListChecks, FileCheck2, Swords, Trophy, Award, ShoppingBag, MessageSquare, Megaphone,
-  ClipboardCheck, Bug, ListTodo, Settings, User, SlidersHorizontal, Coins, Flame, Heart,
+  Sun, ListChecks, FileCheck2, Swords, Trophy, Award, ShoppingBag, Package, MessageSquare, Megaphone,
+  ClipboardCheck, Bug, ListTodo, Settings, Sparkles, User, SlidersHorizontal, Coins, Flame, Heart,
 } from "lucide-react";
 import useAuthStore from "@/stores/authStore";
 import useNotificationStore, { notifRedirectPath } from "@/stores/notificationStore";
@@ -20,7 +20,7 @@ import PortalShell from "./PortalShell";
 
 const ICONS = {
   today: Sun, tasks: ListChecks, submissions: FileCheck2, qa: ClipboardCheck, bugs: Bug, testcases: ListTodo,
-  quests: Swords, leaderboard: Trophy, achievements: Award, shop: ShoppingBag, chat: MessageSquare, announcements: Megaphone,
+  quests: Swords, leaderboard: Trophy, achievements: Award, shop: ShoppingBag, inventory: Package, chat: MessageSquare, announcements: Megaphone, ai: Sparkles,
 };
 const cap = (s) => s.charAt(0).toUpperCase() + s.slice(1);
 const num = (v) => (Number(v) || 0).toLocaleString();
@@ -28,11 +28,12 @@ const num = (v) => (Number(v) || 0).toLocaleString();
 // Top-bar gamification bar: one link to the profile. Phone: level only; ≥640px adds gold, streak, HP; ≥1024px the XP bar.
 function GameBar() {
   const { level = 1, currentXp = 0, maxXp = 100, gold = 0, hp = 0, streak = 0 } = useGamificationStore((s) => s.currentUser) ?? {};
+  const isViewAs = useAuthStore((s) => !!s.viewAs);
   const pct = Math.min(100, Math.max(0, (currentXp / (maxXp || 1)) * 100));
   return (
     <Link
       to="/workspace/profile"
-      aria-label={`Level ${level}, ${num(currentXp)} of ${num(maxXp)} XP, ${num(gold)} gold, ${num(streak)} day streak, ${num(hp)} HP. Open your profile`}
+      aria-label={`Level ${level}, ${num(currentXp)} of ${num(maxXp)} XP, ${num(gold)} gold, ${num(streak)} day streak${isViewAs ? "" : `, ${num(hp)} HP`}. Open your profile`}
       className="mr-1 flex h-9 shrink-0 items-center gap-3 rounded-xl px-2 text-text-primary transition-colors hover:bg-[var(--nav-bg-hover)]"
     >
       <span className="flex items-center gap-2.5">
@@ -47,7 +48,7 @@ function GameBar() {
       <span aria-hidden="true" className="hidden items-center gap-3 border-l border-ink/[0.08] pl-3 text-xs font-bold tabular-nums sm:flex">
         <span className="flex items-center gap-1" title="Gold"><Coins size={13} strokeWidth={2.2} color="#7A5200" />{num(gold)}</span>
         <span className="flex items-center gap-1" title="Day streak"><Flame size={13} strokeWidth={2.2} color="#B4410C" />{num(streak)}</span>
-        <span className="flex items-center gap-1" title="Health points"><Heart size={13} strokeWidth={2.2} color={hpColor(hp)} />{num(hp)}</span>
+        <span className="flex items-center gap-1" title="Health points"><Heart size={13} strokeWidth={2.2} color={hpColor(hp ?? 0)} />{isViewAs ? "—" : num(hp)}</span>
       </span>
     </Link>
   );
@@ -76,7 +77,7 @@ export default function EmployeeShell() {
   useGamificationSocket({ onRefresh: refresh });
 
   const cfg = {
-    role: kind, portal: user?.role ?? cap(kind), portalSub: ROLE_WORDS[kind].map(cap).join(" · "),
+    role: kind, portal: user?.roleLabel ?? user?.role ?? cap(kind), portalSub: ROLE_WORDS[kind].map(cap).join(" · "),
     storageKey: RAIL_KEY, label: user?.orgName, phoneDrawer: true,
     nav: employeeNav(kind, dashboardPathForRole(user?.role)).map((g) => ({ ...g, items: g.items.map((i) => ({ ...i, icon: ICONS[i.icon] })) })),
     bottomNav: [{ icon: Settings, label: "Settings", to: "/workspace/settings" }],

@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   Clock, Shield, Bell, Building2, Cpu, Zap,
   Loader2, AlertTriangle, ChevronRight, Info,
-  RefreshCw, Save, UserCog, Monitor,
+  RefreshCw, Save, UserCog, Monitor, Users, Plus, Pencil, XCircle, Check, X, Calendar,
 } from "lucide-react";
 import useUiStore from "@/stores/uiStore";
 import api        from "@/lib/api";
@@ -20,6 +20,8 @@ const SECTIONS = [
   { id: "organization",     icon: Building2, label: "Organization" },
   { id: "ai",               icon: Cpu,       label: "AI" },
   { id: "security",         icon: Monitor,   label: "Security" },
+  { id: "roles",            icon: Users,     label: "Custom Roles" },
+  { id: "bookings",         icon: Calendar,  label: "Resource Bookings" },
 ];
 
 const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
@@ -643,6 +645,231 @@ function SecuritySection({ addToast }) {
   );
 }
 
+// ── Custom Roles section ──────────────────────────────────────────────────────
+const CATEGORIES = ["developer", "designer", "tester"];
+const CAT_LABEL = { developer: "Developer", designer: "Designer", tester: "Tester" };
+const CAT_COLOR = { developer: "#0E6A30", designer: "#7A4B00", tester: "#136386" };
+
+function RolesSection({ addToast }) {
+  const [roles,     setRoles]     = useState([]);
+  const [loading,   setLoading]   = useState(true);
+  const [busy,      setBusy]      = useState("");
+  const [showAdd,   setShowAdd]   = useState(false);
+  const [addForm,   setAddForm]   = useState({ label: "", category: "developer" });
+  const [addErr,    setAddErr]    = useState("");
+  const [editKey,   setEditKey]   = useState(null);
+  const [editLabel, setEditLabel] = useState("");
+  const [editErr,   setEditErr]   = useState("");
+
+  async function load() {
+    setLoading(true);
+    try { setRoles((await api.get("/api/director/settings/custom-roles")).customRoles ?? []); }
+    catch { addToast({ type: "error", message: "Could not load custom roles." }); }
+    finally { setLoading(false); }
+  }
+  useEffect(() => { load(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  async function handleAdd(e) {
+    e.preventDefault();
+    const lab = addForm.label.trim();
+    if (lab.length < 2 || lab.length > 40) return setAddErr("Label must be 2–40 characters.");
+    setAddErr(""); setBusy("add");
+    try {
+      const { customRole } = await api.post("/api/director/settings/custom-roles", { label: lab, category: addForm.category });
+      setRoles((r) => [...r, customRole]);
+      setShowAdd(false); setAddForm({ label: "", category: "developer" });
+      addToast({ type: "success", message: `Role "${customRole.label}" added.` });
+    } catch (e2) { setAddErr(e2.message ?? "Could not add role."); }
+    finally { setBusy(""); }
+  }
+
+  async function handleRename(key) {
+    const lab = editLabel.trim();
+    if (lab.length < 2 || lab.length > 40) return setEditErr("Label must be 2–40 characters.");
+    setEditErr(""); setBusy(`rename-${key}`);
+    try {
+      const { customRole } = await api.patch(`/api/director/settings/custom-roles/${key}`, { label: lab });
+      setRoles((r) => r.map((x) => x.key === key ? customRole : x));
+      setEditKey(null);
+      addToast({ type: "success", message: "Role renamed." });
+    } catch (e2) { setEditErr(e2.message ?? "Could not rename role."); }
+    finally { setBusy(""); }
+  }
+
+  async function handleDeactivate(role) {
+    setBusy(`deact-${role.key}`);
+    try {
+      await api.delete(`/api/director/settings/custom-roles/${role.key}`);
+      setRoles((r) => r.map((x) => x.key === role.key ? { ...x, active: false } : x));
+      addToast({ type: "success", message: `"${role.label}" deactivated.` });
+    } catch (e2) { addToast({ type: "error", message: e2.message ?? "Could not deactivate role." }); }
+    finally { setBusy(""); }
+  }
+
+  if (loading) return <div className="flex flex-col gap-2">{[0,1,2].map(i=><div key={i} className="h-12 rounded-xl bg-ink/[0.04] animate-pulse"/>)}</div>;
+
+  const active = roles.filter((r) => r.active);
+  return (
+    <div className="flex flex-col gap-5">
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <p className="text-sm font-bold text-text-primary">Custom Roles</p>
+          <p className="text-xs text-slate-500 mt-0.5">{active.length}/20 active roles. Category determines XP weights and task rules.</p>
+        </div>
+        <button type="button" disabled={active.length >= 20} onClick={() => { setShowAdd(true); setAddErr(""); }}
+          className="flex shrink-0 items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold text-white disabled:opacity-40 transition-colors"
+          style={{ background: ACCENT }}>
+          <Plus size={13} /> Add role
+        </button>
+      </div>
+
+      {showAdd && (
+        <form onSubmit={handleAdd} className="flex flex-wrap items-end gap-2 p-4 rounded-xl border border-ink/[0.08] bg-ink/[0.02]">
+          <div className="flex flex-col gap-1 min-w-[180px]">
+            <label className="text-[11px] font-semibold text-text-secondary">Label</label>
+            <input autoFocus maxLength={40} value={addForm.label} onChange={(e) => setAddForm((f) => ({ ...f, label: e.target.value }))}
+              placeholder="e.g. Senior Developer"
+              className="h-9 rounded-xl border border-ink/[0.1] bg-white px-3 text-xs text-text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-[#4B2FC4]/40" />
+          </div>
+          <div className="flex flex-col gap-1">
+            <label className="text-[11px] font-semibold text-text-secondary">Category</label>
+            <select value={addForm.category} onChange={(e) => setAddForm((f) => ({ ...f, category: e.target.value }))}
+              className="h-9 rounded-xl border border-ink/[0.1] bg-white px-3 text-xs text-text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-[#4B2FC4]/40">
+              {CATEGORIES.map((c) => <option key={c} value={c}>{CAT_LABEL[c]}</option>)}
+            </select>
+          </div>
+          {addErr && <p role="alert" className="w-full text-[11px] text-[#B01F17] font-semibold">{addErr}</p>}
+          <div className="flex gap-2 ml-auto">
+            <button type="button" onClick={() => setShowAdd(false)} className="flex items-center gap-1 px-3 py-1.5 rounded-xl text-xs text-slate-500 hover:text-slate-700 transition-colors"><X size={13} />Cancel</button>
+            <button type="submit" disabled={busy === "add"} className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold text-white disabled:opacity-50 transition-colors" style={{ background: ACCENT }}>
+              {busy === "add" ? <Loader2 size={12} className="animate-spin" /> : <Check size={12} />} Add
+            </button>
+          </div>
+        </form>
+      )}
+
+      {roles.length === 0 ? (
+        <p className="text-xs text-slate-400 py-4 text-center">No custom roles yet. Add one to give employees display labels.</p>
+      ) : (
+        <div className="flex flex-col gap-1.5">
+          {roles.map((role) => (
+            <div key={role.key} className={`flex flex-wrap items-center gap-2 px-4 py-3 rounded-xl border ${role.active ? "border-ink/[0.08] bg-white" : "border-ink/[0.05] bg-ink/[0.02] opacity-60"}`}>
+              {editKey === role.key ? (
+                <div className="flex flex-wrap items-center gap-2 flex-1 min-w-0">
+                  <input autoFocus value={editLabel} onChange={(e) => setEditLabel(e.target.value)} maxLength={40}
+                    className="h-8 rounded-xl border border-ink/[0.1] bg-white px-3 text-xs text-text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-[#4B2FC4]/40 min-w-[160px]" />
+                  {editErr && <p role="alert" className="text-[11px] text-[#B01F17] font-semibold">{editErr}</p>}
+                  <div className="flex gap-1.5 ml-auto">
+                    <button type="button" onClick={() => handleRename(role.key)} disabled={!!busy}
+                      className="flex items-center gap-1 px-3 py-1.5 rounded-xl text-xs font-bold text-white disabled:opacity-50" style={{ background: ACCENT }}>
+                      {busy.startsWith("rename") ? <Loader2 size={11} className="animate-spin" /> : <Check size={11} />} Save
+                    </button>
+                    <button type="button" onClick={() => setEditKey(null)} className="px-3 py-1.5 rounded-xl text-xs text-slate-500 hover:text-slate-700"><X size={11} /></button>
+                  </div>
+                </div>
+              ) : (
+                <>
+                  <span className="text-xs font-semibold text-text-primary flex-1 min-w-0 truncate">{role.label}</span>
+                  <span className="text-[11px] font-bold px-2 py-0.5 rounded-full" style={{ background: `${CAT_COLOR[role.category]}18`, color: CAT_COLOR[role.category] }}>{CAT_LABEL[role.category]}</span>
+                  {!role.active && <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-slate-100 text-slate-400">Inactive</span>}
+                  {role.active && (
+                    <div className="flex gap-1.5 shrink-0">
+                      <button type="button" onClick={() => { setEditKey(role.key); setEditLabel(role.label); setEditErr(""); }}
+                        className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-semibold text-slate-500 hover:text-text-primary hover:bg-ink/[0.05] transition-colors">
+                        <Pencil size={11} /> Rename
+                      </button>
+                      <button type="button" disabled={busy === `deact-${role.key}`} onClick={() => handleDeactivate(role)}
+                        className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-semibold text-slate-400 hover:text-[#B01F17] hover:bg-rose-500/5 transition-colors disabled:opacity-40">
+                        {busy === `deact-${role.key}` ? <Loader2 size={11} className="animate-spin" /> : <XCircle size={11} />} Deactivate
+                      </button>
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── Resource Bookings section (Director read-only) ────────────────────────────
+function BookingsSectionDirector({ addToast }) {
+  const [assets,  setAssets]  = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [selected, setSelected] = useState(null); // { asset, bookings }
+  const [bookLoading, setBookLoading] = useState(false);
+
+  useEffect(() => {
+    api.get("/api/manager/assets").then((d) => setAssets(d?.assets ?? [])).catch(() => setAssets([])).finally(() => setLoading(false));
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  async function viewBookings(asset) {
+    setBookLoading(true);
+    try {
+      const d = await api.get(`/api/director/assets/${asset.id ?? asset._id}/bookings`);
+      setSelected({ asset, bookings: d.bookings ?? [] });
+    } catch (e) { addToast({ type: "error", message: e.message ?? "Could not load bookings." }); }
+    finally { setBookLoading(false); }
+  }
+
+  function fmtDay(d) { return d ? new Date(d).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "—"; }
+
+  if (loading) return <div className="flex flex-col gap-2">{[0,1,2].map(i=><div key={i} className="h-10 rounded-xl bg-ink/[0.04] animate-pulse"/>)}</div>;
+
+  if (selected) return (
+    <div className="flex flex-col gap-4">
+      <div className="flex items-center gap-3">
+        <button type="button" onClick={() => setSelected(null)} className="text-xs font-semibold text-slate-500 hover:text-text-primary transition-colors">← All assets</button>
+        <span className="text-xs text-slate-400">/</span>
+        <span className="text-xs font-bold text-text-primary">{selected.asset.name}</span>
+        <span className="ml-auto text-[11px] text-slate-400">Read-only</span>
+      </div>
+      {selected.bookings.length === 0 ? (
+        <p className="text-xs text-slate-400 py-4 text-center">No active bookings for this asset.</p>
+      ) : (
+        <div className="flex flex-col gap-1.5">
+          {selected.bookings.map((b) => (
+            <div key={b._id} className="flex flex-wrap items-center gap-3 px-4 py-3 rounded-xl border border-ink/[0.08] bg-white">
+              <div className="flex-1 min-w-0">
+                <p className="text-xs font-semibold text-text-primary">{fmtDay(b.from)} – {fmtDay(b.to)}</p>
+                <p className="text-[11px] text-slate-400">{b.bookedBy?.name ?? "Unknown"} · {b.projectId?.title ?? "No project"}{b.note ? ` · "${b.note}"` : ""}</p>
+              </div>
+              <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600">Active</span>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+
+  return (
+    <div className="flex flex-col gap-4">
+      <div>
+        <p className="text-sm font-bold text-text-primary">Asset Bookings</p>
+        <p className="text-xs text-slate-500 mt-0.5">View active bookings by asset. Select an asset to see its schedule.</p>
+      </div>
+      {assets.length === 0 ? (
+        <p className="text-xs text-slate-400 py-4 text-center">No assets in this organisation yet.</p>
+      ) : (
+        <div className="flex flex-col gap-1.5">
+          {assets.map((a) => (
+            <button key={a.id ?? a._id} type="button" onClick={() => viewBookings(a)} disabled={bookLoading}
+              className="flex items-center justify-between gap-3 px-4 py-3 rounded-xl border border-ink/[0.08] bg-white text-left hover:bg-ink/[0.03] transition-colors disabled:opacity-60">
+              <div className="min-w-0">
+                <p className="text-xs font-semibold text-text-primary truncate">{a.name}</p>
+                <p className="text-[11px] text-slate-400">{a.type}</p>
+              </div>
+              <ChevronRight size={13} className="text-slate-400 shrink-0" />
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function DirectorSettingsPage() {
   const addToast = useUiStore((st) => st.addToast);
   const [activeId, setActiveId] = useState("working-time");
@@ -848,6 +1075,8 @@ export default function DirectorSettingsPage() {
               {activeId === "organization"    && <OrganizationSection s={settings} setS={setS} members={members} />}
               {activeId === "ai"              && <AiSection           s={settings} setS={setS} />}
               {activeId === "security"        && <SecuritySection addToast={addToast} />}
+              {activeId === "roles"           && <RolesSection addToast={addToast} />}
+              {activeId === "bookings"        && <BookingsSectionDirector addToast={addToast} />}
             </div>
 
             {/* ── Sticky save bar ───────────────────────────────────── */}

@@ -136,7 +136,8 @@ export default function NotificationsPage({ hideGamification = false }) {
   const deleteOne     = useNotificationStore((s) => s.deleteOne);
   const deleteAll     = useNotificationStore((s) => s.deleteAll);
   const fetchAll      = useNotificationStore((s) => s.fetch);
-  const isManager     = useAuthStore((s) => s.user?.role) === "Manager"; // universal page header (D-083)
+  const userRole      = useAuthStore((s) => s.user?.role);
+  const isManager     = userRole === "Manager"; // universal page header (D-083)
 
   useEffect(() => { fetchAll(); }, [fetchAll]); // fresh list on open (the bell may have marked items read)
 
@@ -181,8 +182,9 @@ export default function NotificationsPage({ hideGamification = false }) {
 
   function handleNavigate(n) {
     if (!n.read) markRead(n._id);
-    const dest = notifRedirectPath(n);
-    if (dest !== "/workspace/notifications") navigate(dest);
+    const dest = notifRedirectPath(n, userRole);
+    const ownPath = `/workspace/notifications`;
+    if (dest !== ownPath) navigate(dest);
   }
 
   return (

@@ -9,7 +9,6 @@ import { Link } from "react-router-dom";
 import api from "@/lib/api";
 import usePerfLog from "@/hooks/usePerfLog";
 import { useRoleTheme } from "@/utils/roleTheme";
-import EmptyState from "@/components/ui/EmptyState";
 import { SkeletonCard } from "@/components/ui/Skeleton";
 import OrgCodeBadge from "@/components/ui/OrgCodeBadge";
 import PageHeader from "@/components/ui/PageHeader";
@@ -187,7 +186,7 @@ function TeamWellbeing({ data, xpDist, loading }) {
   );
 }
 
-// ── Team by Role (widget 4 — headcount only, no XP) ─────────────────────────
+// ── Team by Role (widget 4 — headcount by role; click View roster for full list) ──
 function TeamByRole({ xpDist, loading, theme }) {
   if (loading) return <Widget title="Team by Role" icon={Users} delay={0.2}><SkeletonCard className="m-4" /></Widget>;
 
@@ -197,16 +196,22 @@ function TeamByRole({ xpDist, loading, theme }) {
   const maxCount = rows[0]?.memberCount || 1;
 
   return (
-    <Widget title="Team by Role" icon={Users} iconColor={theme.accent} delay={0.2} action={{ to: "/director/roles", label: "View roster" }}>
+    <Widget
+      title="Team by Role"
+      icon={Users}
+      iconColor={theme.accent}
+      delay={0.2}
+      action={{ to: "/director/roles", label: "View roster" }}
+    >
       {rows.length === 0 ? (
-        <EmptyState
-          pose="thinking"
-          heading="No team members yet"
-          body="Members will appear here once they join."
-          className="py-8"
-        />
+        <div className="flex flex-col items-center justify-center py-8 gap-3 px-5">
+          <p className="text-sm text-slate-500 text-center">No team members yet.</p>
+          <p className="text-xs text-slate-400 text-center">Share your workspace code so members can join.</p>
+          <OrgCodeBadge />
+        </div>
       ) : (
         <div className="flex flex-col gap-3 px-5 py-5">
+          <p className="text-[11px] text-slate-400 mb-1">Headcount by role — <Link to="/director/roles" className="text-accent-text font-semibold hover:underline">View roster for names and projects</Link></p>
           {rows.map((r) => {
             const pct = Math.round((r.memberCount / maxCount) * 100);
             return (
@@ -346,6 +351,7 @@ export default function DirectorDashboard() {
   const [auditLogs,       setAuditLogs]       = useState([]);
   const [xpDist,          setXpDist]          = useState([]);
   const [duesData,        setDuesData]        = useState(null);
+  const [gardenData,      setGardenData]      = useState(null);
   const [loading,         setLoading]         = useState(true);
   const [error,           setError]           = useState(null);
 
@@ -353,18 +359,20 @@ export default function DirectorDashboard() {
     setError(null);
     setLoading(true);
     try {
-      const [dash, auditRes, xpRes, actionRes, duesRes] = await Promise.all([
+      const [dash, auditRes, xpRes, actionRes, duesRes, gardenRes] = await Promise.all([
         api.get("/api/director/dashboard"),
         api.get("/api/director/audit-log?limit=6"),
         api.get("/api/director/xp-distribution"),
         api.get("/api/approvals").catch(() => ({ approvals: [] })),
         api.get("/api/director/dues").catch(() => null),
+        api.get("/api/director/garden").catch(() => null),
       ]);
       setData(dash);
       setAuditLogs(auditRes.logs ?? []);
       setXpDist(Array.isArray(xpRes) ? xpRes : []);
       setActionApprovals(actionRes.approvals ?? []);
       setDuesData(duesRes);
+      setGardenData(gardenRes);
     } catch (e) {
       setError(e.message ?? "Failed to load dashboard.");
     } finally {
@@ -405,16 +413,22 @@ export default function DirectorDashboard() {
       <OrgSnapshot data={data} loading={loading} theme={theme} />
 
       {/* Garden: org growth visual */}
-      {data && (
+      {!loading && (
         <motion.div
           initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.4, delay: 0.12 }}
           className="glass-panel rounded-2xl border border-ink/[0.07] px-5 py-4"
         >
-          <p className="text-xs font-black uppercase tracking-[0.14em] text-slate-400 mb-3">Org Garden</p>
+          <div className="flex items-center justify-between mb-3">
+            <p className="text-xs font-black uppercase tracking-[0.14em] text-slate-400">Progress Garden</p>
+            <Link to="/director/garden" className="text-[11px] font-bold text-accent-text hover:underline">
+              View full garden →
+            </Link>
+          </div>
           <OrgGarden
-            score={Math.max(0, 100 - (data.burnoutRisk ?? 0) * 10)}
-            projects={duesData?.projects}
+            projects={gardenData?.projects ?? []}
+            onTrackPct={gardenData?.onTrackPct ?? 0}
+            totalCount={gardenData?.totalCount}
           />
         </motion.div>
       )}

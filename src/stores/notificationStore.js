@@ -1,6 +1,7 @@
 import { create } from "zustand";
 import api    from "@/lib/api";
 import socket from "@/utils/socket";
+import useAuthStore from "@/stores/authStore";
 
 export { toCategory, notifRedirectPath } from "@/utils/notifRoutes";
 
@@ -15,7 +16,7 @@ const useNotificationStore = create((set, get) => ({
 
   // ── Fetch all notifications ──────────────────────────────────────────────
   fetch: async () => {
-    if (get().loading) return;
+    if (get().loading || useAuthStore.getState().viewAs) return; // notifications are private: the server answers 403 in View as (D-217)
     set({ loading: true });
     try {
       const data  = await api.get("/api/notifications");

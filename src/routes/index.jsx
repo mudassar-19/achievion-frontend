@@ -3,7 +3,6 @@ import { lazy, Suspense } from "react";
 import { createBrowserRouter, Navigate, Link, useRouteError, isRouteErrorResponse, useParams, useLocation } from "react-router-dom";
 import TallyLoader from "@/components/ui/TallyLoader";
 import Tally from "@/components/ui/Tally";
-import ComingSoonPage from "@/components/ui/ComingSoonPage";
 import useAuthStore from "@/stores/authStore";
 import { homePathFor } from "@/utils/roleTheme";
 
@@ -38,12 +37,16 @@ const MyTasksPage = lazy(() => import("@/pages/employee/MyTasksPage")); // E-2: 
 const TaskBoardPage = lazy(() => import("@/pages/workspace/TaskBoardPage"));
 const TaskDetailPage = lazy(() => import("@/pages/workspace/TaskDetailPage"));
 const ProfilePage = lazy(() => import("@/pages/workspace/ProfilePage"));
+const QuestBoardPage = lazy(() => import("@/pages/employee/QuestBoardPage"));
+const EmployeeAiPage = lazy(() => import("@/pages/employee/EmployeeAiPage"));
 const LeaderboardPage = lazy(() => import("@/pages/workspace/LeaderboardPage"));
 const ChatHomePage = lazy(() => import("@/pages/workspace/ChatHomePage"));
 const NotificationsPage = lazy(() => import("@/pages/workspace/NotificationsPage"));
 const SettingsPage = lazy(() => import("@/pages/workspace/SettingsPage"));
 const BadgesPage = lazy(() => import("@/pages/workspace/BadgesPage"));
 const AvatarPage = lazy(() => import("@/pages/workspace/AvatarPage"));
+const ShopPage = lazy(() => import("@/pages/workspace/ShopPage"));
+const InventoryPage = lazy(() => import("@/pages/workspace/InventoryPage"));
 const TitlesPage = lazy(() => import("@/pages/workspace/TitlesPage"));
 const ProjectBoardPage = lazy(() => import("@/pages/workspace/ProjectBoardPage"));
 const GanttPage = lazy(() => import("@/pages/workspace/GanttPage"));
@@ -62,11 +65,13 @@ const ProjectWizardPage        = lazy(() => import("@/pages/manager/ProjectWizar
 const ManagerSprintsPage = lazy(() => import("@/pages/manager/ManagerSprintsPage"));
 const ManagerSprintPage  = lazy(() => import("@/pages/manager/ManagerSprintPage"));
 const DirectorDashboard = lazy(() => import("@/pages/director/DirectorDashboard"));
+const ProgressGardenPage = lazy(() => import("@/pages/director/ProgressGardenPage"));
 const ApprovalQueuePage = lazy(() => import("@/pages/director/ApprovalQueuePage"));
 const TeamAnalyticsPage = lazy(() => import("@/pages/director/TeamAnalyticsPage"));
 const UserRolesPage = lazy(() => import("@/pages/director/UserRolesPage"));
 const ProjectManagementPage = lazy(() => import("@/pages/director/ProjectManagementPage"));
 const AuditLogPage = lazy(() => import("@/pages/director/AuditLogPage"));
+const DirectorAnomaliesPage = lazy(() => import("@/pages/director/DirectorAnomaliesPage"));
 const DirectorReportsPage = lazy(() => import("@/pages/director/DirectorReportsPage"));
 const DirectorProfilePage = lazy(() => import("@/pages/director/DirectorProfilePage"));
 const DirectorNotificationsPage = lazy(() => import("@/pages/director/DirectorNotificationsPage"));
@@ -89,7 +94,8 @@ const CollaborationBridgePage  = lazy(() => import("@/pages/CollaborationBridgeP
 const OrgDashboard = lazy(() => import("@/pages/org/OrgDashboard"));
 const EmployeeList = lazy(() => import("@/pages/org/EmployeeList"));
 const CreateEmployee = lazy(() => import("@/pages/org/CreateEmployee"));
-const OrgApprovalsPage = lazy(() => import("@/pages/org/OrgApprovalsPage"));
+const OrgApprovalsPage   = lazy(() => import("@/pages/org/OrgApprovalsPage"));
+const PastEmployeesPage  = lazy(() => import("@/pages/org/PastEmployeesPage"));
 // T-1 (D-113): new Team Lead pages; the old Dashboard / Projects / Tasks Hub / Board / Team / Availability files are kept, not routed.
 const TLHomePage    = lazy(() => import("@/pages/teamlead/TLHomePage"));
 const TLModulesPage = lazy(() => import("@/pages/teamlead/TLModulesPage"));
@@ -223,10 +229,12 @@ const router = createBrowserRouter([{
       {
         element: <OrgLayout />,
         children: [
-          { path: "/org/dashboard",        element: <S><OrgDashboard /></S>        },
-          { path: "/org/employees",         element: <S><EmployeeList /></S>        },
-          { path: "/org/employees/create",  element: <S><CreateEmployee /></S>      },
-          { path: "/org/approvals",         element: <S><OrgApprovalsPage /></S>    },
+          { path: "/org/dashboard",          element: <S><OrgDashboard /></S>        },
+          { path: "/org/employees",          element: <S><EmployeeList /></S>        },
+          { path: "/org/employees/create",   element: <S><CreateEmployee /></S>      },
+          { path: "/org/employees/deleted",  element: <S><PastEmployeesPage /></S>   },
+          { path: "/org/past-employees",     element: <S><PastEmployeesPage /></S>   },
+          { path: "/org/approvals",          element: <S><OrgApprovalsPage /></S>    },
         ],
       },
     ],
@@ -249,15 +257,16 @@ const router = createBrowserRouter([{
               { path: "tasks",         element: <WorkspaceTasks />           },
               { path: "tasks/:taskId", element: <WorkspaceTask />            }, // E-2: deep link opens the drawer
               { path: "profile",       element: <S><ProfilePage /></S>        },
-              { path: "inventory",     element: <S><AvatarPage /></S>         }, // Shop comes in E-7
+              { path: "shop",          element: <S><ShopPage /></S>            }, // E-7 (D-243)
+              { path: "inventory",     element: <S><InventoryPage /></S>       }, // E-7 (D-244)
               { path: "achievements",  element: <S><BadgesPage /></S>         }, // titles join in E-6
               { path: "announcements", element: <S><CollaborationBridgePage key="announcements" startWith="announcements" /></S> },
               { path: "badges",        element: <Navigate to="/workspace/achievements" replace /> },
-              { path: "avatar",        element: <Navigate to="/workspace/inventory" replace /> },
+              { path: "avatar",        element: <S><AvatarPage /></S>              },
               { path: "sprint",        element: <Navigate to="/workspace/tasks" replace /> }, // sprint view comes in E-2
               { path: "leaderboard",   element: <S><LeaderboardPage /></S>    },
-              { path: "quests",        element: <ComingSoonPage title="Quests" subtitle="Not available yet. This page will show your own data once the feature is built." />         },
-              { path: "ai",            element: <ComingSoonPage title="AI Assistant" subtitle="Not available yet. This page will show your own data once the feature is built." />    },
+              { path: "quests",        element: <S><QuestBoardPage /></S>     }, // Batch 3 (E13)
+              { path: "ai",            element: <S><EmployeeAiPage /></S>     }, // Batch 4 (E14, E15)
               { path: "chat",          element: <S><CollaborationBridgePage /></S> },
               { path: "notifications", element: <WorkspaceNotifications />   },
               { path: "settings",            element: <S><SettingsPage /></S>            },
@@ -392,12 +401,14 @@ const router = createBrowserRouter([{
             element: <DirectorLayout />,
             children: [
               { index: true,              element: <S><DirectorDashboard /></S>           },
+              { path: "garden",           element: <S><ProgressGardenPage /></S>          },
               { path: "approvals",        element: <S><ApprovalQueuePage /></S>           },
               { path: "analytics",        element: <S><TeamAnalyticsPage /></S>           },
               { path: "roles",            element: <S><UserRolesPage /></S>               },
               { path: "projects",         element: <S><ProjectManagementPage /></S>       },
               { path: "audit-log",        element: <S><AuditLogPage /></S>                },
               { path: "reports",          element: <S><DirectorReportsPage /></S>         },
+              { path: "anomalies",        element: <S><DirectorAnomaliesPage /></S>       }, // Batch 5 (D9)
               { path: "account-settings",   element: <S><SettingsPage /></S>                           }, // U-1: personal settings
               { path: "leaderboard",        element: <S><LeaderboardPage /></S>                        }, // U-1 (D-133): org view, Director is not ranked
               { path: "profile",            element: <S><DirectorProfilePage /></S>                   },

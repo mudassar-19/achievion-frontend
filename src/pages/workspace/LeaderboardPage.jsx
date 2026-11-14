@@ -1,7 +1,16 @@
 // Shared leaderboard for every portal (U-1, D-133; UC-13, FR05-05). The server decides who is ranked
 // (Developers, Designers, Testers, Team Leads — never Managers or Directors) and which scopes this viewer has.
+// Batch 3 (E4, TC-LB-02): live. The server sends "leaderboard:changed" to the organisation when XP is awarded; the page
+// re-reads the same route (so ranks and ties are always the server's) and slides the rows to their new places.
+// People who ask for reduced motion get the new order at once, without the slide.
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
+import api from "@/lib/api";
+import socket from "@/utils/socket";
+import { avatarUrl, loadAvatarStyles } from "@/lib/avatar";
+import { myMove, sameOrder } from "@/utils/leaderboardLive";
 import { ArrowDown, ArrowUp, Minus, Trophy, Gauge, Activity, Flame } from "lucide-react";
+import { frameStyle, badgeEmoji, titleMeta } from "@/utils/shopCosmetics";
 import Page from "@/components/ui/Page";
 import PageHeader from "@/components/ui/PageHeader";
 import Panel from "@/components/ui/Panel";
@@ -12,6 +21,7 @@ import EmptyState from "@/components/ui/EmptyState";
 import ErrorState from "@/components/ui/ErrorState";
 import Skeleton from "@/components/ui/Skeleton";
 import useLoad from "@/pages/manager/project/useLoad";
+import LeaderboardLine from "@/pages/employee/LeaderboardLine";
 
 const SCOPE_LABEL = { company: "Company", team: "Team", project: "Project" };
 const PERIODS = [{ value: "all", label: "All-time" }, { value: "month", label: "This month" }, { value: "week", label: "Last 7 days" }];
@@ -19,19 +29,30 @@ const PLACE = { 1: "#8A6100", 2: "#4A566B", 3: "#8A4B1F" }; // gold / silver / b
 const n = (v) => (v ?? 0).toLocaleString();
 const initials = (name) => String(name ?? "?").split(/\s+/).filter(Boolean).slice(0, 2).map((w) => w[0]).join("").toUpperCase();
 
-function Avatar({ name, size = 32 }) {
+// The avatar the person equipped on the Avatar page, else the default robot (the server fills both), with the shop
+// cosmetics on top: frame ring, badge emoji. Initials only when an older server sends no avatar.
+function Avatar({ r, size = 32 }) {
+  const fs = frameStyle(r.shopEquipped?.frame), be = badgeEmoji(r.shopEquipped?.badge);
   return (
-    <span aria-hidden="true" className="inline-flex shrink-0 items-center justify-center rounded-full bg-accent-tint font-black text-accent-text"
-      style={{ width: size, height: size, fontSize: size * 0.38 }}>{initials(name)}</span>
+    <span className="relative inline-flex shrink-0 rounded-full" style={{ width: size, height: size, ...(fs ?? {}) }}>
+      {r.avatar
+        ? <img src={avatarUrl(r.avatar.style, r.avatar.seed)} alt="" aria-hidden="true" width={size} height={size} data-avatar
+            className="rounded-full bg-accent-tint ring-1 ring-ink/[0.06]" style={{ width: size, height: size }} />
+        : <span aria-hidden="true" className="inline-flex h-full w-full items-center justify-center rounded-full bg-accent-tint font-black text-accent-text"
+            style={{ fontSize: size * 0.38 }}>{initials(r.name)}</span>}
+      {be && <span aria-hidden="true" className="absolute -bottom-0.5 -right-0.5 leading-none" style={{ fontSize: size * 0.4 }}>{be}</span>}
+    </span>
   );
 }
 function Person({ r }) {
+  const tm = titleMeta(r.shopEquipped?.title);
   return (
-    <div className="flex min-w-0 items-center gap-2.5">
-      <Avatar name={r.name} />
+    <div data-uid={r.userId} className="flex min-w-0 items-center gap-2.5">
+      <Avatar r={r} />
       <div className="min-w-0">
         <p className="truncate font-semibold text-text-primary" title={r.name}>{r.name}{r.isUser && <span className="ml-1.5 text-xs font-bold text-accent-text">(you)</span>}</p>
-        <p className="truncate text-xs text-text-secondary">{r.role}</p>
+        {tm ? <p className="truncate text-[11px] font-bold" style={{ color: tm.color }}>{tm.label}</p>
+             : <p className="truncate text-xs text-text-secondary">{r.roleLabel || r.role}</p>}
       </div>
     </div>
   );
@@ -53,13 +74,15 @@ function Podium({ rows }) {
   return (
     <ol aria-label="Top three" className="grid grid-cols-1 gap-3 sm:grid-cols-3">
       {top.map((r) => (
-        <li key={r.userId} className="glass-panel flex min-w-0 items-center gap-3 rounded-2xl border border-ink/[0.07] px-4 py-4">
+        <li key={r.userId} data-uid={r.userId} className={`glass-panel flex min-w-0 items-center gap-3 rounded-2xl border px-4 py-4 ${r.isUser ? "border-accent/40 bg-accent/[0.05]" : "border-ink/[0.07]"}`}>
           <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border-2 text-sm font-black tabular-nums"
             style={{ color: PLACE[r.rank], borderColor: `${PLACE[r.rank]}55` }}><span className="sr-only">Rank </span>{r.rank}</span>
-          <Avatar name={r.name} size={40} />
+          <Avatar r={r} size={40} />
           <div className="min-w-0 flex-1">
-            <p className="truncate text-sm font-black text-text-primary" title={r.name}>{r.name}</p>
-            <p className="truncate text-xs text-text-secondary">{r.role} · Level {r.level}</p>
+            <p className="truncate text-sm font-black text-text-primary" title={r.name}>{r.name}{r.isUser && <span className="ml-1.5 text-xs font-bold text-accent-text">(you)</span>}</p>
+            {titleMeta(r.shopEquipped?.title)
+              ? <p className="truncate text-[11px] font-bold" style={{ color: titleMeta(r.shopEquipped.title).color }}>{titleMeta(r.shopEquipped.title).label} · Level {r.level}</p>
+              : <p className="truncate text-xs text-text-secondary">{r.roleLabel || r.role} · Level {r.level}</p>}
           </div>
           <p className="shrink-0 text-right text-sm font-black tabular-nums text-text-primary">{n(r.xp)}<span className="block text-[11px] font-semibold text-text-secondary">XP</span></p>
         </li>
@@ -68,12 +91,59 @@ function Podium({ rows }) {
   );
 }
 
+// Slide every row / podium card from where it was to where it is now (FLIP). Places are read with offsetTop / offsetLeft,
+// so scrolling between two answers does not count as a move. `view` changes with the filters: a new view never animates.
+function useSlide(ref, rows, view) {
+  const seen = useRef({ view: null, at: new Map() });
+  useLayoutEffect(() => {
+    const root = ref.current;
+    if (!root) return;
+    const calm = seen.current.view !== view || window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+    const at = new Map();
+    for (const mark of root.querySelectorAll("[data-uid]")) {
+      const el = mark.closest("tr") ?? mark.closest("li");
+      if (!el) continue;
+      const key = `${el.tagName}:${mark.dataset.uid}`, now = { x: el.offsetLeft, y: el.offsetTop }, was = seen.current.at.get(key);
+      at.set(key, now);
+      if (calm || !was || (was.x === now.x && was.y === now.y) || !el.animate) continue;
+      el.dataset.moved = was.y > now.y || was.x > now.x ? "up" : "down";
+      el.animate([{ transform: `translate(${was.x - now.x}px, ${was.y - now.y}px)` }, { transform: "none" }], { duration: 520, easing: "cubic-bezier(0.16, 1, 0.3, 1)" });
+    }
+    seen.current = { view, at };
+  }, [ref, rows, view]);
+}
+
 export default function LeaderboardPage() {
   const [sp, setSp] = useSearchParams();
   const scope = sp.get("scope") ?? "", period = sp.get("period") ?? "all", projectId = sp.get("project") ?? "";
   const q = new URLSearchParams({ ...(scope && { scope }), period, ...(projectId && { projectId }) });
-  const { data, error, loading, reload } = useLoad(`/api/gamification/leaderboard?${q}`);
-  const rows = data?.rows ?? [];
+  const url = `/api/gamification/leaderboard?${q}`;
+  const { data, error, loading, reload, setData } = useLoad(url);
+  const rows = useMemo(() => data?.rows ?? [], [data]);
+  const [moved, setMoved] = useState("");   // spoken once after a live re-rank
+  const [, setStyles] = useState(0);        // re-render when the extra avatar styles have loaded
+  const board = useRef(null);
+  const last = useRef({ url: null, rows: [] });
+  useEffect(() => { last.current = { url, rows }; }, [url, rows]);
+  useSlide(board, rows, url);
+
+  // Live: re-read quietly (no skeleton) and keep the old answer when nothing moved.
+  const live = useCallback(async () => {
+    const asked = url;
+    const next = await api.get(asked, { silent: true }).catch(() => null);
+    if (!next || last.current.url !== asked) return;
+    const before = last.current.rows, me = next.rows.find((r) => r.isUser), m = me ? myMove(before, next.rows, me.userId) : null;
+    if (m) setMoved(`You moved ${m.dir} ${m.by} ${m.by === 1 ? "place" : "places"}. You are now #${m.rank}.`);
+    else if (!sameOrder(before, next.rows)) setMoved("The ranking changed.");
+    setData(next);
+  }, [url, setData]);
+  useEffect(() => {
+    const events = ["leaderboard:changed", "xp:awarded"];
+    events.forEach((e) => socket.on(e, live));
+    return () => events.forEach((e) => socket.off(e, live));
+  }, [live]);
+  const fancy = rows.some((r) => r.avatar && r.avatar.style !== "bottts");
+  useEffect(() => { if (fancy) loadAvatarStyles().then(() => setStyles((n) => n + 1)).catch(() => {}); }, [fancy]);
   const pick = (id) => { const next = new URLSearchParams(sp); if (id) next.set("project", id); else next.delete("project"); setSp(next, { replace: true }); };
 
   const columns = [
@@ -103,6 +173,7 @@ export default function LeaderboardPage() {
         )}
       </div>
 
+      {!error && <LeaderboardLine query={q.toString()} />}
       {error ? <ErrorState message={error} onRetry={reload} /> : loading && !data ? (
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">{[0, 1, 2].map((i) => <Skeleton key={i} className="h-20 rounded-2xl" />)}</div>
       ) : !data?.enough ? (
@@ -111,7 +182,8 @@ export default function LeaderboardPage() {
             body={rows.length === 1 ? "Only one person is in this view. A leaderboard needs at least two." : "Nobody in this view earns XP yet. Try another scope."}
             action={data?.scopes?.length > 1 && data.scope !== data.scopes[0] ? { label: `Show ${SCOPE_LABEL[data.scopes[0]]}`, to: "?" } : undefined} />
         </Panel>
-      ) : (<>
+      ) : (<div ref={board} className="flex flex-col gap-6">
+        <p role="status" aria-live="polite" className="sr-only">{moved}</p>
         <Panel title="Summary" icon={Gauge}>
           <div className="grid grid-cols-1 divide-y divide-ink/[0.05] sm:grid-cols-3 sm:divide-x sm:divide-y-0">
             <StatCard label="Top performer" icon={Trophy} color="#8A6100" value={data.meta.topPerformer ? <span className="block max-w-[16rem] truncate" title={data.meta.topPerformer.name}>{data.meta.topPerformer.name}</span> : null}
@@ -121,8 +193,9 @@ export default function LeaderboardPage() {
           </div>
         </Panel>
         <Podium rows={rows} />
-        <DataTable label="Leaderboard" columns={columns} rows={rows} rowKey={(r) => r.userId} total={rows.length} pageSize={Math.max(rows.length, 1)} loading={loading} />
-      </>)}
+        <DataTable label="Leaderboard" columns={columns} rows={rows} rowKey={(r) => r.userId} total={rows.length} pageSize={Math.max(rows.length, 1)} loading={loading}
+          rowClassName={(r) => (r.isUser ? "bg-accent/[0.06] hover:bg-accent/[0.09]" : "")} />
+      </div>)}
     </Page>
   );
 }

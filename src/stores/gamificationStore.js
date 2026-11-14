@@ -6,12 +6,15 @@ import api from "@/lib/api";
 const useGamificationStore = create((set) => ({
   // ── Current player ────────────────────────────────────────────────────────
   currentUser: {
-    level:     1,
-    currentXp: 0,
-    maxXp:     100,
-    gold:      0,
-    hp:        100,
-    streak:    0,
+    level:         1,
+    currentXp:     0,
+    maxXp:         100,
+    gold:          0,
+    hp:            100,
+    streak:        0,
+    freezeCount:   0,
+    ownedCosmetics: [],
+    shopEquipped:  {},
     streaks: {
       daily:   0,
       quality: 0,

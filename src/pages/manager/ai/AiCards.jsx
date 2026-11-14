@@ -7,6 +7,7 @@ import { Link } from "react-router-dom";
 import { Sparkles, RefreshCw, Lightbulb } from "lucide-react";
 import api from "@/lib/api";
 import useUiStore from "@/stores/uiStore";
+import useAuthStore from "@/stores/authStore";
 import Panel from "@/components/ui/Panel";
 import Drawer from "@/components/ui/Drawer";
 import ConfirmModal from "@/components/ui/ConfirmModal";
@@ -37,8 +38,10 @@ export function InsightCard({ base = "/api/manager", feature = "mgr_insight", pl
   const [whyOpen, setWhyOpen] = useState(false);
   const [dismissed, setDismissed] = useState(false);
   const { run } = call;
+  const isViewAs = useAuthStore((s) => !!s.viewAs);
   const [aiOff, setAiOff] = useState(false);
   useEffect(() => {
+    if (isViewAs) return undefined; // AI is off in View as: no calls (the server answers 403)
     let live = true;
     (async () => {
       if (checkFirst) {
@@ -50,7 +53,7 @@ export function InsightCard({ base = "/api/manager", feature = "mgr_insight", pl
       if (live && d) setDismissed(!!d.dismissed);
     })();
     return () => { live = false; };
-  }, [run, base, checkFirst]);
+  }, [run, base, checkFirst, isViewAs]);
   const d = call.data, ins = d?.insight;
 
   async function dismiss(undo = false) {
@@ -62,7 +65,7 @@ export function InsightCard({ base = "/api/manager", feature = "mgr_insight", pl
   }
 
   if (call.status === "done" && dismissed) return null;
-  if (aiOff) return <Panel title="AI insight" icon={Lightbulb} delay={0.08}><p className="px-5 py-4 text-sm text-text-secondary">AI is not configured. Everything else works as usual.</p></Panel>;
+  if (aiOff || isViewAs) return <Panel title="AI insight" icon={Lightbulb} delay={0.08}><p className="px-5 py-4 text-sm text-text-secondary">AI is not configured. Everything else works as usual.</p></Panel>;
   return (
     <Panel title="AI insight" icon={Lightbulb} delay={0.08}
       action={call.status === "done" ? { label: "Refresh", onClick: () => { setDismissed(false); run("get", `${base}/ai/insight?refresh=1`); } } : undefined}>

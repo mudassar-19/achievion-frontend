@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import { Loader2 } from "lucide-react";
 import MultiStepAuthLayout from "@/components/layout/MultiStepAuthLayout";
@@ -149,10 +149,13 @@ export default function OrgStep3() {
           )}
         </motion.div>
 
-        <motion.div variants={itemVariants} className="w-full">
+        <motion.div variants={itemVariants} className="w-full flex flex-col gap-3">
           <Button variant="primary" size="md" className="w-full" onClick={handleGoToLogin}>
             Go to Admin Login →
           </Button>
+          <Link to="/" className="text-xs text-center text-text-disabled hover:text-text-secondary transition-colors block">
+            ← Back to home
+          </Link>
         </motion.div>
       </motion.div>
     </MultiStepAuthLayout>

@@ -19,7 +19,7 @@ export default defineConfig({
     // Proxy API calls to a future backend
     proxy: {
       "/api": {
-        target: "http://localhost:3001",
+        target: process.env.VITE_API_TARGET || "http://localhost:3001",
         changeOrigin: true,
         secure: false,
       },

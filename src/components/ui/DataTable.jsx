@@ -8,11 +8,11 @@ import { BTN } from "./buttons";
  * pagination (server pages of 25), and the 3 states.
  * columns: [{ key, label, sortable?, render?(row), className? }]
  * sort: { key, dir: "asc"|"desc" }, onSort(key) · page, total, pageSize, onPage(n)
- * onRowClick(row) · rowActions(row) → [{ label, icon, onClick }] (max 2)
+ * rowClassName(row) → extra classes for that row (optional) · onRowClick(row) · rowActions(row) → [{ label, icon, onClick }] (max 2)
  * empty: node shown when there are no rows · loading · error + onRetry
  */
 export default function DataTable({ label, columns, rows, rowKey = (r) => r.id, sort, onSort, page = 1, total = 0, pageSize = 25, onPage,
-  onRowClick, rowActions, empty, loading, error, onRetry }) {
+  onRowClick, rowActions, rowClassName, empty, loading, error, onRetry }) {
   if (error) return <ErrorState message={error} onRetry={onRetry} />;
   const pages = Math.max(1, Math.ceil(total / pageSize));
   const from = total ? (page - 1) * pageSize + 1 : 0, to = Math.min(page * pageSize, total);
@@ -50,7 +50,7 @@ export default function DataTable({ label, columns, rows, rowKey = (r) => r.id, 
               <tr key={rowKey(r)} onClick={onRowClick ? () => onRowClick(r) : undefined}
                 tabIndex={onRowClick ? 0 : undefined}
                 onKeyDown={onRowClick ? (e) => { if (e.key === "Enter" && e.target === e.currentTarget) onRowClick(r); } : undefined}
-                className={`group border-b border-ink/[0.04] transition-colors hover:bg-ink/[0.03] focus-within:bg-ink/[0.03] ${onRowClick ? "cursor-pointer" : ""}`}>
+                className={`group border-b border-ink/[0.04] transition-colors hover:bg-ink/[0.03] focus-within:bg-ink/[0.03] ${onRowClick ? "cursor-pointer" : ""} ${rowClassName?.(r) ?? ""}`}>
                 {columns.map((c) => <td key={c.key} className={`px-4 py-3 align-middle break-words ${c.className ?? ""}`}>{c.render ? c.render(r) : r[c.key]}</td>)}
                 {rowActions && (
                   <td className="whitespace-nowrap px-3 py-2 text-right" onClick={(e) => e.stopPropagation()}>

@@ -315,12 +315,12 @@ export default function TitlesPage() {
       )}
 
       {/* Category tabs */}
-      <div className="flex flex-wrap gap-1 p-1 rounded-xl bg-ink/[0.03] border border-ink/[0.06] w-fit">
+      <div className="flex gap-1 p-1 rounded-xl bg-ink/[0.03] border border-ink/[0.06] overflow-x-auto max-w-full">
         {CATEGORY_TABS.map(({ key, label, icon: Icon }) => (
           <button
             key={key}
             onClick={() => setTab(key)}
-            className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-[14px] font-black transition-all duration-200"
+            className="flex shrink-0 items-center gap-1.5 px-2 sm:px-4 py-2 rounded-lg text-xs sm:text-[14px] font-black transition-all duration-200"
             style={tab === key
               ? { background: theme.accent, color: "var(--on-accent)", boxShadow: "var(--shadow-1)" }
               : { color: "#4F5B75" }}
@@ -334,7 +334,7 @@ export default function TitlesPage() {
       {/* Unlock rule notice */}
       <motion.div
         initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.25 }}
-        className="flex items-center gap-2 text-[14px] text-slate-600 border border-ink/[0.05] rounded-xl px-4 py-2.5 w-fit"
+        className="flex items-start gap-2 text-[14px] text-slate-600 border border-ink/[0.05] rounded-xl px-4 py-2.5"
         style={{ background: "rgba(20,32,61,0.02)" }}
       >
         <Crown size={10} style={{ color: theme.text }} />

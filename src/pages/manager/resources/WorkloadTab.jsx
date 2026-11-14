@@ -1,5 +1,6 @@
 // Resources → Workload (UX §7). Replaces Workforce + Availability + Team Overview with one table.
 // Numbers come from the workload engine (D-072); filters live in the URL; ?member=<id> opens the drawer.
+import LastSeen from "@/components/ui/LastSeen";
 import { useSearchParams } from "react-router-dom";
 import { AlertTriangle } from "lucide-react";
 import DataTable from "@/components/ui/DataTable";
@@ -25,7 +26,7 @@ export default function WorkloadTab({ data, error, reload, roleOptions = ROLES, 
   const over = (data?.members ?? []).filter((m) => m.status === "Overloaded").length;
 
   const columns = [
-    { key: "name", label: "Member", className: "min-w-[180px]", render: (m) => <span className="font-bold text-text-primary">{m.name}</span> },
+    { key: "name", label: "Member", className: "min-w-[180px]", render: (m) => <span className="flex flex-col"><span className="font-bold text-text-primary">{m.name}</span><LastSeen at={m.lastSeenAt} /></span> },
     { key: "role", label: "Role", className: "whitespace-nowrap text-text-secondary", render: (m) => m.role },
     { key: "active", label: "Active tasks", className: "tabular-nums", render: (m) => m.activeTasks },
     { key: "due", label: "Due this week", className: "tabular-nums", render: (m) => m.dueThisWeek },

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import MultiStepAuthLayout from "@/components/layout/MultiStepAuthLayout";
 import Input from "@/components/ui/Input";
@@ -109,6 +109,18 @@ export default function OrgStep1() {
           <Button type="submit" variant="primary" size="md" className="w-full">
             Register Workspace →
           </Button>
+        </motion.div>
+
+        <motion.div variants={itemVariants} className="flex flex-col items-center gap-2 pt-2">
+          <p className="text-xs text-text-secondary">
+            Already have a workspace?{" "}
+            <Link to="/login" className="font-semibold text-accent-text hover:underline">
+              Log in
+            </Link>
+          </p>
+          <Link to="/" className="text-xs text-text-disabled hover:text-text-secondary transition-colors">
+            ← Back to home
+          </Link>
         </motion.div>
       </motion.form>
     </MultiStepAuthLayout>

@@ -419,7 +419,6 @@ export default function OperationsHubPage() {
     }
   }, []);
 
-  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => { loadData(); }, [loadData]);
 
   // Poll every 90 seconds for live feel

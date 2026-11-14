@@ -1,10 +1,10 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Sparkles, X, Send, RefreshCw, BookOpen, ChevronRight } from "lucide-react";
+import { Sparkles, X, Send, RefreshCw, BookOpen, ChevronRight, ExternalLink } from "lucide-react";
 import Tally from "@/components/ui/Tally";
 import api from "@/lib/api";
 
-export const AI_W = 360;
+export const AI_W = 420;
 
 // Director colours by default. Another portal passes accent="var(--accent)" and the tints follow its token.
 const DIRECTOR = "#4B2FC4";
@@ -132,7 +132,7 @@ function TypingBubble({ tint = tintOf(DIRECTOR) }) {
  */
 export default function AiPanel({
   open, onClose, topOffset = 60, context = "Org",
-  accent = DIRECTOR, chip, headerActions, top, quickPrompts: quickOverride, welcome, placeholder, footer,
+  accent = DIRECTOR, chip, headerActions, fullScreenPath, top, quickPrompts: quickOverride, welcome, placeholder, footer,
   configured: configuredProp, offMessage, onAsk, renderMeta, resetKey, initialMessages, inputDisabled = false,
 }) {
   const tint = tintOf(accent);
@@ -281,6 +281,16 @@ export default function AiPanel({
             </div>
             <div className="flex shrink-0 items-center gap-0.5">
               {headerActions}
+              {fullScreenPath && (
+                <a
+                  href={fullScreenPath}
+                  title="Open full screen"
+                  aria-label="Open AI full screen"
+                  className="h-7 w-7 rounded-lg flex items-center justify-center text-slate-400 hover:bg-ink/[0.06] hover:text-text-primary transition-colors"
+                >
+                  <ExternalLink size={12} strokeWidth={2} />
+                </a>
+              )}
               <button
                 type="button"
                 onClick={onClose}

@@ -426,10 +426,10 @@ export default function AuditLogPage() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(()=>{ setTimeout(()=>load(page,category,search),0); }, [page,category]);
 
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(()=>{
     const t = setTimeout(()=>{ setPage(1); load(1,category,search); }, 350);
     return ()=>clearTimeout(t);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [search]);
 
   function handleCategory(key) { setCategory(key); setPage(1); }

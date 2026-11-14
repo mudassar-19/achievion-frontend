@@ -6,6 +6,7 @@ import useAuthStore from "@/stores/authStore";
 import useNotificationStore, { notifRedirectPath } from "@/stores/notificationStore";
 import PortalShell, { D_TOPBAR_H } from "./PortalShell";
 import ManagerAiPanel from "./ManagerAiPanel";
+import { ViewAsMenu } from "./ViewAs";
 import { BarChart3, Zap, Megaphone, LayoutDashboard, Layers, ListChecks, ClipboardCheck, Users, Timer, Trophy, MessageSquare, Settings, User, SlidersHorizontal } from "lucide-react";
 
 const NAV = [
@@ -38,6 +39,7 @@ const CFG = {
     { icon: User,              label: "Profile",     to: "/teamlead/profile" },
     { icon: SlidersHorizontal, label: "Preferences", to: "/teamlead/settings" },
   ],
+  topbarExtra: <ViewAsMenu />,
   notificationsPath: "/teamlead/notifications",
   notifLabel: (n) => n.title || n.type,
   notifTarget: (n) => {

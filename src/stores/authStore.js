@@ -28,6 +28,7 @@ function mapApiUser(apiUser) {
     username:     apiUser.name,
     email:        apiUser.email,
     role:         apiUser.role,
+    roleLabel:    apiUser.roleLabel    ?? null,
     roleCategory: apiUser.roleCategory ?? null,
     department:   apiUser.department   ?? null,
     orgName:      apiUser.orgName      ?? null,

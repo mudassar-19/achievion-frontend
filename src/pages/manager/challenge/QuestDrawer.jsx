@@ -10,7 +10,7 @@ import { fmt } from "../project/format";
 const ERR = "text-xs font-semibold text-[#B01F17]";
 const today = () => new Date().toISOString().slice(0, 10);
 const blank = () => ({ title: "", description: "", type: "custom", repeat: false, sprintId: "", metric: "tasks_completed", target: "5", scope: "organisation",
-  refKind: "project", refId: "", rewardXp: "100", rewardGold: "0", startDate: today(), deadline: "" });
+  refKind: "project", refId: "", rewardXp: "100", rewardGold: "0", rewardBadgeId: "", startDate: today(), deadline: "" });
 const day = (d) => (d ? new Date(d).toISOString().slice(0, 10) : "");
 
 // Same windows as the server (questRules.periodFor), shown as a hint.
@@ -48,7 +48,7 @@ export default function QuestDrawer({ open, onClose, quest = null, onSaved, draf
     setErrors({}); setOptsError(null); // eslint-disable-line react-hooks/set-state-in-effect
     setForm(quest ? { title: quest.title, description: quest.description ?? "", type: quest.type, repeat: quest.repeat, sprintId: quest.sprintId ?? "", metric: quest.metric,
       target: String(quest.target), scope: quest.scope, refKind: quest.scopeRef?.kind === "team" ? "team" : "project", refId: quest.scopeRef?.id ?? "",
-      rewardXp: String(quest.rewardXp), rewardGold: String(quest.rewardGold), startDate: day(quest.startDate) || today(), deadline: day(quest.deadline) }
+      rewardXp: String(quest.rewardXp), rewardGold: String(quest.rewardGold), rewardBadgeId: quest.rewardBadgeId ?? "", startDate: day(quest.startDate) || today(), deadline: day(quest.deadline) }
       : draft ? { ...blank(), title: draft.title, description: draft.description ?? "", type: draft.type, metric: draft.metric, target: String(draft.target), rewardXp: String(draft.rewardXp),
         deadline: draft.type === "custom" ? new Date(Date.now() + 7 * 864e5).toISOString().slice(0, 10) : "" } : blank());
     if (!opts) api.get("/api/manager/quests/options").then(setOpts).catch((e) => setOptsError(e?.message ?? "Options could not be loaded."));
@@ -83,9 +83,9 @@ export default function QuestDrawer({ open, onClose, quest = null, onSaved, draf
         title: form.title.trim(), description: form.description.trim(), type: form.type, repeat: ["daily", "weekly"].includes(form.type) && form.repeat,
         sprintId: form.type === "sprint" ? form.sprintId : null, metric: form.metric, target: Number(form.target), scope: form.scope,
         scopeRef: form.scope === "organisation" ? null : { kind: form.scope === "individual" ? "user" : form.refKind, id: form.refId },
-        rewardXp: Number(form.rewardXp), rewardGold: Number(form.rewardGold || 0), startDate: form.startDate, deadline: form.type === "custom" ? form.deadline : undefined,
+        rewardXp: Number(form.rewardXp), rewardGold: Number(form.rewardGold || 0), rewardBadgeId: form.rewardBadgeId || null, startDate: form.startDate, deadline: form.type === "custom" ? form.deadline : undefined,
       };
-      const r = quest ? await api.patch(`/api/manager/quests/${quest.id}`, body) : await api.post("/api/manager/quests", body);
+      const r = quest ? await api.patch(`/api/manager/quests/${quest.id}`, body) : await api.post("/api/manager/quests", { ...body, aiDraft: !!draft }); // Batch 3: an AI-made quest enrols people automatically (UC-17)
       onSaved(r, !quest); onClose();
     } catch (err) { setErrors(err?.data?.fields ?? { form: err?.message ?? "The challenge could not be saved." }); }
     finally { setBusy(false); }
@@ -188,6 +188,17 @@ export default function QuestDrawer({ open, onClose, quest = null, onSaved, draf
             <span className={errors.rewardGold ? ERR : "text-xs font-normal text-text-secondary"}>{errors.rewardGold ?? `Up to ${cap.gold}`}</span>
           </label>
         </div>
+        {!locked && opts?.badges?.length > 0 && (
+          <label htmlFor="qd-rewardBadgeId" className={lbl}>Badge reward <span className="text-xs font-normal text-text-secondary">(optional)</span>
+            <select id="qd-rewardBadgeId" value={form.rewardBadgeId} onChange={(e) => set("rewardBadgeId", e.target.value)} className={`${field} bg-bg-surface border border-ink/[0.08]`}>
+              <option value="">— None —</option>
+              {opts.badges.map((b) => (
+                <option key={b.id} value={b.id}>{b.name} ({b.rarity})</option>
+              ))}
+            </select>
+            {errors.rewardBadgeId && <span className={ERR}>{errors.rewardBadgeId}</span>}
+          </label>
+        )}
         <p className="text-xs text-text-secondary">The reward goes through the normal XP system once a person reaches the target. If the challenge expires, nobody loses anything.</p>
       </div>
     </Drawer>
