@@ -156,7 +156,7 @@ export default function CreateEmployee() {
   const [customRoles, setCustomRoles] = useState([]);
 
   useEffect(() => {
-    api.get("/api/director/settings/custom-roles")
+    api.get("/api/org/custom-roles")
       .then((d) => setCustomRoles((d?.customRoles ?? []).filter((r) => r.active)))
       .catch(() => {});
   }, []);
@@ -171,7 +171,7 @@ export default function CreateEmployee() {
     const errs = {};
     if (!form.name.trim())  errs.name  = "Full name is required.";
     if (!form.email.trim()) errs.email = "Email is required.";
-    else if (!/\S+@\S+\.\S+/.test(form.email)) errs.email = "Enter a valid email.";
+    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) errs.email = "Enter a valid email.";
     const allRoles = [...BUILTIN_ROLES, ...customRoles.map((r) => r.label)];
     if (!form.role || !allRoles.includes(form.role)) errs.role = "Select a valid role.";
     return errs;

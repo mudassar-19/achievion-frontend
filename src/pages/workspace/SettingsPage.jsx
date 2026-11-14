@@ -75,7 +75,8 @@ function SecuritySection() {
     if (f.next !== f.confirm) return setErr("The two new passwords are not the same.");
     setErr(""); setBusy(true);
     try {
-      await api.patch("/api/auth/password", { currentPassword: f.current, newPassword: f.next });
+      const data = await api.patch("/api/auth/password", { currentPassword: f.current, newPassword: f.next });
+      if (data?.token) setToken(data.token);
       setF({ current: "", next: "", confirm: "" });
       addToast({ type: "success", message: "Password updated." });
     } catch (e2) { setErr(e2.message ?? "Password change failed."); } finally { setBusy(false); }
@@ -173,8 +174,9 @@ function CelebrationSettings() {
 }
 
 export default function SettingsPage() {
-  const user = useAuthStore((s) => s.user);
-  const setUser = useAuthStore((s) => s.setUser);
+  const user     = useAuthStore((s) => s.user);
+  const setUser  = useAuthStore((s) => s.setUser);
+  const setToken = useAuthStore((s) => s.setToken);
   const addToast = useUiStore((s) => s.addToast);
   const [active, setActive] = useState("account");
   const [opts, setOpts] = useState(null);

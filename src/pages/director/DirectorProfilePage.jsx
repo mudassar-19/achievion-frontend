@@ -244,7 +244,8 @@ function SecurityTab({ user }) {
     if (!canSave) return;
     setSaving(true);
     try {
-      await api.patch("/api/auth/password", { currentPassword: current, newPassword: newPw });
+      const data = await api.patch("/api/auth/password", { currentPassword: current, newPassword: newPw });
+      if (data?.token) setToken(data.token);
       addToast({ type: "success", message: "Password updated." });
       setCurrent(""); setNewPw(""); setConfirm("");
     } catch (err) {
@@ -421,8 +422,9 @@ function SecurityTab({ user }) {
 
 // ── DirectorProfilePage ───────────────────────────────────────────────────────
 export default function DirectorProfilePage() {
-  const user    = useAuthStore((s) => s.user);
-  const setUser = useAuthStore((s) => s.setUser);
+  const user     = useAuthStore((s) => s.user);
+  const setUser  = useAuthStore((s) => s.setUser);
+  const setToken = useAuthStore((s) => s.setToken);
 
   const [data,      setData]     = useState(null);
   const [loading,   setLoading]  = useState(true);
