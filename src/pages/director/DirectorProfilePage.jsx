@@ -228,6 +228,7 @@ function pwStrength(pw) {
 // ── Security tab ─────────────────────────────────────────────────────────────
 function SecurityTab({ user }) {
   const addToast = useUiStore((s) => s.addToast);
+  const setToken = useAuthStore((s) => s.setToken);
   const [current,  setCurrent]  = useState("");
   const [newPw,    setNewPw]    = useState("");
   const [confirm,  setConfirm]  = useState("");

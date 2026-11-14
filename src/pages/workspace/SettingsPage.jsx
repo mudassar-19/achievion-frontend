@@ -60,6 +60,7 @@ const Heading = ({ title, sub }) => (
 // ── Security: password + sessions (own buttons; nothing for the save bar) ────────
 function SecuritySection() {
   const addToast = useUiStore((s) => s.addToast);
+  const setToken = useAuthStore((s) => s.setToken);
   const [f, setF] = useState({ current: "", next: "", confirm: "" });
   const [show, setShow] = useState(false);
   const [err, setErr] = useState("");
