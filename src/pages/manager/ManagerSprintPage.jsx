@@ -46,7 +46,7 @@ function CloseChoice({ sprint, choice, setChoice, nextId, setNextId }) {
 }
 
 // T-5 (D-143): the Team Lead uses this same page with their own API and links (TLSprintPage).
-export default function ManagerSprintPage({ base = "/api/manager", root = "/manager", projectLink = (id) => `/manager/projects/${id}?tab=sprints`, notFound = "This sprint does not exist or is not in your organisation.", isLead = false }) {
+export default function ManagerSprintPage({ base = "/api/manager", root = "/manager", projectLink = (id) => `/manager/projects/${id}?tab=sprints`, notFound = "This sprint does not exist or is not in your organization.", isLead = false }) {
   const { id } = useParams();
   const navigate = useNavigate();
   const addToast = useUiStore((s) => s.addToast);

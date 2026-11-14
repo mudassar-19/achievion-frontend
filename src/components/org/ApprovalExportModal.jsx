@@ -98,7 +98,7 @@ function generatePDF(approvals, orgName, start, end) {
   doc.setFontSize(10);
   doc.setTextColor(40, 45, 70);
   doc.setFont("helvetica", "bold");
-  doc.text("Organisation:", 14, 30);
+  doc.text("Organization:", 14, 30);
   doc.setFont("helvetica", "normal");
   doc.text(orgName, 45, 30);
 

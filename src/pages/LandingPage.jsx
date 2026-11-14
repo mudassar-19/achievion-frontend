@@ -206,7 +206,7 @@ export default function LandingPage() {
               <FadeUpItem>
                 <Link to="/register/step-1">
                   <Button variant="primary" size="lg">
-                    Create Your Organisation
+                    Create Your Organization
                     <ArrowRight size={16} strokeWidth={2.5} />
                   </Button>
                 </Link>
@@ -402,7 +402,7 @@ export default function LandingPage() {
           </FadeUpItem>
           <FadeUpItem>
             <p className="text-slate-400 text-lg max-w-xl">
-              Set up your organisation in under 5 minutes. Your team will be earning XP before the next standup.
+              Set up your organization in under 5 minutes. Your team will be earning XP before the next standup.
             </p>
           </FadeUpItem>
           <FadeUpItem className="flex flex-col sm:flex-row gap-4">

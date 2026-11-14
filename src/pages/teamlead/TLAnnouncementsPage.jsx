@@ -21,7 +21,7 @@ export default function TLAnnouncementsPage() {
   if (error) return <Page><ErrorState message={error} onRetry={reload} /></Page>;
   return (
     <Page>
-      <PageHeader title="Announcements" subtitle={data?.unread ? `${data.unread} unread` : "News from your Manager and organisation. Read only."}
+      <PageHeader title="Announcements" subtitle={data?.unread ? `${data.unread} unread` : "News from your Manager and organization. Read only."}
         secondary={data?.unread ? { label: "Mark all as read", onClick: () => mark(null) } : undefined} />
       {!data ? <div aria-busy="true" aria-label="Loading announcements" className="flex flex-col gap-3">{[0, 1, 2].map((i) => <Skeleton key={i} className="h-20 rounded-2xl" />)}</div>
         : !data.items.length ? <EmptyState heading="No announcements yet" body="When your Manager posts one, it shows here." action={{ label: "Open Collaboration", to: "/teamlead/chat" }} />

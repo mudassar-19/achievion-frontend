@@ -376,7 +376,7 @@ export default function ProjectDetailPage() {
                 </span>
               )}
               {project.visibility === "org_wide"
-                ? <Globe size={13} className="text-slate-500" title="Organisation Wide" />
+                ? <Globe size={13} className="text-slate-500" title="Organization Wide" />
                 : <Lock  size={13} className="text-slate-500" title="Team Only" />
               }
               {project.isFrozen && (

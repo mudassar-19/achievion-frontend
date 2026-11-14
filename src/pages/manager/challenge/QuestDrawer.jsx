@@ -166,7 +166,7 @@ export default function QuestDrawer({ open, onClose, quest = null, onSaved, draf
 
         <fieldset className="flex flex-col gap-2" disabled={locked}>
           <legend className="mb-1.5 font-bold text-text-primary">Who takes part</legend>
-          <Seg name="qd-scope" value={form.scope} disabled={locked} onChange={(v) => { set("scope", v); set("refId", ""); }} options={[["individual", "One person"], ["team", "Team"], ["organisation", "Whole organisation"]]} />
+          <Seg name="qd-scope" value={form.scope} disabled={locked} onChange={(v) => { set("scope", v); set("refId", ""); }} options={[["individual", "One person"], ["team", "Team"], ["organisation", "Whole organization"]]} />
           {form.scope === "team" && <Seg name="qd-refkind" value={form.refKind} disabled={locked} onChange={(v) => { set("refKind", v); set("refId", ""); }} options={[["project", "A project's team"], ["team", "A team"]]} />}
           {form.scope !== "organisation" && (
             <select id="qd-scopeRef" aria-label={form.scope === "individual" ? "Person" : form.refKind === "team" ? "Team" : "Project"} value={form.refId} onChange={(e) => set("refId", e.target.value)}

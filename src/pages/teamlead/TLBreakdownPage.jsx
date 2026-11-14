@@ -365,7 +365,7 @@ export default function TLBreakdownPage() {
                       <Link to={`${moduleLink}${moduleLink.includes("?") ? "&" : "?"}request=person`} className={BTN.ghost}>Ask your Manager for another person</Link>
                     </div>
                   )}
-                  <p className="text-[11px] text-text-secondary">Numbers come from the workload engine: working days and hours of your organisation, minus each person's current work.</p>
+                  <p className="text-[11px] text-text-secondary">Numbers come from the workload engine: working days and hours of your organization, minus each person's current work.</p>
                 </>
               )}
             </div>

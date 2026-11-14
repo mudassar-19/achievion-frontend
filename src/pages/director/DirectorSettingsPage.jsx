@@ -851,7 +851,7 @@ function BookingsSectionDirector({ addToast }) {
         <p className="text-xs text-slate-500 mt-0.5">View active bookings by asset. Select an asset to see its schedule.</p>
       </div>
       {assets.length === 0 ? (
-        <p className="text-xs text-slate-400 py-4 text-center">No assets in this organisation yet.</p>
+        <p className="text-xs text-slate-400 py-4 text-center">No assets in this organization yet.</p>
       ) : (
         <div className="flex flex-col gap-1.5">
           {assets.map((a) => (

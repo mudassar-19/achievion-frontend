@@ -96,7 +96,7 @@ export default function ManagerProjectDetailPage() {
   if (error) return (
     <Page>
       {error.status === 404
-        ? <EmptyState heading="This project does not exist or is not in your organisation." action={{ label: "Back to projects", to: "/manager/projects" }} />
+        ? <EmptyState heading="This project does not exist or is not in your organization." action={{ label: "Back to projects", to: "/manager/projects" }} />
         : <ErrorState message={error.message} onRetry={() => load()} />}
     </Page>
   );

@@ -1245,7 +1245,7 @@ export default function CreateProjectPage() {
                   <div className="grid grid-cols-2 gap-3">
                     {[
                       { val: "team_only", label: "Team Only",        desc: "Only assigned team members can view project details and activity." },
-                      { val: "org_wide",  label: "Organisation Wide", desc: "All members across the organisation can view this project." },
+                      { val: "org_wide",  label: "Organization Wide", desc: "All members across the organization can view this project." },
                     ].map(({ val, label, desc }) => (
                       <button
                         key={val}

@@ -330,7 +330,7 @@ export default function AiPanel({
                     <div className="flex items-start gap-2.5">
                       <Tally pose="idle" size={32} />
                       <div className="rounded-2xl rounded-bl-sm border border-ink/[0.08] bg-white px-3.5 py-2.5 text-xs text-text-secondary leading-relaxed max-w-[240px]">
-                        {welcome ?? "Hi! Ask me anything about your organisation — projects, goals, risks, or reports."}
+                        {welcome ?? "Hi! Ask me anything about your organization — projects, goals, risks, or reports."}
                       </div>
                     </div>
                     <div className="flex flex-col gap-1.5 pl-10">

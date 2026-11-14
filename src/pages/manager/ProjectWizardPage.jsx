@@ -316,7 +316,7 @@ export default function ProjectWizardPage() {
                     {teamLeads.map((p) => <option key={p.id} value={p.id}>{p.name}{p.availability ? ` (${p.availability})` : ""}</option>)}
                   </select>
                 </div>
-              )) : <p className="text-sm font-semibold text-[#B01F17]">Your organisation has no Team Lead yet. Ask the Director to add one.</p>}
+              )) : <p className="text-sm font-semibold text-[#B01F17]">Your organization has no Team Lead yet. Ask the Director to add one.</p>}
               {errors.teamLeadId && <p className="text-xs font-semibold text-[#B01F17]">{errors.teamLeadId}</p>}
             </fieldset>
             <fieldset>

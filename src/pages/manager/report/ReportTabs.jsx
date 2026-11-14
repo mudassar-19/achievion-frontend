@@ -247,7 +247,7 @@ export function WellbeingTab({ query, hasProject }) {
               {CHART.tiers.map(([k, label, color]) => <li key={k} className="flex items-center gap-1.5"><span className="h-2 w-2 rounded-full" style={{ background: color }} aria-hidden="true" />{label}</li>)}
             </ul>
           </ChartPanel>
-          {hasProject && <p className="-mt-3 text-xs text-text-secondary">The trend covers the whole organisation.</p>}
+          {hasProject && <p className="-mt-3 text-xs text-text-secondary">The trend covers the whole organization.</p>}
         </>
       );
     }}</Guard>

@@ -90,7 +90,7 @@ export default function OrgLoginPage() {
           </span>
           <div className="flex flex-col gap-0.5">
             <h1 className="text-2xl font-black text-text-primary tracking-tight">Software House Login</h1>
-            <p className="text-sm text-text-secondary">Sign in to your organisation admin panel.</p>
+            <p className="text-sm text-text-secondary">Sign in to your organization admin panel.</p>
           </div>
         </div>
 
@@ -167,7 +167,7 @@ export default function OrgLoginPage() {
           </Link>
           {" · "}
           <Link to="/register/step-1" className="text-purple-DEFAULT hover:text-purple-400 font-medium transition-colors">
-            Register organisation
+            Register organization
           </Link>
         </p>
       </div>

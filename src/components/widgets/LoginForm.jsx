@@ -345,7 +345,7 @@ export default function LoginForm() {
 
       {/* Footer */}
       <motion.p variants={itemVariants} className="text-center text-xs text-text-disabled">
-        New organisation?{" "}
+        New organization?{" "}
         <Link to="/register/step-1" className="text-cyan-DEFAULT hover:text-cyan-300 font-medium transition-colors">
           Register workspace
         </Link>

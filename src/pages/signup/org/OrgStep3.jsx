@@ -52,7 +52,7 @@ export default function OrgStep3() {
         const is409 = err.status === 409;
         setErrMsg(
           is409
-            ? "This organisation email is already registered. Please log in instead."
+            ? "This organization email is already registered. Please log in instead."
             : (err.message ?? "Registration failed. Please try again.")
         );
         setPhase(is409 ? "already_exists" : "error");
@@ -138,7 +138,7 @@ export default function OrgStep3() {
           </p>
           {orgCode && (
             <div className="mt-2 flex flex-col items-center gap-1">
-              <p className="text-xs text-text-disabled">Your organisation code</p>
+              <p className="text-xs text-text-disabled">Your organization code</p>
               <span className="font-mono text-xl font-black tracking-widest text-accent-text">
                 {orgCode}
               </span>

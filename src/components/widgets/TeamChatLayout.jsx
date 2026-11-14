@@ -373,7 +373,7 @@ export default function TeamChatLayout() {
             <div>
               <p className="text-sm font-black text-text-primary tracking-tight">Channels</p>
               <p className="text-[14px] text-slate-600 font-medium mt-0.5">
-                {user?.department ?? "Organisation"}
+                {user?.department ?? "Organization"}
               </p>
             </div>
             {canManage && (

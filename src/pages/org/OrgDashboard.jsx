@@ -161,7 +161,7 @@ export default function OrgDashboard() {
         <p className="text-xs font-bold uppercase tracking-[0.15em] text-accent-text mb-1">
           Admin Panel
         </p>
-        <h1 className="text-3xl font-black text-text-primary">Organisation Overview</h1>
+        <h1 className="text-3xl font-black text-text-primary">Organization Overview</h1>
         <div className="flex items-center gap-3 mt-2 flex-wrap">
           <p className="text-sm text-text-secondary">{data.orgName}</p>
           {org?.orgCode && (

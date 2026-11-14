@@ -30,7 +30,7 @@ export default function ProgressGardenPage() {
       <motion.div initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }}>
         <PageHeader
           title="Progress Garden"
-          subtitle="A visual snapshot of your organisation's project health."
+          subtitle="A visual snapshot of your organization's project health."
           icon={Leaf}
         />
       </motion.div>
@@ -42,7 +42,7 @@ export default function ProgressGardenPage() {
       >
         Each tree is one project. Its growth stage shows the project&rsquo;s status (planning → in progress → completed).
         Each tree&rsquo;s colour shows that project&rsquo;s own health (on track, at risk, off track, not started).
-        The percentage shows how many projects are on track across the whole organisation.
+        The percentage shows how many projects are on track across the whole organization.
       </motion.div>
 
       {loading ? (

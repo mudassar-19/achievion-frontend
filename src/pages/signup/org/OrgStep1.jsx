@@ -33,7 +33,7 @@ export default function OrgStep1() {
 
   const validate = () => {
     const errs = {};
-    if (!form.name.trim())   errs.name     = "Organisation name is required.";
+    if (!form.name.trim())   errs.name     = "Organization name is required.";
     if (!form.email.trim())  errs.email    = "Admin email is required.";
     else if (!/\S+@\S+\.\S+/.test(form.email)) errs.email = "Enter a valid email.";
     if (!form.password)      errs.password = "Password is required.";
@@ -68,7 +68,7 @@ export default function OrgStep1() {
 
         <motion.div variants={itemVariants}>
           <Input
-            label="Organisation Name"
+            label="Organization Name"
             id="org-name"
             placeholder="Acme Software"
             value={form.name}

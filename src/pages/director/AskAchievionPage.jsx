@@ -70,10 +70,10 @@ function saveChats(chats) {
 
 // ── Suggestion cards ──────────────────────────────────────────────────────────
 const SUGGESTIONS = [
-  { icon: AlertTriangle, label: "Risk",        color: "#f59e0b", text: "What are the top risks in our organisation right now?" },
+  { icon: AlertTriangle, label: "Risk",        color: "#f59e0b", text: "What are the top risks in our organization right now?" },
   { icon: Layers,        label: "Projects",    color: "#6366f1", text: "Which projects are at risk of missing their deadline?" },
   { icon: Users,         label: "Team",        color: "#10b981", text: "How is team performance looking this month?" },
-  { icon: BarChart2,     label: "Highlights",  color: "#8b5cf6", text: "Summarise this week's organisational highlights" },
+  { icon: BarChart2,     label: "Highlights",  color: "#8b5cf6", text: "Summarise this week's organizational highlights" },
   { icon: Target,        label: "Goals",       color: "#ec4899", text: "Which goals are behind target this quarter?" },
   { icon: Zap,           label: "Actions",     color: "#f97316", text: "What should I focus on as Director this week?" },
 ];

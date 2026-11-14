@@ -201,7 +201,7 @@ export default function DirectorWorkspaceSettingsPage() {
         </Section>
 
         {/* ── Branding (Batch 5, D7) ───────────────────────────────────────── */}
-        <Section icon={ImageUp} title="Branding" description="Your organisation's logo." delay={0.08}>
+        <Section icon={ImageUp} title="Branding" description="Your organization's logo." delay={0.08}>
           <BrandingCard />
         </Section>
 

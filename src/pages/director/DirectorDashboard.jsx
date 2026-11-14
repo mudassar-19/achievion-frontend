@@ -30,7 +30,7 @@ const AUDIT_LABELS = {
   employee_created:         "Member joined",
   DIRECTOR_SETUP:           "Director setup",
   DIRECTOR_CREATED:         "Director added",
-  ORG_CREATED:              "Organisation created",
+  ORG_CREATED:              "Organization created",
   workspace_updated:        "Workspace settings updated",
   settings_updated:         "Settings updated",
   GAMIFICATION_RESET:       "Scoring rules reset",

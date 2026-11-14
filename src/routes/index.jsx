@@ -171,6 +171,15 @@ function PostLoginRedirect() {
   return <Navigate to={homePathFor(user)} replace />;
 }
 
+// Redirects already-authenticated users away from /login
+function GuestRoute({ children }) {
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
+  const authReady       = useAuthStore((s) => s.authReady);
+  const user            = useAuthStore((s) => s.user);
+  if (authReady && isAuthenticated) return <Navigate to={homePathFor(user)} replace />;
+  return children;
+}
+
 // ── 404 / error screen (FE-002, FE-048) ──────────────────────────────────────
 // Used as the root errorElement (render errors in any page) and as the catch-all route.
 function RouteError() {
@@ -210,7 +219,7 @@ const router = createBrowserRouter([{
   },
 
   // ── Employee auth ─────────────────────────────────────────────────────────
-  { path: "/login",            element: <AuthLayout><LoginPage /></AuthLayout> },
+  { path: "/login",            element: <GuestRoute><AuthLayout><LoginPage /></AuthLayout></GuestRoute> },
   { path: "/forgot-password",  element: <AuthLayout><ForgotPasswordPage /></AuthLayout> },
   { path: "/dashboard",        element: <PostLoginRedirect /> },
 

@@ -51,6 +51,11 @@ function syncXpLabel(role) {
   useGamificationStore.getState().setXpLabel(ROLE_XP_LABEL[base] ?? "XP");
 }
 
+// ── Cross-tab auth sync ───────────────────────────────────────────────────────
+// When another tab logs in or out, the shared localStorage key changes.
+// Listen once and force this tab to log out + redirect so tokens never mix.
+let _syncListenerAttached = false;
+
 // ── Store ─────────────────────────────────────────────────────────────────────
 const useAuthStore = create(
   persist(
@@ -142,6 +147,7 @@ const useAuthStore = create(
 
         // Idempotent — don't run twice
         if (authReady) return;
+        get()._attachSyncListener();
 
         if (!token) {
           set({ authReady: true });
@@ -166,6 +172,24 @@ const useAuthStore = create(
             set({ user: null, token: null, isAuthenticated: false, authReady: true, error: null });
           }
         }
+      },
+
+      // ── cross-tab sync ───────────────────────────────────────────────────
+      // Registers once; fires when another tab writes to achievion-auth.
+      _attachSyncListener: () => {
+        if (_syncListenerAttached || typeof window === "undefined") return;
+        _syncListenerAttached = true;
+        window.addEventListener("storage", (e) => {
+          if (e.key !== "achievion-auth") return;
+          try {
+            const incoming = JSON.parse(e.newValue ?? "null")?.state?.token ?? null;
+            if (incoming !== get().token) {
+              socket.disconnect();
+              set({ user: null, token: null, isAuthenticated: false, error: null, viewAs: null });
+              window.location.href = "/login";
+            }
+          } catch {}
+        });
       },
 
       // ── clearError ───────────────────────────────────────────────────────

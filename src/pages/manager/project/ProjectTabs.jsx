@@ -269,7 +269,7 @@ export function TeamTab({ project, onChanged }) {
               <option value="">Choose a person</option>
               {candidates.map((p) => <option key={p.id} value={p.id}>{p.name} · {p.role}{p.availability === "Overloaded" ? " · needs a lighter load" : ""}</option>)}
             </Sel>
-          ) : <p className="text-sm text-text-secondary">Everyone in your organisation is already on this project.</p>}
+          ) : <p className="text-sm text-text-secondary">Everyone in your organization is already on this project.</p>}
           <p className="text-xs text-text-secondary">Adding a Team Lead makes them a Team Lead of this project.</p>
         </div>
       </Drawer>

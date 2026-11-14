@@ -1,4 +1,4 @@
-// Anomaly report for the Director (Batch 5, D9; UC "Manage Organisation Settings" alternative flow: "Director reviews
+// Anomaly report for the Director (Batch 5, D9; UC "Manage Organization Settings" alternative flow: "Director reviews
 // audit logs and AI anomaly reports"). Read only: the decision (dismiss / confirm) stays with the Manager.
 // Data: GET /api/director/anomalies?status=open|reviewed|all&reason=<kind>&page=n. Filters live in the URL.
 import { useSearchParams } from "react-router-dom";
@@ -44,7 +44,7 @@ export default function DirectorAnomaliesPage() {
       </div>
       <DataTable label="Anomaly report" columns={columns} rows={data?.items ?? []} rowKey={(r) => r.id} loading={!data && !error} error={error} onRetry={reload}
         page={page} total={data?.total ?? 0} pageSize={data?.pageSize ?? 25} onPage={(n) => set("page", String(n))}
-        empty={<EmptyState pose="thinking" heading="No flags here" body={status === "all" && !reason ? "The checks have not flagged any XP award in this organisation." : "Nothing matches these filters."} action={status !== "all" || reason ? { label: "Show all flags", to: "?" } : undefined} />} />
+        empty={<EmptyState pose="thinking" heading="No flags here" body={status === "all" && !reason ? "The checks have not flagged any XP award in this organization." : "Nothing matches these filters."} action={status !== "all" || reason ? { label: "Show all flags", to: "?" } : undefined} />} />
       <p className="flex items-start gap-2 text-xs text-text-secondary"><ShieldAlert size={13} aria-hidden="true" className="mt-0.5 shrink-0" />The Manager opens a flag under Anomalies and either finds no issue or confirms it; a confirmed flag takes the XP back through the ledger. Each decision is in the audit log.</p>
     </Page>
   );

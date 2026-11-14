@@ -303,7 +303,7 @@ export default function OrgApprovalsPage() {
       {showExport && (
         <ApprovalExportModal
           allData={allData}
-          orgName={org?.name ?? "Organisation"}
+          orgName={org?.name ?? "Organization"}
           orgCreatedAt={org?.createdAt ?? null}
           onClose={() => setShowExport(false)}
         />

@@ -105,7 +105,7 @@ export function PlanningView({ sprint, onChanged, base = "/api/manager", readOnl
           </div>
           <Meter pct={pct} color={over > 0 ? RED : theme.accent} />
           <p className="text-xs text-text-secondary">
-            {cap.people ? `${cap.people === 1 ? "1 person" : `${cap.people} people`} × ${plural(cap.days, "working day")} × ${cap.hoursPerDay} h (organisation working hours).` : "No team members on this project yet, so capacity is 0. Add people on the project's Team tab."}
+            {cap.people ? `${cap.people === 1 ? "1 person" : `${cap.people} people`} × ${plural(cap.days, "working day")} × ${cap.hoursPerDay} h (organization working hours).` : "No team members on this project yet, so capacity is 0. Add people on the project's Team tab."}
             {stats.unestimated > 0 && ` ${plural(stats.unestimated, "task")} in the sprint ${stats.unestimated === 1 ? "has" : "have"} no estimate and count as 0 h.`}
           </p>
         </div>

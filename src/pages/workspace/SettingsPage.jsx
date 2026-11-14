@@ -246,7 +246,7 @@ export default function SettingsPage() {
     if (active === "security") return <SecuritySection />;
     if (active === "account") return (
       <div className="flex flex-col gap-5">
-        <Heading title="Account" sub="Your name as others see it. Email and role are set by your organisation." />
+        <Heading title="Account" sub="Your name as others see it. Email and role are set by your organization." />
         <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
           <Field label="Name" htmlFor="set-name"><input id="set-name" className={input} value={draft.name} maxLength={80} onChange={(e) => setDraft((d) => ({ ...d, name: e.target.value }))} /></Field>
           <Field label="Email" htmlFor="set-email"><input id="set-email" className={input} value={user?.email ?? ""} readOnly /></Field>

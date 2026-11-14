@@ -61,7 +61,7 @@ export default function ManagerChallengePage() {
 
   if (error) return (
     <Page>{error.status === 404
-      ? <EmptyState heading="This challenge does not exist or is not in your organisation." action={{ label: "Back to challenges", to: "/manager/challenges" }} />
+      ? <EmptyState heading="This challenge does not exist or is not in your organization." action={{ label: "Back to challenges", to: "/manager/challenges" }} />
       : <ErrorState message={error.message} onRetry={() => load()} />}</Page>
   );
   if (!q) return (

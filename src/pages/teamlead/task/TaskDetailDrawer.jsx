@@ -65,7 +65,7 @@ export default function TaskDetailDrawer({ taskId, onClose, onOpenTask, onChange
     setExtErr(er); if (Object.keys(er).length) return;
     try {
       const r = await api.post(`/api/teamlead/tasks/${taskId}/extend`, { days: Number(ext.days), reason: ext.reason.trim() });
-      addToast({ type: "success", message: r?.status === "pending" || r?.extension?.status === "pending" ? "Request sent; it needs approval under your organisation's rules." : "Deadline extended." });
+      addToast({ type: "success", message: r?.status === "pending" || r?.extension?.status === "pending" ? "Request sent; it needs approval under your organization's rules." : "Deadline extended." });
       setExtending(false); setExt({ days: "3", reason: "" }); changed();
     } catch (err) { setExtErr(err?.data?.fields ?? { reason: err?.message ?? "Could not extend." }); }
   }
@@ -216,7 +216,7 @@ export default function TaskDetailDrawer({ taskId, onClose, onOpenTask, onChange
       <ConfirmModal open={deleting} layer="z-[70]" onClose={() => setDeleting(false)} onConfirm={remove} loading={busy} destructive confirmLabel="Delete task"
         title={`Delete "${t?.title}"?`} body="The task is removed. Only tasks that have not started can be deleted." />
       <ConfirmModal open={extending} layer="z-[70]" onClose={() => setExtending(false)} onConfirm={() => document.getElementById("td-ext-form")?.requestSubmit()} confirmLabel="Extend deadline"
-        title="Extend the deadline" body={`Current deadline: ${t?.deadline ? fmt(t.deadline) : "none"}. Within your organisation's limits it moves at once; above them it waits for approval.`}>
+        title="Extend the deadline" body={`Current deadline: ${t?.deadline ? fmt(t.deadline) : "none"}. Within your organization's limits it moves at once; above them it waits for approval.`}>
         <form id="td-ext-form" onSubmit={extend} className="mt-3 flex flex-col gap-3 text-sm">
           <label htmlFor="td-ext-days" className="flex flex-col gap-1 font-bold">Days<input id="td-ext-days" type="number" min={1} max={60} value={ext.days} onChange={(e) => setExt({ ...ext, days: e.target.value })} aria-invalid={!!extErr.days} className="h-10 w-32 rounded-xl px-3 font-normal tabular-nums" />
             {extErr.days && <span className="text-xs font-semibold text-[#B01F17]">{extErr.days}</span>}</label>
