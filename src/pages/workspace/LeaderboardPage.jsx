@@ -120,6 +120,11 @@ export default function LeaderboardPage() {
   const url = `/api/gamification/leaderboard?${q}`;
   const { data, error, loading, reload, setData } = useLoad(url);
   const rows = useMemo(() => data?.rows ?? [], [data]);
+  // UIA-7: useLoad nulls data on every filter change, so keep the last scopes/projects: both filter groups stay on screen.
+  const [kept, setKept] = useState({ scopes: ["company"], projects: [] });
+  useEffect(() => { if (data?.scopes) setKept({ scopes: data.scopes, projects: data.projects ?? [] }); }, [data]); // eslint-disable-line react-hooks/set-state-in-effect
+  const scopes = data?.scopes ?? kept.scopes, projects = data?.projects ?? kept.projects;
+  const shownScope = data?.scope ?? (scope || scopes[0]);
   const [moved, setMoved] = useState("");   // spoken once after a live re-rank
   const [, setStyles] = useState(0);        // re-render when the extra avatar styles have loaded
   const board = useRef(null);
@@ -160,14 +165,14 @@ export default function LeaderboardPage() {
     <Page>
       <PageHeader title="Leaderboard" subtitle="Ranked by XP. Developers, Designers, Testers and Team Leads take part. People with the same XP share a rank." />
       <div className="flex flex-wrap items-center gap-x-6 gap-y-3">
-        {data?.scopes?.length > 1 && <FilterChips label="Scope" param="scope" fallback={data.scopes[0]} options={data.scopes.map((s) => ({ value: s, label: SCOPE_LABEL[s] }))} />}
+        <FilterChips label="Scope" param="scope" fallback={scopes[0]} options={scopes.map((s) => ({ value: s, label: SCOPE_LABEL[s] ?? s }))} />
         <FilterChips label="Period" param="period" fallback="all" options={PERIODS} />
-        {data?.scope === "project" && (
+        {shownScope === "project" && (
           <label className="flex min-w-0 items-center gap-2 text-xs font-bold text-text-secondary">Project
-            <select value={data.project?.id ?? ""} onChange={(e) => pick(e.target.value)} disabled={!data.projects.length}
-              className="h-8 min-w-0 max-w-[280px] truncate rounded-xl border border-border-subtle bg-bg-surface px-2 text-sm font-semibold text-text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus)]">
-              {!data.projects.length && <option value="">No projects</option>}
-              {data.projects.map((p) => <option key={p.id} value={p.id}>{p.title.length > 48 ? `${p.title.slice(0, 47)}…` : p.title}</option>)}
+            <select value={data?.project?.id ?? projectId} onChange={(e) => pick(e.target.value)} disabled={!projects.length}
+              className="h-8 min-w-0 max-w-[280px] truncate rounded-xl border border-border-subtle bg-bg-surface px-2 text-sm font-semibold text-text-primary">
+              {!projects.length && <option value="">No projects</option>}
+              {projects.map((p) => <option key={p.id} value={p.id} title={p.title}>{p.title.length > 48 ? `${p.title.slice(0, 47)}…` : p.title}</option>)}
             </select>
           </label>
         )}

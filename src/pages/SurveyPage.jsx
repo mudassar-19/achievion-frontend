@@ -73,24 +73,27 @@ function currentWeek() {
   return `${d.getFullYear()}-W${String(week).padStart(2, "0")}`;
 }
 
+// UIA-3: 1-5 as five equal pill buttons. Native radios (sr-only) so arrow keys / Tab / form semantics work;
+// the scale legend is shown once at the top of the page, not per row.
 function RadioRow({ label, name, value, onChange }) {
   return (
-    <div className="flex flex-col gap-1.5">
-      <p className="text-sm font-semibold text-text-primary">{label}</p>
-      <div className="flex gap-2 flex-wrap">
+    <fieldset className="flex min-w-0 flex-col gap-2 border-0 p-0">
+      <legend className="mb-2 text-sm font-semibold text-text-primary">{label}</legend>
+      <div className="grid grid-cols-5 gap-2">
         {[1, 2, 3, 4, 5].map((n) => (
-          <label key={n} className="flex items-center gap-1.5 cursor-pointer select-none min-h-[32px]">
+          <label key={n} className="relative cursor-pointer select-none">
             <input
               type="radio" name={name} value={n} checked={value === n}
               onChange={() => onChange(n)}
-              className="accent-[#4B2FC4]"
+              className="peer sr-only"
             />
-            <span className="text-xs font-semibold text-slate-600">{n}</span>
+            <span className="flex min-h-11 items-center justify-center rounded-xl border border-[#6D7B99] bg-white text-sm font-bold text-slate-600 transition-colors hover:bg-[#EEEAFD] peer-checked:border-[#4B2FC4] peer-checked:bg-[#4B2FC4] peer-checked:text-white peer-focus-visible:ring-2 peer-focus-visible:ring-[#4B2FC4] peer-focus-visible:ring-offset-2">
+              {n}
+            </span>
           </label>
         ))}
-        <span className="text-[11px] text-slate-400 self-center">(1=Strongly disagree · 5=Strongly agree)</span>
       </div>
-    </div>
+    </fieldset>
   );
 }
 
@@ -105,7 +108,9 @@ export default function SurveyPage() {
 
   function setSusItem(i, v) { setSus((prev) => { const next = [...prev]; next[i] = v; return next; }); }
 
-  const allFilled = enjoyable != null && easy != null && sus.every((v) => v != null);
+  const total = 12;
+  const answered = (enjoyable != null) + (easy != null) + sus.filter((v) => v != null).length;
+  const allFilled = answered === total;
 
   async function submit() {
     if (!allFilled) return;
@@ -211,6 +216,15 @@ export default function SurveyPage() {
           className="rounded-3xl bg-white border border-ink/[0.1] shadow-xl p-6 flex flex-col gap-1">
           <h1 className="text-lg font-black text-text-primary">User Satisfaction Survey</h1>
           <p className="text-xs text-slate-500">Your answers are anonymous. 2 experience questions + 10 SUS items. About 3 minutes.</p>
+          <p className="mt-2 rounded-lg bg-[#EEEAFD] px-3 py-2 text-xs font-semibold text-[#3B22A0]">
+            Scale: 1 = Strongly disagree, 5 = Strongly agree
+          </p>
+          <div className="mt-3 flex items-center gap-3" role="status">
+            <div className="h-2 flex-1 overflow-hidden rounded-full bg-ink/10" role="progressbar" aria-valuemin={0} aria-valuemax={total} aria-valuenow={answered} aria-label="Survey progress">
+              <div className="h-full rounded-full bg-[#4B2FC4] transition-[width] duration-300" style={{ width: `${(answered / total) * 100}%` }} />
+            </div>
+            <span className="shrink-0 text-xs font-semibold text-slate-600">{answered} of {total} answered</span>
+          </div>
         </motion.div>
 
         {/* 2 experience items */}
@@ -225,17 +239,21 @@ export default function SurveyPage() {
         <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3, delay: 0.1 }}
           className="rounded-3xl bg-white border border-ink/[0.1] shadow-xl p-6 flex flex-col gap-4">
           <h2 className="text-sm font-bold text-text-primary">System Usability Scale (SUS)</h2>
-          <p className="text-[12px] text-slate-500">Rate each statement from 1 (Strongly disagree) to 5 (Strongly agree).</p>
           {SUS_ITEMS.map((item, i) => (
             <RadioRow key={i} label={`${i + 1}. ${item}`} name={`sus_${i}`} value={sus[i]} onChange={(v) => setSusItem(i, v)} />
           ))}
         </motion.div>
 
-        <button onClick={submit} disabled={!allFilled}
-          className="py-3 rounded-2xl text-white text-sm font-black disabled:opacity-40 min-h-[44px]"
-          style={{ background: ACCENT }}>
-          Submit Survey
-        </button>
+        <div className="flex flex-col gap-2">
+          <button onClick={submit} disabled={!allFilled}
+            className="py-3 rounded-2xl text-white text-sm font-black disabled:opacity-40 min-h-[44px]"
+            style={{ background: ACCENT }}>
+            Submit Survey
+          </button>
+          <p className="text-center text-xs text-slate-500" aria-live="polite">
+            {allFilled ? "All answered. Ready to submit." : `${answered} of ${total} answered. ${total - answered} left.`}
+          </p>
+        </div>
       </div>
     </div>
   );

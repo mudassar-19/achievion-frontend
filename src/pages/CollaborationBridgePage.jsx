@@ -530,7 +530,7 @@ function CommunitySidebar({ communities, dms, activeGroupId, onSelectGroup, onSe
                   className="flex flex-1 min-w-0 items-center gap-1 rounded-md py-0.5 text-left">
                   {isCollapsed ? <ChevronRight size={11} className="text-text-tertiary shrink-0" /> : <ChevronDown size={11} className="text-text-tertiary shrink-0" />}
                   <span className="text-sm shrink-0" aria-hidden="true">{community.icon ?? "💬"}</span>
-                  <span className="flex-1 text-xs font-bold text-text-primary truncate">{community.name}</span>
+                  <span className="min-w-0 flex-1 text-xs font-bold text-text-primary truncate" title={community.name}>{community.name}</span>
                 </button>
                 {comUnread > 0 && isCollapsed && (
                   <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full text-white shrink-0 tabular-nums" style={{ background: ACCENT }}>
@@ -562,7 +562,7 @@ function CommunitySidebar({ communities, dms, activeGroupId, onSelectGroup, onSe
                   }`}
                   style={activeGroupId === group._id ? { background: ACCENT } : {}}>
                   <span className="text-sm shrink-0" aria-hidden="true">{group.icon ?? "💬"}</span>
-                  <span className="flex-1 truncate">{group.type === "announcement" ? "Announcements" : group.name}</span>
+                  <span className="min-w-0 flex-1 truncate" title={group.name}>{group.type === "announcement" ? "Announcements" : group.name}</span>
                   {group.muted && <BellOff size={10} className="shrink-0 opacity-70" aria-label="Muted" />}
                   {!group.muted && (group.unread ?? 0) > 0 && activeGroupId !== group._id && (
                     <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full text-white shrink-0 tabular-nums" style={{ background: ACCENT }}>
@@ -577,7 +577,7 @@ function CommunitySidebar({ communities, dms, activeGroupId, onSelectGroup, onSe
                   {community.joinable.map((g) => (
                     <div key={g._id} className="flex items-center gap-2 py-1 text-xs text-text-secondary">
                       <span className="text-sm shrink-0 opacity-70" aria-hidden="true">{g.icon ?? "💬"}</span>
-                      <span className="flex-1 truncate">{g.name}</span>
+                      <span className="min-w-0 flex-1 truncate" title={g.name}>{g.name}</span>
                       {g.requested
                         ? <span className="text-[11px] text-text-tertiary">Requested</span>
                         : <button type="button" onClick={() => onJoin(g)} className="text-[11px] font-bold text-[#4B2FC4] hover:underline">{g.joinApproval ? "Ask to join" : "Join"}</button>}
@@ -601,7 +601,7 @@ function CommunitySidebar({ communities, dms, activeGroupId, onSelectGroup, onSe
                   }`}
                   style={activeGroupId === dm._id ? { background: ACCENT } : {}}>
                   <MessageSquare size={11} className="shrink-0" />
-                  <span className="flex-1 truncate">{name}</span>
+                  <span className="min-w-0 flex-1 truncate" title={name}>{name}</span>
                   {(dm.unread ?? 0) > 0 && activeGroupId !== dm._id && (
                     <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full text-white shrink-0" style={{ background: ACCENT }}>{dm.unread}</span>
                   )}

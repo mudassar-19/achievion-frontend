@@ -367,9 +367,9 @@ export default function ApprovalQueuePage() {
                   <motion.div key={acc._id} variants={rowV} layout exit="exit"
                     className="rounded-2xl border border-ink/[0.08] glass-panel p-5 flex flex-col gap-3">
                     <div className="flex items-start justify-between gap-3 flex-wrap">
-                      <div className="flex flex-col gap-1.5">
+                      <div className="flex min-w-0 flex-1 basis-64 flex-col gap-1.5">
                         <ActionBadge type={acc.actionType}/>
-                        <p className="text-sm font-semibold text-text-primary leading-snug">{accountDesc(acc)}</p>
+                        <p className="line-clamp-2 text-sm font-semibold text-text-primary leading-snug" title={accountDesc(acc)}>{accountDesc(acc)}</p>
                         {acc.actionType==='CREATE_EMPLOYEE' && acc.payload?.email && (
                           <p className="text-xs text-slate-500">{acc.payload.email}</p>
                         )}

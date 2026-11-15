@@ -1,7 +1,8 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Sparkles, X, Send, RefreshCw, BookOpen, ChevronRight, ExternalLink } from "lucide-react";
+import { Sparkles, X, Send, RefreshCw, ChevronRight, ExternalLink } from "lucide-react";
 import Tally from "@/components/ui/Tally";
+import Markdown, { SourceChips } from "@/components/ui/Markdown";
 import api from "@/lib/api";
 
 export const AI_W = 420;
@@ -9,50 +10,6 @@ export const AI_W = 420;
 // Director colours by default. Another portal passes accent="var(--accent)" and the tints follow its token.
 const DIRECTOR = "#4B2FC4";
 const tintOf = (accent) => (a) => (accent === DIRECTOR ? `rgba(75,47,196,${a})` : `rgb(var(--c-accent) / ${a})`);
-
-// ── Tiny markdown renderer (bold + bullets, no dep) ───────────────────────────
-function inlineMd(text) {
-  const parts = text.split(/(\*\*[^*]+\*\*)/g);
-  return parts.map((p, i) =>
-    p.startsWith("**") && p.endsWith("**")
-      ? <strong key={i} className="font-semibold text-text-primary">{p.slice(2, -2)}</strong>
-      : p
-  );
-}
-
-function renderMd(text, accent = DIRECTOR) {
-  const lines = text.split("\n");
-  const out = [];
-  let bullets = [];
-
-  const flush = () => {
-    if (!bullets.length) return;
-    out.push(
-      <ul key={`ul${out.length}`} className="space-y-1 my-1 pl-0">
-        {bullets.map((b, i) => (
-          <li key={i} className="flex gap-1.5 items-start">
-            <span className="shrink-0 font-bold mt-px" style={{ color: accent }}>•</span>
-            <span>{inlineMd(b)}</span>
-          </li>
-        ))}
-      </ul>
-    );
-    bullets = [];
-  };
-
-  for (const raw of lines) {
-    const line = raw.trim();
-    if (!line) { flush(); continue; }
-    if (line.startsWith("•") || line.startsWith("- ")) {
-      bullets.push(line.replace(/^[•-]\s*/, ""));
-    } else {
-      flush();
-      out.push(<p key={`p${out.length}`} className="leading-relaxed">{inlineMd(line)}</p>);
-    }
-  }
-  flush();
-  return out;
-}
 
 // Quick prompts per page context
 const QUICK = {
@@ -68,9 +25,9 @@ const QUICK = {
 function Bubble({ msg, accent = DIRECTOR, renderMeta, onRetry }) {
   const isUser = msg.role === "user";
   return (
-    <div className={`flex flex-col gap-1 ${isUser ? "items-end" : "items-start"}`}>
+    <div className={`flex min-w-0 max-w-full flex-col gap-1 ${isUser ? "items-end" : "items-start"}`}>
       <div
-        className={`max-w-[280px] rounded-2xl px-3.5 py-2.5 text-sm break-words ${
+        className={`max-w-full min-w-0 rounded-2xl px-3.5 py-2.5 text-sm break-words ${
           isUser
             ? "text-white rounded-br-sm leading-relaxed"
             : msg.error
@@ -80,7 +37,7 @@ function Bubble({ msg, accent = DIRECTOR, renderMeta, onRetry }) {
         style={isUser ? { background: accent } : {}}
       >
         {isUser || msg.error ? msg.text : (
-          <div className="flex flex-col gap-1.5 text-[13px]">{renderMd(msg.text, accent)}</div>
+          <Markdown text={msg.text} accent={accent} />
         )}
         {msg.error && msg.retry && onRetry && (
           <button type="button" onClick={() => onRetry(msg)} className="mt-2 flex min-h-8 items-center gap-1 rounded-lg px-2 text-xs font-bold text-rose-800 underline underline-offset-2 hover:bg-rose-100">
@@ -89,19 +46,7 @@ function Bubble({ msg, accent = DIRECTOR, renderMeta, onRetry }) {
         )}
       </div>
       {!isUser && !msg.error && renderMeta?.(msg)}
-      {msg.citations?.length > 0 && (
-        <div className="max-w-[280px] flex flex-col gap-0.5 pl-1">
-          <span className="flex items-center gap-1 text-[10px] text-slate-400 font-medium">
-            <BookOpen size={9} /> Sources
-          </span>
-          {msg.citations.map((c, i) => (
-            <span key={i} className="text-[10px] text-slate-400 truncate">
-              [{i + 1}] <span className="capitalize">{c.source}</span>
-              {c.text ? ` — ${c.text}` : ""}
-            </span>
-          ))}
-        </div>
-      )}
+      {msg.citations?.length > 0 && <SourceChips citations={msg.citations} className="max-w-full pl-1" />}
     </div>
   );
 }
@@ -244,7 +189,7 @@ export default function AiPanel({
     <AnimatePresence>
       {open && (
         <motion.aside
-          className="fixed z-30 flex flex-col outline-none"
+          className="fixed z-[45] flex flex-col outline-none"
           style={{
             top: topOffset, right: 0, width: AI_W, bottom: 0, maxWidth: "100vw",
             background: "#FAFBFE",

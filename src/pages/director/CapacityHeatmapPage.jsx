@@ -124,7 +124,7 @@ export default function CapacityHeatmapPage() {
               <tbody>
                 {data.rows.map((row) => (
                   <tr key={row.teamId} className="border-b border-ink/[0.04] last:border-0">
-                    <td className="px-3 py-2 font-semibold text-text-primary">{row.teamName}</td>
+                    <td className="px-3 py-2 font-semibold text-text-primary max-w-[180px]" title={row.teamName}><span className="block truncate">{row.teamName}</span></td>
                     {row.cells.map((cell) => (
                       <td key={cell.week} className="px-2 py-1.5">
                         <button
@@ -209,8 +209,8 @@ export default function CapacityHeatmapPage() {
           <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/30 backdrop-blur-sm p-4">
             <motion.div initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 24 }}
               className="w-full max-w-sm rounded-2xl bg-white border border-ink/[0.1] shadow-2xl p-6 flex flex-col gap-3">
-              <div className="flex items-center justify-between">
-                <h3 className="text-sm font-bold text-text-primary">{drawer.team} · {drawer.week}</h3>
+              <div className="flex items-center justify-between gap-2">
+                <h3 className="min-w-0 truncate text-sm font-bold text-text-primary" title={`${drawer.team} · ${drawer.week}`}>{drawer.team} · {drawer.week}</h3>
                 <button onClick={() => setDrawer(null)} aria-label="Close" className="h-8 w-8 flex items-center justify-center rounded-lg hover:bg-ink/[0.06] min-h-[32px]">
                   <X size={14} />
                 </button>

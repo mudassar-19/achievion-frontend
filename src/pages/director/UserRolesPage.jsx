@@ -425,8 +425,8 @@ export default function UserRolesPage() {
                     />
                   </div>
                   <div className="min-w-0">
-                    <p className="text-xs font-bold text-text-primary truncate">{member.name}</p>
-                    <p className="text-[14px] text-slate-600 truncate">{member.email}</p>
+                    <p className="text-xs font-bold text-text-primary truncate" title={member.name}>{member.name}</p>
+                    <p className="text-[14px] text-slate-600 truncate" title={member.email}>{member.email}</p>
                     <p data-member-meta className="mt-0.5 flex flex-wrap items-center gap-x-2.5 gap-y-0.5 text-xs text-text-secondary">
                       <span className="truncate">{member.department || "No department"}</span>
                       {member.skills?.length > 0 && <span className="truncate" title={member.skills.join(", ")}>{member.skills.slice(0, 3).join(", ")}{member.skills.length > 3 ? ` +${member.skills.length - 3}` : ""}</span>}

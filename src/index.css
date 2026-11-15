@@ -154,12 +154,36 @@
     transition: border-color var(--transition), box-shadow var(--transition);
   }
   input::placeholder, textarea::placeholder { color: var(--text-tertiary); opacity: 1; }
-  input:focus, textarea:focus, select:focus {
+  /* UIA-2 shared field: ONE outer 1px border, 2px ring on focus (border + 1px shadow). */
+  input:focus, textarea:focus, select:focus,
+  input:focus-visible, textarea:focus-visible, select:focus-visible {
     outline: none;
     border-color: var(--accent);
-    box-shadow: 0 0 0 3px rgb(var(--c-accent) / .25);
+    box-shadow: 0 0 0 1px var(--accent);
+    border-radius: var(--r-sm);
   }
-  input:focus-visible, textarea:focus-visible, select:focus-visible { box-shadow: 0 0 0 3px rgb(var(--c-accent) / .35); }
+  /* A "bare" inner control (bg-transparent, and NO own "border" class) lives inside a bordered wrapper: no own border/ring/outline.
+     A control that carries its own `border` class is standalone and keeps the shared field look (UIA-2b). */
+  :is(input, textarea, select)[class*="bg-transparent"]:not([class~="border"]),
+  :is(input, textarea, select)[class*="bg-transparent"]:not([class~="border"]):focus,
+  :is(input, textarea, select)[class*="bg-transparent"]:not([class~="border"]):focus-visible,
+  .field :is(input, textarea, select),
+  .field :is(input, textarea, select):focus,
+  .field :is(input, textarea, select):focus-visible {
+    border: 0; outline: none; box-shadow: none; background-color: transparent; border-radius: 0;
+  }
+  .field {
+    display: flex; align-items: center; gap: .5rem; min-width: 0;
+    border: 1px solid var(--border-control); border-radius: var(--r-sm); background: var(--surface-raised);
+    transition: border-color var(--transition), box-shadow var(--transition);
+  }
+  .field > :is(input, textarea, select) { flex: 1 1 auto; min-width: 0; }
+  /* wrapper takes the ring: .field, or any parent/grandparent with a border (class or inline style) of a bare control */
+  .field:focus-within,
+  :is([class*="border"], [style*="border"]):has(> :is(input, textarea, select)[class*="bg-transparent"]:not([class~="border"]):focus),
+  :is([class*="border"], [style*="border"]):has(> * > :is(input, textarea, select)[class*="bg-transparent"]:not([class~="border"]):focus) {
+    border-color: var(--accent) !important; box-shadow: 0 0 0 1px var(--accent) !important; /* !important: some wrappers set border/shadow inline */
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {

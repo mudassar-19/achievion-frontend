@@ -520,7 +520,7 @@ export default function ProjectManagementPage() {
                   >
                     <div className="flex items-center gap-2.5 min-w-0">
                       <FolderKanban size={14} className="text-[#4B2FC4] shrink-0" strokeWidth={2}/>
-                      <span className="text-sm font-bold text-text-primary truncate">{proj.title}</span>
+                      <span className="text-sm font-bold text-text-primary truncate" title={proj.title}>{proj.title}</span>
                     </div>
                     <div><StatusChip status={proj.status}/></div>
                     <ProgressBar pct={proj.completion}/>

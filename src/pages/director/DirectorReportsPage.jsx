@@ -2,10 +2,6 @@ import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { BarChart2, CheckSquare, Clock, AlertTriangle, TrendingUp, Zap, FileText, Calendar, Download, RefreshCw, Layers, Sparkles } from "lucide-react";
 import PageHeader from "@/components/ui/PageHeader";
-import {
-  BarChart, Bar, XAxis, YAxis, Tooltip as ReTooltip,
-  ResponsiveContainer, Cell, LabelList,
-} from "recharts";
 import api from "@/lib/api";
 import { useRoleTheme } from "@/utils/roleTheme";
 
@@ -46,14 +42,30 @@ function Section({ title, icon: Icon, delay = 0, children }) {
   );
 }
 
-// ── Custom recharts tooltip ───────────────────────────────────────────────────
-function CustomTooltip({ active, payload }) {
-  if (!active || !payload?.length) return null;
+// ── XP by role (UIA-5): one row per role, label + bar + value, 0-XP roles included. Role aggregate only (D-027). ──
+function XpRoleBars({ rows }) {
+  const max = Math.max(1, ...rows.map((r) => r.totalXp ?? 0));
   return (
-    <div className="rounded-xl bg-[#FFFFFF] border border-ink/[0.1] px-3 py-2 text-xs shadow-xl">
-      <p className="font-bold text-text-primary">{payload[0].payload.role}</p>
-      <p style={{ color: "var(--accent)" }} className="font-black tabular-nums">{payload[0].value.toLocaleString()} XP</p>
-    </div>
+    <figure aria-label="XP distribution by role" className="m-0">
+      <ul className="flex flex-col gap-2.5">
+        {rows.map((r, i) => {
+          const xp = r.totalXp ?? 0;
+          return (
+            <li key={r.role} className="grid grid-cols-[minmax(80px,140px)_minmax(0,1fr)] items-center gap-3">
+              <span className="truncate text-[13px] font-semibold text-slate-600" title={r.role}>{r.role}</span>
+              <div className="group relative flex h-5 min-w-0 items-center gap-2" tabIndex={0} aria-label={`${r.role}: ${xp.toLocaleString()} XP`}>
+                <div className="relative h-full shrink-0 rounded-r-md transition-[width]" style={{ width: `calc((100% - 4rem) * ${xp / max})`, minWidth: 3, background: BAR_COLORS[i % BAR_COLORS.length] }}>
+                  <span role="tooltip" className="pointer-events-none absolute bottom-full left-0 z-10 mb-1 hidden whitespace-nowrap rounded-lg border border-ink/[0.1] bg-white px-2 py-1 text-[11px] font-bold tabular-nums text-text-primary shadow-lg group-hover:block group-focus:block">
+                    {r.role}: {xp.toLocaleString()} XP
+                  </span>
+                </div>
+                <span className="shrink-0 text-xs font-bold tabular-nums text-slate-600">{xp.toLocaleString()} XP</span>
+              </div>
+            </li>
+          );
+        })}
+      </ul>
+    </figure>
   );
 }
 
@@ -131,20 +143,24 @@ function CustomReportsTab() {
               ))}
               <span className="text-[12px] px-2.5 py-1 rounded-full bg-ink/[0.04] font-bold text-slate-500">Total: {portfolio.total}</span>
             </div>
-            <div className="overflow-hidden rounded-xl border border-ink/[0.06]">
-              <table className="w-full text-xs">
+            <div className="overflow-x-auto rounded-xl border border-ink/[0.06]">
+              {/* UIA-6: fixed layout, name column takes the rest and truncates; full name in title and in exports */}
+              <table className="w-full min-w-[620px] table-fixed text-xs">
+                <colgroup>
+                  <col /><col className="w-28" /><col className="w-24" /><col className="w-32" /><col className="w-20" />
+                </colgroup>
                 <thead>
                   <tr className="border-b border-ink/[0.06] bg-ink/[0.02]">
                     {["Project","Status","Priority","Deadline","Health"].map((h) => (
-                      <th key={h} className="px-4 py-2.5 text-left text-[13px] font-bold uppercase tracking-wide text-slate-600">{h}</th>
+                      <th key={h} className="whitespace-nowrap px-4 py-2.5 text-left text-[13px] font-bold uppercase tracking-wide text-slate-600">{h}</th>
                     ))}
                   </tr>
                 </thead>
                 <tbody>
                   {portfolio.rows.slice(0, 10).map((p) => (
                     <tr key={p.id} className="border-b border-ink/[0.04] last:border-0 hover:bg-ink/[0.02]">
-                      <td className="px-4 py-2.5 font-semibold text-text-primary">{p.title}</td>
-                      <td className="px-4 py-2.5 text-slate-500">{p.status}</td>
+                      <td className="px-4 py-2.5 font-semibold text-text-primary" title={p.title}><span className="block truncate">{p.title}</span></td>
+                      <td className="truncate px-4 py-2.5 text-slate-500">{p.status}</td>
                       <td className="px-4 py-2.5 text-slate-500">{p.priority ?? "—"}</td>
                       <td className="px-4 py-2.5 text-slate-400">{p.deadline ? new Date(p.deadline).toLocaleDateString("en-US",{month:"short",day:"numeric",year:"numeric"}) : "—"}</td>
                       <td className="px-4 py-2.5 tabular-nums font-bold" style={{ color: ACCENT }}>{p.healthScore ?? "—"}</td>
@@ -416,46 +432,9 @@ export default function DirectorReportsPage() {
             <Zap size={28} strokeWidth={1.2} />
             <p className="text-xs font-medium">No XP data yet.</p>
           </div>
-        ) : (() => {
-          // rename 'role' field to 'roleName' so Recharts does not pass it as
-          // an ARIA role attribute on SVG <path> elements (axe aria-roles violation)
-          const chartData = xpByRole.map(({ role, ...rest }) => ({ ...rest, roleName: role }));
-          return (
-            <figure aria-label="XP distribution by role bar chart">
-              <ResponsiveContainer width="100%" height={220}>
-                <BarChart data={chartData} layout="vertical" margin={{ left: 16, right: 56, top: 0, bottom: 0 }}>
-                  <XAxis
-                    type="number"
-                    tick={{ fill: "#6D7B99", fontSize: 14 }}
-                    axisLine={false}
-                    tickLine={false}
-                    tickFormatter={(v) => v >= 1000 ? `${(v / 1000).toFixed(0)}k` : v}
-                  />
-                  <YAxis
-                    type="category"
-                    dataKey="roleName"
-                    tick={{ fill: "#6D7B99", fontSize: 13 }}
-                    axisLine={false}
-                    tickLine={false}
-                    width={160}
-                  />
-                  <ReTooltip content={<CustomTooltip />} cursor={{ fill: theme.accent + "18" }} />
-                  <Bar dataKey="totalXp" radius={[0, 6, 6, 0]} maxBarSize={22}>
-                    {chartData.map((_, i) => (
-                      <Cell key={i} fill={BAR_COLORS[i % BAR_COLORS.length]} />
-                    ))}
-                    <LabelList
-                      dataKey="totalXp"
-                      position="right"
-                      formatter={(v) => v >= 1000 ? `${(v / 1000).toFixed(1)}k` : v}
-                      style={{ fill: "#6D7B99", fontSize: 12, fontWeight: 600 }}
-                    />
-                  </Bar>
-                </BarChart>
-              </ResponsiveContainer>
-            </figure>
-          );
-        })()}
+        ) : (
+          <XpRoleBars rows={xpByRole} />
+        )}
       </Section>
 
       {/* ── Sprint Velocity ───────────────────────────────────────────────── */}
@@ -470,12 +449,15 @@ export default function DirectorReportsPage() {
             <p className="text-xs font-medium">No sprints recorded yet.</p>
           </div>
         ) : (
-          <div className="overflow-hidden rounded-xl border border-ink/[0.06]">
-            <table className="w-full text-xs">
+          <div className="overflow-x-auto rounded-xl border border-ink/[0.06]">
+            <table className="w-full min-w-[680px] table-fixed text-xs">
+              <colgroup>
+                <col /><col className="w-28" /><col className="w-28" /><col className="w-24" /><col className="w-28" /><col className="w-36" />
+              </colgroup>
               <thead>
                 <tr className="border-b border-ink/[0.06] bg-ink/[0.02]">
                   {["Sprint", "Start", "Status", "Planned", "Completed", "Velocity"].map((h) => (
-                    <th key={h} className="px-4 py-3 text-left text-[14px] font-bold uppercase tracking-[0.12em] text-slate-600">{h}</th>
+                    <th key={h} className="whitespace-nowrap px-4 py-3 text-left text-[14px] font-bold uppercase tracking-[0.12em] text-slate-600">{h}</th>
                   ))}
                 </tr>
               </thead>
@@ -488,7 +470,7 @@ export default function DirectorReportsPage() {
                   }[s.status] ?? { color: "#3A4660", bg: "#6D7B9918" };
                   return (
                     <tr key={s.id} className="border-b border-ink/[0.04] last:border-0 hover:bg-ink/[0.03] transition-colors">
-                      <td className="px-4 py-3 font-semibold text-text-primary">{s.name}</td>
+                      <td className="px-4 py-3 font-semibold text-text-primary" title={s.name}><span className="block truncate">{s.name}</span></td>
                       <td className="px-4 py-3 text-slate-500">{fmtDate(s.startDate)}</td>
                       <td className="px-4 py-3">
                         <span className="px-2 py-0.5 rounded-full text-[14px] font-black uppercase tracking-wider"

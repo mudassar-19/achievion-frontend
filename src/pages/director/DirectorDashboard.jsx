@@ -462,18 +462,18 @@ export default function DirectorDashboard() {
       {/* Share Feedback */}
       <motion.div
         initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35, delay: 0.3 }}
-        className="rounded-2xl border border-ink/[0.07] bg-gradient-to-r from-[#EAEDF4] to-[#F5F7FB] px-5 py-4 flex items-center justify-between gap-4"
+        className="rounded-2xl border border-ink/[0.07] bg-gradient-to-r from-[#EAEDF4] to-[#F5F7FB] px-5 py-4 flex flex-wrap items-center justify-between gap-3"
       >
-        <div className="flex items-center gap-3">
-          <MessageSquare size={16} strokeWidth={1.75} style={{ color: theme.accent }} />
-          <div>
+        <div className="flex min-w-0 flex-1 basis-60 items-center gap-3">
+          <MessageSquare size={16} strokeWidth={1.75} className="shrink-0" style={{ color: theme.accent }} />
+          <div className="min-w-0">
             <p className="text-sm font-bold text-text-primary">Share Team Feedback</p>
-            <p className="text-xs text-slate-500">Complete the satisfaction survey to help measure success criteria.</p>
+            <p className="text-xs text-slate-500">12 quick questions, about 3 minutes. Helps measure success criteria.</p>
           </div>
         </div>
         <Link
           to="/survey"
-          className="shrink-0 h-8 px-4 rounded-xl text-xs font-bold text-white transition-colors"
+          className="inline-flex min-h-11 shrink-0 items-center px-4 rounded-xl text-xs font-bold text-white transition-colors sm:min-h-8"
           style={{ background: theme.accent }}
         >
           Take Survey

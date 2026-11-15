@@ -118,7 +118,7 @@ export default function ManagerAiPanel({ open, onClose, topOffset, base = "/api/
   );
 
   const renderMeta = (m) => m.id && (
-    <div className="flex max-w-[280px] flex-wrap items-center gap-1.5 pl-1">
+    <div className="flex max-w-full flex-wrap items-center gap-1.5 pl-1">
       <AiTag />
       {(m.sources ?? []).map((s) => (
         <Link key={s.key} to={s.to} className="inline-flex min-h-7 items-center rounded-full border border-ink/[0.1] bg-white px-2 text-[11px] font-semibold text-text-secondary hover:text-text-primary">{s.label}</Link>

@@ -1,8 +1,9 @@
 import { useState, useRef, useEffect, useCallback } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
+import Markdown, { SourceChips } from "@/components/ui/Markdown";
 import {
-  Sparkles, Send, RefreshCw, BookOpen,
-  Plus, Trash2, ChevronRight, Database,
+  Sparkles, Send, RefreshCw,
+  Plus, Trash2, Database,
   BarChart2, Users, AlertTriangle, Target, Layers, Zap,
 } from "lucide-react";
 import Tally from "@/components/ui/Tally";
@@ -18,45 +19,6 @@ function relDate(iso) {
   if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
   if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
   return d.toLocaleDateString(undefined, { month: "short", day: "numeric" });
-}
-
-// ── Inline markdown renderer ──────────────────────────────────────────────────
-function InlineMd({ text }) {
-  const parts = text.split(/(\*\*[^*]+\*\*|\*[^*]+\*)/g);
-  return (
-    <>
-      {parts.map((p, i) => {
-        if (p.startsWith("**") && p.endsWith("**")) return <strong key={i} className="font-semibold">{p.slice(2, -2)}</strong>;
-        if (p.startsWith("*") && p.endsWith("*")) return <em key={i}>{p.slice(1, -1)}</em>;
-        return <span key={i}>{p}</span>;
-      })}
-    </>
-  );
-}
-
-function MarkdownText({ text }) {
-  const blocks = text.split(/\n\n+/);
-  return (
-    <div className="flex flex-col gap-2">
-      {blocks.map((block, bi) => {
-        const lines = block.split("\n").filter(Boolean);
-        const isList = lines.some((l) => /^[•\*\-]\s/.test(l) || /^\d+\.\s/.test(l));
-        if (isList) {
-          return (
-            <ul key={bi} className="space-y-1.5">
-              {lines.map((l, li) => (
-                <li key={li} className="flex gap-2">
-                  <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-violet-400 shrink-0" />
-                  <span><InlineMd text={l.replace(/^[•\*\-\d]+[.)]\s*/, "")} /></span>
-                </li>
-              ))}
-            </ul>
-          );
-        }
-        return <p key={bi}><InlineMd text={block} /></p>;
-      })}
-    </div>
-  );
 }
 
 // ── Storage ───────────────────────────────────────────────────────────────────
@@ -80,7 +42,6 @@ const SUGGESTIONS = [
 
 // ── Message component ─────────────────────────────────────────────────────────
 function Message({ msg, index }) {
-  const [showCitations, setShowCitations] = useState(false);
   const isUser = msg.role === "user";
 
   return (
@@ -120,42 +81,9 @@ function Message({ msg, index }) {
                     boxShadow: "0 2px 12px rgba(109,40,217,0.08), 0 1px 3px rgba(0,0,0,0.06)",
                   }}
                 >
-                  <MarkdownText text={msg.text} />
+                  <Markdown text={msg.text} accent="#6d28d9" />
                 </div>
-                {msg.citations?.length > 0 && (
-                  <div className="mt-2">
-                    <button
-                      type="button"
-                      onClick={() => setShowCitations((v) => !v)}
-                      className="flex items-center gap-1.5 text-[11px] text-violet-400 hover:text-violet-600 transition-colors"
-                    >
-                      <BookOpen size={10} />
-                      {showCitations ? "Hide" : "Show"} {msg.citations.length} source{msg.citations.length > 1 ? "s" : ""}
-                      <ChevronRight size={9} className={`transition-transform ${showCitations ? "rotate-90" : ""}`} />
-                    </button>
-                    <AnimatePresence>
-                      {showCitations && (
-                        <motion.div
-                          initial={{ height: 0, opacity: 0 }}
-                          animate={{ height: "auto", opacity: 1 }}
-                          exit={{ height: 0, opacity: 0 }}
-                          transition={{ duration: 0.18 }}
-                          className="overflow-hidden"
-                        >
-                          <div className="mt-1.5 flex flex-col gap-1 pl-2 border-l-2 border-violet-100">
-                            {msg.citations.map((c, i) => (
-                              <p key={i} className="text-[10px] text-slate-400">
-                                <span className="text-violet-500 font-medium">[{i + 1}]</span>{" "}
-                                <span className="capitalize font-medium text-slate-500">{c.source}</span>
-                                {c.text ? <span className="text-slate-300"> — {c.text.slice(0, 70)}</span> : ""}
-                              </p>
-                            ))}
-                          </div>
-                        </motion.div>
-                      )}
-                    </AnimatePresence>
-                  </div>
-                )}
+                {msg.citations?.length > 0 && <SourceChips citations={msg.citations} className="mt-2" />}
               </>
             )}
           </div>
