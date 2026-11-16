@@ -10,6 +10,9 @@ import useUiStore from "@/stores/uiStore";
 import Drawer from "@/components/ui/Drawer";
 import ConfirmModal from "@/components/ui/ConfirmModal";
 import { BTN } from "@/components/ui/buttons";
+import AttachPicker from "@/components/ui/AttachPicker";
+import { pastStart, todayLocal } from "@/lib/taskDates";
+import { suggestFor, fitWarning, domainWarning } from "@/lib/taskFit";
 import { TONE } from "../../manager/resources/tone";
 
 const TYPES = ["Feature", "Bug", "Design", "Testing", "DevOps", "Documentation"];
@@ -21,8 +24,9 @@ const blank = (preset = {}) => ({ sprintId: "", projectId: "", title: "", descri
   tags: [], xpValue: "", acceptanceCriteria: [], benchmark: "", qaRequired: false, parentId: "", dependsOn: [], mode: "single", userId: "", userIds: [], ...preset });
 
 // Same checks as the server (taskFormRules.validateTaskInput), shown before sending.
-function check(f, editing) {
+function check(f, editing, was = "") {
   const e = {};
+  const ps = pastStart(f.startDate, editing ? was : ""); if (ps) e.startDate = ps; // item 50
   if (!editing && !f.projectId) e.projectId = "Pick the module or project.";
   if (f.title.trim().length < 3 || f.title.trim().length > 120) e.title = "Write a title of 3 to 120 characters.";
   const h = Number(f.estimatedHours);
@@ -63,6 +67,15 @@ export default function TaskFormDrawer({ open, task = null, preset = null, onClo
   const [confirmGroup, setConfirmGroup] = useState(false);
   const [ai, setAi] = useState({ status: "idle" });
   const [bench, setBench] = useState({ status: "idle" }); // T-3: benchmark suggestion (D-019)
+  const [plan, setPlan] = useState({ status: "idle" }); // item 53: suggested dates and sprint
+  const [xpEst, setXpEst] = useState(null); // item 52: read-only Estimated XP
+  const [parentFix, setParentFix] = useState(null); // item 51: the parent to open when subtask hours are too high
+  useEffect(() => {
+    if (!open || !f.type || !f.priority) return;
+    let live = true;
+    api.post("/api/teamlead/xp-estimate", { type: f.type, priority: f.priority }, { silent: true }).then((r) => live && setXpEst(r.estimatedXp)).catch(() => live && setXpEst(null));
+    return () => { live = false; };
+  }, [open, f.type, f.priority]);
 
   useEffect(() => {
     if (!open) return;
@@ -70,7 +83,7 @@ export default function TaskFormDrawer({ open, task = null, preset = null, onClo
       estimatedHours: task.estimatedHours ?? "", startDate: day(task.startDate), deadline: day(task.deadline), tags: task.tags ?? [], xpValue: task.xpValue ?? "",
       acceptanceCriteria: task.acceptanceCriteria ?? [], benchmark: task.benchmark ?? "", qaRequired: !!task.qaRequired, parentId: task.parent?.id ? String(task.parent.id) : "",
       dependsOn: (task.dependsOn ?? []).map((d) => String(d.id)), sprintId: task.sprint?.id ? String(task.sprint.id) : "" }) : blank(preset ?? {});
-    setF(init); setStart(init); setErrors({}); setFiles([]); setTagInput(""); setAi({ status: "idle" }); setBench({ status: "idle" }); // eslint-disable-line react-hooks/set-state-in-effect
+    setF(init); setStart(init); setErrors({}); setFiles([]); setTagInput(""); setAi({ status: "idle" }); setBench({ status: "idle" }); setPlan({ status: "idle" }); // eslint-disable-line react-hooks/set-state-in-effect
     if (!editing) api.get("/api/teamlead/modules").then((d) => setModules(d.modules.filter((m) => m.state !== "Completed"))).catch(() => setModules([]));
   }, [open, task]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -94,8 +107,22 @@ export default function TaskFormDrawer({ open, task = null, preset = null, onClo
   const projectTasks = (ctx?.tasks ?? []).filter((t) => String(t.id) !== String(task?.id ?? ""));
 
   function suggestAssignee() {
-    const best = [...team].sort((a, b) => (a.status === "Overloaded") - (b.status === "Overloaded") || a.activeTasks - b.activeTasks)[0];
+    const best = suggestFor(team, f.type); // item 54: a fitting role first, then room
     if (best) set("userId", String(best.id));
+  }
+  // Item 53: dates and sprint from the estimate (a rule, not an AI call). "Use" fills Start, Deadline and Sprint.
+  async function askPlan() {
+    if (!(Number(f.estimatedHours) > 0)) { setErrors((e) => ({ ...e, estimatedHours: "Give an estimate in hours first (1 to 14)." })); document.getElementById("tf-estimatedHours")?.focus(); return; }
+    setPlan({ status: "loading" });
+    try {
+      const r = await api.post("/api/teamlead/plan-suggest", { projectId: f.projectId, estimatedHours: Number(f.estimatedHours), startDate: f.startDate || undefined }, { silent: true });
+      setPlan({ status: "done", s: r.suggestion });
+    } catch (e) { setPlan({ status: "error", message: e?.message ?? "Could not work out a plan. Fill the dates yourself." }); }
+  }
+  function usePlan() {
+    const s = plan.s;
+    setF((x) => ({ ...x, startDate: s.start, deadline: s.deadline, ...(s.sprint ? { sprintId: s.sprint.id } : {}) }));
+    setPlan({ status: "idle" });
   }
   function addTag() {
     const t = tagInput.trim().toLowerCase();
@@ -126,8 +153,8 @@ export default function TaskFormDrawer({ open, task = null, preset = null, onClo
   }
 
   async function submit(groupConfirmed = false) {
-    const e = check(f, editing); setErrors(e);
-    const first = ["projectId", "title", "estimatedHours", "deadline", "xpValue", "assign", "acceptanceCriteria"].find((k) => e[k]);
+    const e = check(f, editing, start.startDate); setErrors(e);
+    const first = ["projectId", "title", "estimatedHours", "startDate", "deadline", "xpValue", "assign", "acceptanceCriteria"].find((k) => e[k]);
     if (first) { document.getElementById(`tf-${first}`)?.focus(); return; }
     if (!editing && f.mode === "group" && !groupConfirmed) { setConfirmGroup(true); return; }
     setConfirmGroup(false); setBusy(true);
@@ -146,6 +173,7 @@ export default function TaskFormDrawer({ open, task = null, preset = null, onClo
       onSaved(result); onClose();
     } catch (err) {
       const fields = err?.data?.fields ?? {};
+      setParentFix(err?.data?.parentId ?? null); // item 51
       setErrors({ ...fields, ...(Object.keys(fields).length ? {} : { form: err?.message ?? "The task could not be saved." }) });
     } finally { setBusy(false); }
   }
@@ -206,10 +234,12 @@ export default function TaskFormDrawer({ open, task = null, preset = null, onClo
               </div>
               {errors.tags && <span className={ERR}>{errors.tags}</span>}
             </div>
-            <label htmlFor="tf-xpValue" className={lbl}>XP <span className="font-normal text-text-secondary">(empty = default for the priority)</span>
-              <input id="tf-xpValue" type="number" inputMode="numeric" min={10} max={1000} value={f.xpValue} onChange={(e) => set("xpValue", e.target.value)} aria-invalid={!!errors.xpValue} className={`${field} w-40 tabular-nums`} />
-              {errors.xpValue && <span className={ERR}>{errors.xpValue}</span>}
-            </label>
+            {/* Item 52 (D-527): no typed XP. Read-only estimate from the same engine that pays it. */}
+            <div className="flex flex-col gap-1" aria-live="polite">
+              <span className="font-bold text-text-primary">Estimated XP</span>
+              <span className="text-sm tabular-nums text-text-primary">{xpEst == null ? "Pick a category and priority" : `${xpEst} XP`}</span>
+              <span className="text-xs text-text-secondary">Read-only. A 3-star task of this category and priority, handed in on time; the organisation's multipliers apply.</span>
+            </div>
           </Section>
 
           <Section title="Plan">
@@ -219,9 +249,26 @@ export default function TaskFormDrawer({ open, task = null, preset = null, onClo
               </label>
               <label htmlFor="tf-difficulty" className={lbl}>Difficulty<select id="tf-difficulty" value={f.difficulty} onChange={(e) => set("difficulty", e.target.value)} className={field}>{DIFFICULTIES.map((t) => <option key={t}>{t}</option>)}</select></label>
             </div>
-            <span id="tf-hours-help" className={errors.estimatedHours ? ERR : "-mt-1 text-xs text-text-secondary"}>{errors.estimatedHours ?? "A task is 1 to 14 hours of work (D-012)."}</span>
+            <span id="tf-hours-help" className={errors.estimatedHours ? ERR : "-mt-1 text-xs text-text-secondary"}>{errors.estimatedHours ?? "A task is 1 to 14 hours of work (D-012)."}
+              {errors.estimatedHours && parentFix && <> <a href={`/teamlead/tasks?task=${parentFix}`} target="_blank" rel="noreferrer" className="underline">Edit the parent task</a></>}</span>
+            {/* Item 53: dates and sprint suggested from the estimate and the org's working days. A suggestion: "Use" applies it. */}
+            <div className="flex flex-col gap-2 rounded-xl border border-ink/[0.07] bg-ink/[0.02] p-3">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <span className="flex items-center gap-1.5 text-xs font-bold text-text-primary"><Sparkles size={13} aria-hidden="true" />Suggested plan</span>
+                <button type="button" className={BTN.secondary} disabled={plan.status === "loading" || !f.projectId} onClick={askPlan}>{plan.status === "loading" ? "Working it out…" : "Suggest dates"}</button>
+              </div>
+              {plan.status === "error" && <p role="status" className="text-xs text-text-secondary">{plan.message}</p>}
+              {plan.status === "done" && (
+                <div className="flex flex-col gap-2 text-xs" aria-live="polite">
+                  <p className="text-text-primary">Start {plan.s.start} · deadline {plan.s.deadline} ({plan.s.workingDays} working day{plan.s.workingDays === 1 ? "" : "s"} at the organisation's hours per day){plan.s.sprint ? ` · sprint "${plan.s.sprint.name}"` : " · no open sprint covers that date"}</p>
+                  <span className="flex flex-wrap gap-2"><button type="button" className={BTN.primary} onClick={usePlan}>Use</button><button type="button" className={BTN.ghost} onClick={() => setPlan({ status: "idle" })}>Dismiss</button></span>
+                  <span className="text-[11px] text-text-secondary">A suggestion from your estimate and Working Time. Nothing changes until you press Use.</span>
+                </div>
+              )}
+            </div>
             <div className="grid grid-cols-2 gap-3">
-              <label htmlFor="tf-startDate" className={lbl}>Start<input id="tf-startDate" type="date" value={f.startDate} onChange={(e) => set("startDate", e.target.value)} className={field} /></label>
+              <label htmlFor="tf-startDate" className={lbl}>Start<input id="tf-startDate" type="date" min={editing ? undefined : todayLocal()} value={f.startDate} onChange={(e) => set("startDate", e.target.value)} aria-invalid={!!errors.startDate} className={field} />
+                {errors.startDate && <span className={ERR}>{errors.startDate}</span>}</label>
               <label htmlFor="tf-deadline" className={lbl}>Deadline<input id="tf-deadline" type="date" min={f.startDate || undefined} value={f.deadline} onChange={(e) => set("deadline", e.target.value)} aria-invalid={!!errors.deadline} className={field} />
                 {errors.deadline && <span className={ERR}>{errors.deadline}</span>}</label>
             </div>
@@ -244,7 +291,7 @@ export default function TaskFormDrawer({ open, task = null, preset = null, onClo
               {f.mode !== "none" && !f.projectId && <p className="text-xs text-text-secondary">Pick the module first to see who is on it.</p>}
               {f.mode !== "none" && f.projectId && !ctx && <p role="status" className="text-xs text-text-secondary">Loading the team…</p>}
               {f.mode !== "none" && ctx && !team.length && <p className="text-xs text-text-secondary">Nobody is on this project yet. Ask your Manager to add people, or leave it unassigned.</p>}
-              {f.mode === "single" && team.length > 0 && <AssignHint projectId={f.projectId} type={f.type} title={f.title} hours={f.estimatedHours} picked={f.userId} onApply={(id) => set("userId", id)} />}
+              {f.mode === "single" && team.length > 0 && <AssignHint projectId={f.projectId} type={f.type} title={f.title} hours={f.estimatedHours} parentId={f.parentId} picked={f.userId} onApply={(id) => set("userId", id)} />}
               {f.mode !== "none" && team.length > 0 && (
                 <ul id="tf-assign" tabIndex={-1} className="flex max-h-56 flex-col gap-1 overflow-y-auto rounded-xl border border-ink/[0.08] p-1" aria-label="Team members">
                   {team.map((m) => {
@@ -254,7 +301,8 @@ export default function TaskFormDrawer({ open, task = null, preset = null, onClo
                         <label className={`flex cursor-pointer items-center gap-3 rounded-lg px-2.5 py-2 ${on ? "bg-accent/[0.07]" : "hover:bg-ink/[0.03]"}`}>
                           <input type={f.mode === "single" ? "radio" : "checkbox"} name="tf-person" checked={on} className="h-4 w-4 accent-[var(--accent)]"
                             onChange={() => (f.mode === "single" ? set("userId", id) : set("userIds", on ? f.userIds.filter((x) => x !== id) : [...f.userIds, id]))} />
-                          <span className="min-w-0 flex-1"><span className="block truncate font-semibold">{m.name}</span><span className="block text-xs text-text-secondary">{m.role} · {m.activeTasks} active</span></span>
+                          <span className="min-w-0 flex-1"><span className="block truncate font-semibold">{m.name}</span><span className="block text-xs text-text-secondary">{m.role} · {m.activeTasks} active</span>
+                            {on && fitWarning(m, f.type) && <span role="status" className="mt-0.5 block text-xs font-semibold text-[#9A3A06]">{fitWarning(m, f.type)}</span>}</span>
                           <span className="shrink-0 text-xs font-semibold tabular-nums" style={{ color: TONE[m.tone]?.text }}>{m.label}</span>
                         </label>
                       </li>
@@ -305,6 +353,9 @@ export default function TaskFormDrawer({ open, task = null, preset = null, onClo
               <select id="tf-parent" value={f.parentId} onChange={(e) => set("parentId", e.target.value)} className={field} disabled={!f.projectId}>
                 <option value="">None</option>{projectTasks.map((t) => <option key={t.id} value={t.id}>{t.title}</option>)}
               </select>
+              {f.parentId && domainWarning(projectTasks.find((t) => String(t.id) === String(f.parentId))?.type, f.type) && (
+                <span role="status" className="text-xs font-semibold text-[#9A3A06]">{domainWarning(projectTasks.find((t) => String(t.id) === String(f.parentId))?.type, f.type)}</span>
+              )}
             </label>
             <div className="flex flex-col gap-1.5">
               <span className="font-bold text-text-primary">Depends on <span className="font-normal text-text-secondary">(cannot start until these are Done)</span></span>
@@ -323,10 +374,9 @@ export default function TaskFormDrawer({ open, task = null, preset = null, onClo
 
           {!editing && (
             <Section title="Files">
-              <label htmlFor="tf-files" className={lbl}>Attach files <span className="font-normal text-text-secondary">(PDF, DOC, DOCX, CSV, PNG, JPG; up to 5 files of 5 MB)</span>
-                <input id="tf-files" type="file" multiple accept=".pdf,.doc,.docx,.csv,.png,.jpg,.jpeg" onChange={(e) => setFiles([...e.target.files].slice(0, 5))} className="text-sm font-normal" />
-              </label>
-              {files.length > 0 && <p className="text-xs text-text-secondary">{files.length} file{files.length === 1 ? "" : "s"} will be added after the task is created{f.mode === "group" ? ", to each task" : ""}.</p>}
+              <label htmlFor="tf-files" className={lbl}>Attach files</label>
+              <AttachPicker id="tf-files" files={files} onChange={setFiles} />
+              {files.length > 0 && <p className="text-xs text-text-secondary">The files will be added after the task is created{f.mode === "group" ? ", to each task" : ""}.</p>}
             </Section>
           )}
           {editing && <p className="text-xs text-text-secondary">Files, subtasks and reassigning are on the task's own tabs.</p>}

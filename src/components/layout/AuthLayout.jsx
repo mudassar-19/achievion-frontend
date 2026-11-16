@@ -34,7 +34,7 @@ const DOT_STYLE = {
 
 export default function AuthLayout({ children }) {
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-2 min-h-screen">
+    <div className="grid grid-cols-1 lg:grid-cols-2 min-h-screen [&>*]:min-w-0">
 
       {/* ── LEFT COLUMN — showcase panel (hidden on mobile) ────────────────── */}
       <div

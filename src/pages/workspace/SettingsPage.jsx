@@ -3,7 +3,7 @@
 import ProfileDetails from "@/components/ui/ProfileDetails";
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import { User, Shield, Bell, Eye, EyeOff, Lock, Loader2 } from "lucide-react";
+import { User, Shield, Bell, Eye, EyeOff, Loader2 } from "lucide-react";
 import useAuthStore from "@/stores/authStore";
 import useUiStore from "@/stores/uiStore";
 import api from "@/lib/api";
@@ -117,7 +117,7 @@ function SecuritySection() {
               <li key={s.id} className="flex min-w-0 items-center justify-between gap-3 rounded-xl border border-border-subtle bg-bg-surface px-4 py-3">
                 <div className="min-w-0">
                   <p className="truncate text-sm font-semibold text-text-primary" title={s.device ?? ""}>{s.device ?? "Unknown device"}</p>
-                  <p className="text-[13px] text-text-secondary">{s.ip ?? "—"} · last seen {fmtDateTime(s.lastSeenAt)}</p>
+                  <p className="text-[13px] text-text-secondary">{s.status === "active" || s.status === "current" ? "Active now" : `Last active ${fmtDateTime(s.lastSeenAt)}`}</p>
                 </div>
                 {s.isCurrent && <span className="shrink-0 rounded-md bg-accent-tint px-2 py-0.5 text-xs font-bold text-accent-text">This device</span>}
               </li>
@@ -135,7 +135,6 @@ function SecuritySection() {
 export default function SettingsPage({ embedded = false }) {
   const user     = useAuthStore((s) => s.user);
   const setUser  = useAuthStore((s) => s.setUser);
-  const setToken = useAuthStore((s) => s.setToken);
   const addToast = useUiStore((s) => s.addToast);
   const [active, setActive] = useState("account");
   const [opts, setOpts] = useState(null);
@@ -208,11 +207,10 @@ export default function SettingsPage({ embedded = false }) {
       <div className="flex flex-col gap-5">
         <Heading title="Notifications" sub="Choose which updates reach your bell. Things that need your action are always on." />
         <div className="flex max-w-2xl flex-col gap-2">
-          {opts.groups.map((g) => (
+          {/* Item 39: rows that are always on are not listed; the line above says so once. */}
+          {opts.groups.filter((g) => !g.locked).map((g) => (
             <Row key={g.key} title={g.label} desc={g.desc}>
-              {g.locked
-                ? <span className="inline-flex shrink-0 items-center gap-1 text-[13px] font-semibold text-text-secondary"><Lock size={13} aria-hidden />Always on</span>
-                : <Toggle label={g.label} on={draft.notifs[g.key]} onChange={(v) => setDraft((d) => ({ ...d, notifs: { ...d.notifs, [g.key]: v } }))} />}
+              <Toggle label={g.label} on={draft.notifs[g.key]} onChange={(v) => setDraft((d) => ({ ...d, notifs: { ...d.notifs, [g.key]: v } }))} />
             </Row>
           ))}
           <Row title="Email notifications" desc="Send an email for task assignments, reviews, and deadline reminders when you are offline (more than 5 minutes inactive).">

@@ -4,6 +4,7 @@ import api                from "@/lib/api";
 import socket, { joinRooms } from "@/utils/socket";
 import useGamificationStore from "@/stores/gamificationStore";
 import { dashboardPathForRole } from "@/utils/roleTheme";
+import { syncAction, alreadySignedIn, ALREADY_SIGNED_IN } from "@/lib/authSync";
 
 // ── Role-derived display labels ───────────────────────────────────────────────
 export const ROLE_XP_LABEL = {
@@ -97,6 +98,8 @@ const useAuthStore = create(
       // Authenticates via POST /api/auth/login.
       // Returns { success: true, role } on success or { success: false, error }.
       login: async (email, password, orgCode) => {
+        let saved = null; try { saved = localStorage.getItem("achievion-auth"); } catch { /* storage blocked: no check */ }
+        if (alreadySignedIn(saved, get().token)) { set({ error: ALREADY_SIGNED_IN }); return { success: false, error: ALREADY_SIGNED_IN }; } // item 62
         set({ isLoading: true, error: null });
         try {
           const data = await api.post("/api/auth/login", { email, password, orgCode });
@@ -181,14 +184,13 @@ const useAuthStore = create(
         _syncListenerAttached = true;
         window.addEventListener("storage", (e) => {
           if (e.key !== "achievion-auth") return;
-          try {
-            const incoming = JSON.parse(e.newValue ?? "null")?.state?.token ?? null;
-            if (incoming !== get().token) {
-              socket.disconnect();
-              set({ user: null, token: null, isAuthenticated: false, error: null, viewAs: null });
-              window.location.href = "/login";
-            }
-          } catch {}
+          const action = syncAction(get().token, e.newValue);
+          if (action === "reload") { window.location.reload(); return; } // another tab signed in: read its login, write nothing (item 62)
+          if (action === "logout") {
+            socket.disconnect();
+            set({ user: null, token: null, isAuthenticated: false, error: null, viewAs: null });
+            window.location.href = "/login";
+          }
         });
       },
 

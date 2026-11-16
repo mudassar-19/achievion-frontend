@@ -27,6 +27,10 @@ const ROLE_CATEGORIES = [
 // ── Badge helpers ─────────────────────────────────────────────────────────────
 
 
+// Item 60: the header and every row use ONE column template with a fixed last column (an `auto` column was sized
+// separately in each row, so the headers drifted away from their cells). minmax(0, …) lets long names and e-mails truncate.
+const GRID = "grid grid-cols-[minmax(0,2fr)_minmax(0,2fr)_minmax(0,1.6fr)_minmax(0,1.5fr)_96px] gap-3";
+
 function StatusBadge({ status }) {
   const cls = {
     active:           "bg-emerald-500/15 text-emerald-400 border-emerald-500/25",
@@ -271,7 +275,7 @@ export default function EmployeeList() {
       {/* Table */}
       <div className="rounded-2xl border border-ink/8 bg-gradient-to-b from-[#EAEDF4] to-[#FFFFFF] overflow-hidden">
         {/* Table header */}
-        <div className="grid grid-cols-[2fr_2fr_2fr_1fr_auto] gap-3 px-5 py-3 border-b border-ink/[0.05] bg-ink/[0.02]">
+        <div className={`${GRID} px-5 py-3 border-b border-ink/[0.05] bg-ink/[0.02]`}>
           {["Name", "Email", "Role", "Status", "Actions"].map((h) => (
             <span key={h} className="text-[14px] font-bold uppercase tracking-widest text-text-disabled">{h}</span>
           ))}
@@ -297,7 +301,7 @@ export default function EmployeeList() {
               const busy       = actionLoading[emp.id];
               const isDirector = emp.role === "Director";
               return (
-                <div key={emp.id} className="grid grid-cols-[2fr_2fr_2fr_1fr_auto] gap-3 items-center px-5 py-3.5">
+                <div key={emp.id} className={`${GRID} items-center px-5 py-3.5`}>
                   {/* Name + avatar + status dot */}
                   <div className="flex items-center gap-2.5 min-w-0">
                     <InitialsAvatar name={emp.name} />
@@ -356,7 +360,7 @@ export default function EmployeeList() {
                   </div>
 
                   {/* Status */}
-                  <div className="flex flex-col gap-0.5">
+                  <div className="flex min-w-0 flex-col items-start gap-0.5">
                     <StatusBadge status={emp.status} />
                     {emp.pendingSuspension && (
                       <span className="inline-flex items-center gap-1 text-[14px] font-bold text-amber-400">

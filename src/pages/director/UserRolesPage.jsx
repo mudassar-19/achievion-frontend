@@ -280,7 +280,7 @@ function AdjustXpDrawer({ employee, open, onClose, onSuccess }) {
             <textarea
               id="xp-reason"
               rows={4}
-              placeholder="Explain why you're adjusting this employee's XP…"
+              placeholder="What is being corrected, or what is the special case?"
               value={reason}
               onChange={(e) => setReason(e.target.value)}
               disabled={loading}
@@ -330,7 +330,8 @@ function AdjustXpDrawer({ employee, open, onClose, onSuccess }) {
 
           {/* Limits note */}
           <p className="text-xs text-text-secondary/70 leading-relaxed border-t border-ink/[0.05] pt-4">
-            Limits: ±{AMOUNT_MAX} XP per adjustment · 3 per employee per day ·
+            This is a correction or a special case, not a reward. Limits: ±{AMOUNT_MAX} XP per adjustment · 3 per employee per day ·
+            5 per employee per month, 1000 XP in total either way ·
             Applies only to Team Lead, Developer, Designer, and Tester roles ·
             Logged to audit trail and employee is notified.
           </p>

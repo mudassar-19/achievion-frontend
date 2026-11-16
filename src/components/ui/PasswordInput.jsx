@@ -7,7 +7,7 @@ import Input from "@/components/ui/Input";
  * Accepts all the same props as Input; `type` is managed internally.
  */
 const PasswordInput = forwardRef(function PasswordInput(
-  { label = "Password", placeholder = "••••••••", ...props },
+  { label = "Password", placeholder = "Enter password", ...props }, // dots looked like a filled field (item 61)
   ref
 ) {
   const [visible, setVisible] = useState(false);

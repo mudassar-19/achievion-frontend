@@ -5,11 +5,12 @@ import {
   ClipboardCheck, CheckCircle2, XCircle, Clock,
   Loader2, UserPlus, UserMinus, ShieldOff, ShieldCheck, RefreshCw, MessageSquare, AlertTriangle,
 } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import api from "@/lib/api";
 import useAuthStore from "@/stores/authStore";
 import useUiStore from "@/stores/uiStore";
 import ConfirmModal from "@/components/ui/ConfirmModal";
+import DecisionHistory from "@/components/ui/DecisionHistory";
 import PageHeader from "@/components/ui/PageHeader";
 import socket from "@/utils/socket";
 import { useRoleTheme } from "@/utils/roleTheme";
@@ -155,6 +156,12 @@ export default function ApprovalQueuePage() {
   const [busy,        setBusy]        = useState({});
   const [rejectOpen,  setRejectOpen]  = useState({});
   const [deleteConfirm, setDeleteConfirm] = useState(null);
+  const [notes, setNotes] = useState({}); // optional approve notes by approval id
+  const notesRef = useRef({}); notesRef.current = notes; // eslint-disable-line react-hooks/refs
+
+  // A notification links here as /director/approvals?id=<approval id> (item 32): scroll to that request and mark it.
+  const focusId = useSearchParams()[0].get("id");
+  useEffect(() => { if (focusId && !loading) document.getElementById(`approval-${focusId}`)?.scrollIntoView({ block: "center", behavior: "smooth" }); }, [focusId, loading]);
 
   // Pending actions with Undo (id → setTimeout handle)
   const pendingActions = useRef({});
@@ -201,7 +208,7 @@ export default function ApprovalQueuePage() {
   // ── Commit helpers (called after Undo window) ─────────────────────────────
   async function commitApproveAccount(acc) {
     try {
-      await api.post(`/api/approvals/${acc._id}/approve`, {}, {headers:{Authorization:`Bearer ${token}`}});
+      await api.post(`/api/approvals/${acc._id}/approve`, { note: notesRef.current[acc._id]?.trim() || undefined }, {headers:{Authorization:`Bearer ${token}`}});
     } catch(e) {
       addToast({type:"error", message:e?.message??"Approval failed."});
       setAccounts(prev=>[acc,...prev]);
@@ -364,8 +371,8 @@ export default function ApprovalQueuePage() {
                 const isRejectOpen = rejectOpen[key];
                 const isBusy = !!busy[key];
                 return (
-                  <motion.div key={acc._id} variants={rowV} layout exit="exit"
-                    className="rounded-2xl border border-ink/[0.08] glass-panel p-5 flex flex-col gap-3">
+                  <motion.div key={acc._id} id={`approval-${acc._id}`} variants={rowV} layout exit="exit"
+                    className={`rounded-2xl border glass-panel p-5 flex flex-col gap-3 ${focusId === String(acc._id) ? "border-accent ring-2 ring-accent/40" : "border-ink/[0.08]"}`}>
                     <div className="flex items-start justify-between gap-3 flex-wrap">
                       <div className="flex min-w-0 flex-1 basis-64 flex-col gap-1.5">
                         <ActionBadge type={acc.actionType}/>
@@ -403,6 +410,10 @@ export default function ApprovalQueuePage() {
                             <AlertTriangle size={11} strokeWidth={2}/> Approving this will permanently delete the employee account.
                           </p>
                         )}
+                        {/* Item 10 (D-533): an optional note on approve (a note on reject is mandatory, asked below) */}
+                        <input type="text" maxLength={300} aria-label={`Optional note for approving: ${accountDesc(acc)}`} placeholder="Note (optional)"
+                          value={notes[acc._id] ?? ""} onChange={(e)=>setNotes(n=>({...n,[acc._id]:e.target.value}))}
+                          className="h-9 rounded-lg border border-ink/[0.1] bg-white px-3 text-xs text-text-primary"/>
                         <div className="flex gap-2">
                           <button onClick={()=>handleApproveAcc(acc)} disabled={isBusy}
                             className={[
@@ -436,6 +447,7 @@ export default function ApprovalQueuePage() {
           </motion.div>
         </motion.div>
       )}
+      <DecisionHistory path="/api/approvals/decisions" headers={{ Authorization: `Bearer ${token}` }} />
     </div>
   );
 }

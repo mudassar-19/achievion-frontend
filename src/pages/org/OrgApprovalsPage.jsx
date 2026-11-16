@@ -7,6 +7,7 @@ import socket from "@/utils/socket";
 import ApprovalExportModal from "@/components/org/ApprovalExportModal";
 
 import TallyLoader from "@/components/ui/TallyLoader";
+import DecisionHistory from "@/components/ui/DecisionHistory";
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 function timeAgo(iso) {
@@ -298,6 +299,8 @@ export default function OrgApprovalsPage() {
           </AnimatePresence>
         </motion.div>
       )}
+
+      <DecisionHistory path="/api/org/decisions" headers={authHeaders} />
 
       {/* Export modal */}
       {showExport && (

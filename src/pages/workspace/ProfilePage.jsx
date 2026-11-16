@@ -673,7 +673,8 @@ export default function ProfilePage() {
                               <Zap size={11} style={{ color: theme.text }} />
                             </div>
                             <div>
-                              <p className="text-xs font-semibold text-slate-300 capitalize">{l.source?.replace(/_/g, " ")}</p>
+                              <p className="text-xs font-semibold text-slate-300 capitalize">{l.label ?? l.source?.replace(/_/g, " ")}</p>
+                              {l.reason && <p className="text-[14px] text-slate-500">Correction: {l.reason}</p>}
                               <p className="text-[14px] text-slate-600">{fmtTimeAgo(l.createdAt)}</p>
                             </div>
                           </div>

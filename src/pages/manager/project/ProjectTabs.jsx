@@ -172,20 +172,26 @@ export function ModulesTab({ project, onChanged }) {
     { key: "roles", label: "Work types", render: (m) => m.roles.length ? m.roles.map((r) => ROLE_LABEL[r] ?? r).join(" · ") : "—" },
     { key: "progress", label: "Progress", render: (m) => <span className="text-sm tabular-nums">{m.progressPct}% <span className="text-xs text-text-secondary">({m.done}/{m.tasks})</span></span> },
     { key: "lead", label: "Team Lead", render: (m) => m.teamLead?.name ?? <span className="text-xs font-semibold text-[#9A3A06]">Not assigned</span> },
-    { key: "due", label: "Due", className: "whitespace-nowrap", render: (m) => fmt(m.dueDate) },
+    { key: "due", label: "Module due date", className: "whitespace-nowrap", render: (m) => (
+      <span className="flex flex-col">{fmt(m.dueDate)}
+        {m.workingDaysLeft != null && <span className="text-xs text-text-secondary">{m.workingDaysLeft === 0 ? "No working days left" : `${m.workingDaysLeft} working day${m.workingDaysLeft === 1 ? "" : "s"} left`}</span>}
+      </span>) },
   ];
   return (
     <div className="flex flex-col gap-4">
       <div className="flex justify-end"><button type="button" className={BTN.secondary} onClick={() => { setForm((f) => ({ ...f, title: "", roles: ["Developer"] })); setErr(null); setAdding(true); }}><Plus size={14} aria-hidden="true" /> Add module</button></div>
       <DataTable label="Modules" columns={columns} rows={data?.modules ?? []} loading={!data && !error} error={error} onRetry={reload}
         total={data?.modules?.length ?? 0} pageSize={1000}
-        rowActions={(m) => [{ label: m.teamLead ? "Change Team Lead" : "Assign Team Lead", icon: UserCheck, onClick: () => { setForm((f) => ({ ...f, teamLeadId: m.teamLead?.id ?? "", dueDate: m.dueDate?.slice(0, 10) ?? "" })); setErr(null); setAssign(m); } }]}
+        rowActions={(m) => [{ label: m.teamLead ? "Change Team Lead" : "Assign Team Lead", icon: UserCheck, showLabel: true, onClick: () => { setForm((f) => ({ ...f, teamLeadId: m.teamLead?.id ?? "", dueDate: m.dueDate?.slice(0, 10) ?? "" })); setErr(null); setAssign(m); } }]}
         empty={<EmptyState heading="No modules yet." action={{ label: "Add module", onClick: () => setAdding(true) }} />} />
 
       <Drawer open={!!assign} onClose={() => setAssign(null)} title={`Team Lead for "${assign?.title ?? ""}"`}
         footer={<div className="flex justify-end gap-2"><button type="button" className={BTN.secondary} onClick={() => setAssign(null)}>Cancel</button><button type="button" className={BTN.primary} disabled={busy} onClick={saveLead}>{busy ? "Saving…" : "Assign"}</button></div>}>
         <div className="flex flex-col gap-4 p-5">
-          <p className="text-sm text-text-secondary">One Team Lead per module. They get a notification and the module shows up in their portal.</p>
+          <p className="text-sm text-text-secondary">
+            {assign?.teamLead ? <><strong className="text-text-primary">{assign.teamLead.name}</strong> leads this module now. Saving a different person replaces them: one Team Lead per module. </> : "One Team Lead per module. "}
+            They get a notification and the module shows up in their portal.
+          </p>
           {leads.error ? <ErrorState message={leads.error} onRetry={leads.reload} /> : !leads.data ? <Skeleton className="h-10 rounded-xl" /> : (
             <Sel id="mod-lead" label="Team Lead" value={form.teamLeadId} onChange={(v) => setForm((f) => ({ ...f, teamLeadId: v }))}>
               <option value="">Choose a Team Lead</option>{tls.map((t) => <option key={t.id} value={t.id}>{t.name}{t.availability ? ` (${t.availability})` : ""}</option>)}

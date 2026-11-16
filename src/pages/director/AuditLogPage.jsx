@@ -23,6 +23,11 @@ import { avatarUrl } from "@/lib/avatar";
 // See docs/design/AUDIT_BEFORE_AFTER_GAP.md for full backend dependency list.
 
 const ACTION_CFG = {
+  xp_adjusted:            { category:"xp", label:"XP correction", color:"#9A3A06", icon:Activity,
+    sentence: l => l.detail ?? "A Director corrected an employee's XP" },
+  xp_adjust_flagged:      { category:"xp", label:"XP correction flagged", color:"#B01F17", icon:Activity,
+    sentence: l => l.detail ?? "An XP correction was flagged for review" },
+
   role_change:            { category:"employee",     label:"Role Changed",       color:"#4B2FC4", icon:UserCog,
     sentence: l => l.targetName
       ? `${l.targetName} changed from ${l.oldRole??"(unknown)"} to ${l.newRole??"(unknown)"}`
@@ -98,6 +103,7 @@ const CATEGORY_FILTERS = [
   { key:"employee",     label:"Employee & HR", icon:Users,        color:"#4B2FC4" },
   { key:"organization", label:"Organization",  icon:Building2,    color:"#4B2FC4" },
   { key:"project",      label:"Projects",      icon:FolderKanban, color:"#0E6A30" },
+  { key:"xp",           label:"XP adjustments", icon:Activity,    color:"#9A3A06" }, // item 8 (D-532)
 ];
 
 // ── Helpers ───────────────────────────────────────────────────────────────────

@@ -3,6 +3,7 @@
 import { useLayoutEffect, useRef, useState } from "react";
 import { Pencil, SmilePlus, Trash2 } from "lucide-react";
 import api from "@/lib/api";
+import useAuthStore from "@/stores/authStore";
 import ConfirmModal from "@/components/ui/ConfirmModal";
 import { BTN } from "@/components/ui/buttons";
 import { fmtDateTime } from "../../manager/project/format";
@@ -82,7 +83,9 @@ export default function TaskComments({ t, taskId, act, busy, base: baseProp, pla
     if (await act(() => api.patch(`${base}/comments/${editing.id}`, { text: editing.text.trim() }), "Comment updated.")) setEditing(null);
   }
   const react = (id, emoji) => { setPicker(null); return act(() => api.post(`${base}/comments/${id}/reactions`, { emoji })); };
-  const members = t.members ?? [];
+  const me = useAuthStore((s) => s.user?.id ?? s.user?._id);
+  const everyone = t.members ?? []; // names stay bold when someone else mentions you
+  const members = everyone.filter((m) => String(m.id) !== String(me)); // item 57: the @ list leaves yourself out
   return (
     <>
       <form onSubmit={add} className="flex flex-col gap-2">
@@ -108,7 +111,7 @@ export default function TaskComments({ t, taskId, act, busy, base: baseProp, pla
                   <MentionBox id={`td-edit-${c.id}`} value={editing.text} onChange={(v) => setEditing((x) => ({ ...x, text: v }))} members={members} />
                   <span className="flex gap-2"><button type="submit" className={BTN.primary} disabled={busy || !editing.text.trim()}>Save</button><button type="button" className={BTN.ghost} onClick={() => setEditing(null)}>Cancel</button></span>
                 </form>
-              ) : <p className="mt-0.5 whitespace-pre-wrap [overflow-wrap:anywhere]"><Rich text={c.text} members={members} /></p>}
+              ) : <p className="mt-0.5 whitespace-pre-wrap [overflow-wrap:anywhere]"><Rich text={c.text} members={everyone} /></p>}
               <div className="mt-1.5 flex flex-wrap items-center gap-1">
                 {c.reactions.map((r) => (
                   <button key={r.emoji} type="button" aria-pressed={r.mine} aria-label={`${r.emoji} ${r.count}${r.mine ? ", you reacted" : ""}`} disabled={busy} onClick={() => react(c.id, r.emoji)}

@@ -313,7 +313,7 @@ export default function LoginForm() {
           <PasswordInput
             label="Password"
             id="login-password"
-            placeholder="••••••••"
+            placeholder="Enter password"
             value={form.password}
             onChange={update("password")}
             error={fieldErrors.password}

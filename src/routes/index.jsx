@@ -221,7 +221,7 @@ const router = createBrowserRouter([{
 
   // ── Employee auth ─────────────────────────────────────────────────────────
   { path: "/login",            element: <GuestRoute><AuthLayout><LoginPage /></AuthLayout></GuestRoute> },
-  { path: "/forgot-password",  element: <AuthLayout><ForgotPasswordPage /></AuthLayout> },
+  { path: "/forgot-password",  element: <ForgotPasswordPage /> }, // the page wraps itself in AuthLayout (a second wrapper nested the whole layout: item 48)
   { path: "/dashboard",        element: <PostLoginRedirect /> },
 
   // ── Org (Software House) auth ─────────────────────────────────────────────

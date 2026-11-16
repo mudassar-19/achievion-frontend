@@ -54,11 +54,17 @@ export default function DataTable({ label, columns, rows, rowKey = (r) => r.id, 
                 {columns.map((c) => <td key={c.key} className={`px-4 py-3 align-middle break-words ${c.className ?? ""}`}>{c.render ? c.render(r) : r[c.key]}</td>)}
                 {rowActions && (
                   <td className="whitespace-nowrap px-3 py-2 text-right" onClick={(e) => e.stopPropagation()}>
-                    <span className="inline-flex gap-1 opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100">
+                    <span className={`inline-flex gap-1 ${rowActions(r).some((a) => a.showLabel) ? "" : "opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100"}`}>
                       {rowActions(r).slice(0, 2).map((a) => (
-                        <button key={a.label} type="button" onClick={() => a.onClick(r)} aria-label={`${a.label}: ${r.title ?? r.name ?? ""}`} title={a.label} className={BTN.icon}>
-                          <a.icon size={15} aria-hidden="true" />
-                        </button>
+                        a.showLabel ? ( // an action with `showLabel` is always visible and says what it does (item 59)
+                          <button key={a.label} type="button" onClick={() => a.onClick(r)} aria-label={`${a.label}: ${r.title ?? r.name ?? ""}`} className={`${BTN.secondary} !min-h-8 !px-2.5 text-xs`}>
+                            <a.icon size={14} aria-hidden="true" />{a.label}
+                          </button>
+                        ) : (
+                          <button key={a.label} type="button" onClick={() => a.onClick(r)} aria-label={`${a.label}: ${r.title ?? r.name ?? ""}`} title={a.label} className={BTN.icon}>
+                            <a.icon size={15} aria-hidden="true" />
+                          </button>
+                        )
                       ))}
                     </span>
                   </td>

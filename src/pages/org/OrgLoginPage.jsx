@@ -136,7 +136,7 @@ export default function OrgLoginPage() {
               <PasswordInput
                 label="Password"
                 id="org-login-password"
-                placeholder="••••••••"
+                placeholder="Enter password"
                 value={form.password}
                 onChange={update("password")}
                 error={errors.password}

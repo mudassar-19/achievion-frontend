@@ -86,7 +86,7 @@ function ApprovalModal({ result, onCreateAnother, onViewList }) {
         {/* Password */}
         {emp.password && (
           <div className="flex flex-col gap-1.5">
-            <p className="text-[14px] font-bold uppercase tracking-widest text-text-disabled">Generated Password</p>
+            <p className="text-[14px] font-bold uppercase tracking-widest text-text-disabled">Temporary password</p>
             <div className="flex items-center gap-2 rounded-xl border border-accent/20 bg-accent/5 px-3 py-2.5">
               <code className="flex-1 text-sm font-mono font-bold text-accent-text tracking-wider select-all">
                 {emp.password}

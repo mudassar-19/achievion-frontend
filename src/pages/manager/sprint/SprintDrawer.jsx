@@ -5,6 +5,7 @@ import api from "@/lib/api";
 import Drawer from "@/components/ui/Drawer";
 import { BTN } from "@/components/ui/buttons";
 import { fmt } from "../project/format";
+import { pastStart, todayLocal } from "@/lib/taskDates";
 
 const day = (d) => (d ? new Date(d).toISOString().slice(0, 10) : "");
 const blank = (projectId = "") => ({ name: "", goal: "", startDate: "", endDate: "", projectId });
@@ -43,6 +44,7 @@ export default function SprintDrawer({ open, onClose, sprint = null, projects = 
     if (form.name.trim().length < 2) e.name = "Give the sprint a name (2–80 characters).";
     if (!edit && !form.projectId) e.projectId = "Choose the project this sprint belongs to.";
     if (!form.startDate) e.startDate = "Pick a start date.";
+    else if (!active) e.startDate = pastStart(form.startDate, sprint ? day(sprint.startDate) : "");
     if (!form.endDate) e.endDate = "Pick an end date.";
     else if (form.startDate && form.endDate <= form.startDate) e.endDate = "The end date must be after the start date.";
     return e;
@@ -90,7 +92,7 @@ export default function SprintDrawer({ open, onClose, sprint = null, projects = 
         </label>
         <div className="grid grid-cols-2 gap-3">
           <label htmlFor="sp-startDate" className="flex flex-col gap-1.5 font-bold text-text-primary">Start date
-            <input id="sp-startDate" type="date" value={form.startDate} onChange={set("startDate")} disabled={active} aria-invalid={!!errors.startDate} className={field} />
+            <input id="sp-startDate" type="date" min={edit ? undefined : todayLocal()} value={form.startDate} onChange={set("startDate")} disabled={active} aria-invalid={!!errors.startDate} className={field} />
             {errors.startDate && <span className={ERR}>{errors.startDate}</span>}
           </label>
           <label htmlFor="sp-endDate" className="flex flex-col gap-1.5 font-bold text-text-primary">End date

@@ -12,6 +12,7 @@ import api from "@/lib/api";
 
 import TallyLoader from "@/components/ui/TallyLoader";
 import AiTaskSuggest from "@/components/widgets/AiTaskSuggest";
+import { todayLocal } from "@/lib/taskDates";
 const TEAL = "#08695F";
 
 // ── Constants ──────────────────────────────────────────────────────────────────
@@ -412,6 +413,7 @@ export function CreateTaskModal({
             <Field label="Scheduled Start">
               <input
                 type="datetime-local"
+                min={`${todayLocal()}T00:00`}
                 value={form.startDate}
                 onChange={(e) => set("startDate", e.target.value)}
                 className={inputClass()}

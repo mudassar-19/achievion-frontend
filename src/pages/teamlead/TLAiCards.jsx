@@ -10,18 +10,19 @@ const hours = (n) => `${Math.round((n ?? 0) * 10) / 10} h`;
 const Box = ({ label, children }) => <section aria-label={label} aria-live="polite" className="flex min-w-0 flex-col gap-2 rounded-xl border border-accent/15 bg-accent/[0.03] p-3 text-sm">{children}</section>;
 
 // Task form Assign. The T-2 "Suggest assignee (most room)" button next to it needs no AI and stays available.
-export function AssignHint({ projectId, type, title, hours: h, onApply, picked }) {
+export function AssignHint({ projectId, type, title, hours: h, parentId, onApply, picked }) {
   const call = useAiCall();
   const d = call.data;
   return (
     <Box label="AI assign suggestion">
       {call.status !== "done" && call.status !== "loading" && (
-        <button type="button" className={`${BTN.secondary} self-start`} onClick={() => call.runIfOn(STATUS, "post", `${BASE}/ai/assign-hint`, { projectId, type, title, hours: h })}><Sparkles size={14} aria-hidden="true" />Suggest with AI</button>
+        <button type="button" className={`${BTN.secondary} self-start`} onClick={() => call.runIfOn(STATUS, "post", `${BASE}/ai/assign-hint`, { projectId, type, title, hours: h, parentId: parentId || undefined })}><Sparkles size={14} aria-hidden="true" />Suggest with AI</button>
       )}
       <AiStatus call={call} loadingText="Comparing the team's load…" />
       {call.status === "done" && d && (
         <>
           <p className="break-words text-text-primary"><span className="font-bold">AI suggests {d.name}.</span> {d.reason}</p>
+          {d.note && <p role="status" className="text-xs font-semibold text-[#9A3A06]">{d.note}</p>}
           <div className="flex flex-wrap items-center gap-2">
             <button type="button" className={BTN.secondary} disabled={picked === String(d.candidateId)} onClick={() => onApply(String(d.candidateId))}>{picked === String(d.candidateId) ? "Selected" : "Select this person"}</button>
             <button type="button" className={BTN.ghost} onClick={call.reset}>Dismiss</button>

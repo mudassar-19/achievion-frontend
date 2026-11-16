@@ -14,7 +14,7 @@ function Ring({ score, size = 100, stroke = 9 }) {
   const dash = circ * Math.min(pct / 100, 1);
   const color = pct >= 75 ? "#0E6A30" : pct >= 50 ? "#B45309" : "#B01F17";
   return (
-    <svg width={size} height={size} role="img" aria-label={`${pct} health score`}>
+    <svg width={size} height={size} role="img" aria-label={score == null ? "No health score yet" : `${pct} health score`}>
       <circle cx={size/2} cy={size/2} r={r} fill="none" stroke="rgba(75,47,196,0.08)" strokeWidth={stroke} />
       <circle cx={size/2} cy={size/2} r={r} fill="none" stroke={color} strokeWidth={stroke}
         strokeDasharray={`${dash} ${circ}`} strokeLinecap="round"
@@ -112,25 +112,20 @@ export default function OrgHealthPage() {
             <Ring score={live.overall} size={100} stroke={9} />
             <div className="flex flex-col gap-1 flex-1">
               <h2 className="text-base font-black text-text-primary">Overall Health Score</h2>
-              {(() => {
-                const sub = live.subScores ?? {};
-                const availN = Object.values(sub).filter(v => v != null).length;
-                const isFullConf = availN === 4;
-                const label = live.overall == null ? "No data" :
-                  !isFullConf ? null :
-                  live.overall >= 75 ? "Healthy" :
-                  live.overall >= 50 ? "Needs attention" : "At risk";
-                return (
-                  <>
-                    {label && <p className="text-xs text-slate-500">{label}</p>}
-                    {!isFullConf && availN > 0 && (
-                      <p className="text-xs text-amber-600 font-semibold">
-                        Score based on {availN} of 4 factors — limited confidence
-                      </p>
-                    )}
-                  </>
-                );
-              })()}
+              {live.overall == null ? (
+                <>
+                  <p className="text-sm font-bold text-text-primary">Not enough data</p>
+                  <p className="text-xs text-amber-700 font-semibold">
+                    An overall number needs {live.minFactors ?? 3} of 4 factors with enough records. Now: {live.present ?? 0} of 4.
+                    A number from fewer factors would mislead.
+                  </p>
+                </>
+              ) : (
+                <>
+                  <p className="text-xs text-slate-500">{live.overall >= 75 ? "Healthy" : live.overall >= 50 ? "Needs attention" : "At risk"}</p>
+                  {live.present < 4 && <p className="text-xs text-amber-700 font-semibold">Score based on {live.present} of 4 factors</p>}
+                </>
+              )}
               <p className="text-[11px] text-slate-600 mt-1 flex items-center gap-1">
                 <Info size={11} aria-hidden="true" /> {live.assumptionNote}
               </p>
@@ -171,7 +166,9 @@ export default function OrgHealthPage() {
                 <Ring score={val} size={72} stroke={7} />
                 <div className="text-center">
                   <p className="text-sm font-bold text-text-primary">{SUB_LABEL[key]}</p>
-                  <p className="text-[11px] text-slate-500">{val == null ? "No data" : `weight ${WEIGHTS[key]}%`}</p>
+                  <p className="text-[11px] text-slate-500">
+                    {val == null ? "No data" : live.factors?.[key]?.enough === false ? `Not enough records (${live.factors[key].samples} of ${live.minSamples?.[key] ?? "?"})` : `weight ${WEIGHTS[key]}%`}
+                  </p>
                 </div>
               </motion.div>
             ))}
@@ -214,7 +211,7 @@ export default function OrgHealthPage() {
                     {history.map((s) => (
                       <tr key={s._id} className="border-b border-ink/[0.04] last:border-0 hover:bg-ink/[0.02]">
                         <td className="px-3 py-2 text-slate-500">{new Date(s.calculatedAt).toLocaleDateString("en-US",{month:"short",day:"numeric",year:"numeric"})}</td>
-                        <td className="px-3 py-2 font-black" style={{ color: ACCENT }}>{s.overall}</td>
+                        <td className="px-3 py-2 font-black" style={{ color: ACCENT }}>{s.overall ?? <span className="font-semibold text-slate-500">Not enough data</span>}</td>
                         <td className="px-3 py-2 text-slate-500">{s.subScores?.delivery ?? "—"}</td>
                         <td className="px-3 py-2 text-slate-500">{s.subScores?.capacity ?? "—"}</td>
                         <td className="px-3 py-2 text-slate-500">{s.subScores?.risk ?? "—"}</td>
@@ -275,7 +272,7 @@ export default function OrgHealthPage() {
                   <span className="text-xl font-black" style={{ color: ACCENT }}>{live.overall ?? "—"}</span>
                 </div>
                 <p className="text-[10px] text-slate-600">
-                  Weights are configurable in Director Settings. Null sub-score (e.g. no tasks) is excluded from the weighted average.
+                  Default weights, not editable per organisation. A factor without enough records is left out and the other weights are scaled up; with fewer than 3 factors there is no overall number.
                 </p>
               </div>
             </motion.aside>

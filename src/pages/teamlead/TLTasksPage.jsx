@@ -159,7 +159,10 @@ export default function TLTasksPage() {
     { key: "pick", label: <input type="checkbox" aria-label="Select all tasks on this page" checked={allOnPage} onChange={() => setPicked(allOnPage ? new Set() : new Set(items.map((t) => String(t.id))))} className="h-4 w-4 accent-[var(--accent)]" />,
       className: "w-10", render: (t) => <span onClick={(e) => e.stopPropagation()} className="flex"><input type="checkbox" aria-label={`Select ${t.title}`} checked={picked.has(String(t.id))} onChange={() => toggle(String(t.id))} className="h-4 w-4 accent-[var(--accent)]" /></span> },
     { key: "title", label: "Task", className: "min-w-[220px]", render: (t) => (
-      <span className="flex flex-col"><span className="font-bold text-text-primary">{t.title}</span>
+      <span className={`flex flex-col ${t.parent ? "border-l-2 border-border-subtle pl-3" : ""}`}><span className="font-bold text-text-primary">{t.title}</span>
+        {/* item 56: a subtask says whose it is; a parent says how many subtasks it has */}
+        {t.parent && <span className="text-xs font-semibold text-accent-text">Subtask of {t.parent.title}</span>}
+        {t.subtasks && <span className="text-xs font-semibold text-text-secondary">{t.subtasks.count} subtask{t.subtasks.count === 1 ? "" : "s"} · {t.subtasks.done} done</span>}
         {(t.tags.length > 0 || t.groupTag) && <span className="text-xs text-text-secondary">{[t.groupTag && "group", ...t.tags].filter(Boolean).join(" · ")}</span>}</span>) },
     { key: "project", label: "Module", className: "text-text-secondary", render: (t) => t.project.title },
     { key: "who", label: "Assignee", className: "whitespace-nowrap", render: (t) => t.assignees.map((a) => a.name).join(", ") || <span className="text-text-secondary">Unassigned</span> },

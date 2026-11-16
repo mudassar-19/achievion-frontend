@@ -8,6 +8,7 @@ import api from "@/lib/api";
 import useUiStore from "@/stores/uiStore";
 import Page from "@/components/ui/Page";
 import PageHeader from "@/components/ui/PageHeader";
+import AttachPicker from "@/components/ui/AttachPicker";
 import Breadcrumb from "@/components/ui/Breadcrumb";
 import ErrorState from "@/components/ui/ErrorState";
 import Skeleton from "@/components/ui/Skeleton";
@@ -235,8 +236,8 @@ export default function ProjectWizardPage() {
               <textarea id="businessContext" rows={3} value={f.businessContext} onChange={(e) => set("businessContext", e.target.value)} className="w-full rounded-xl p-3 text-sm" />
             </Field>
             {mode === "create" && (
-              <Field id="files" label="Files" hint="Optional: brief, contract, designs (up to 10 files).">
-                <input id="files" type="file" multiple onChange={(e) => setFiles([...e.target.files].slice(0, 10))} className="text-sm" />
+              <Field id="files" label="Files" hint="Optional: brief, contract, designs. Pick as many times as you like, up to 5 files.">
+                <AttachPicker id="files" files={files} onChange={setFiles} />
               </Field>
             )}
             <div className="grid gap-5 sm:grid-cols-2">
