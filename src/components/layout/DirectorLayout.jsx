@@ -72,7 +72,7 @@ export default function DirectorLayout() {
         ...(DF.goals ? [{ icon: Target, label: "Goals", to: "/director/goals" }] : []),
         { icon: Heart,      label: "Org Health", to: "/director/org-health" },
         { icon: Cpu,        label: "Capacity",   to: "/director/capacity" },
-        { icon: Award,      label: "Criteria",   to: "/director/success-criteria" },
+        { icon: Award,      label: "Success Metrics", to: "/director/success-criteria" },
         { icon: BarChart3,  label: "Reports",    to: "/director/reports" },
         { icon: ScrollText, label: "Audit Log",  to: "/director/audit-log" },
         { icon: ShieldAlert, label: "Anomalies", to: "/director/anomalies" }, // Batch 5 (D9)

@@ -7,6 +7,7 @@ import {
 } from "lucide-react";
 import { Link, useSearchParams } from "react-router-dom";
 import api from "@/lib/api";
+import { isWaiting, waitingDays, deleteConfirmed, roleChangeText, conflictNote } from "@/lib/approvalView";
 import useAuthStore from "@/stores/authStore";
 import useUiStore from "@/stores/uiStore";
 import ConfirmModal from "@/components/ui/ConfirmModal";
@@ -55,11 +56,8 @@ function accountDesc(a) {
     case "DELETE_EMPLOYEE":  return `Delete ${name}${a.payload?.reason ? ` — "${a.payload.reason}"` : ""}`;
     case "SUSPEND_EMPLOYEE": return `Suspend ${name}${a.payload?.reason ? ` — "${a.payload.reason.slice(0, 80)}${a.payload.reason.length > 80 ? "…" : ""}"` : ""}`;
     case "REACTIVATE_EMPLOYEE": return `Reactivate ${name}`;
-    case "ROLE_CHANGE": {
-      const from = a.payload?.oldRole ?? a.payload?.previousRole;
-      const to   = a.payload?.newRole;
-      return `${name}: ${from ?? "Current role unknown"} → ${to ?? "Unknown role"}`;
-    }
+    // Item 11: the role the person has NOW (from the account), not only the one written into the request
+    case "ROLE_CHANGE": return roleChangeText({ name, currentRole: a.targetEmployeeId?.role, requestedFrom: a.payload?.oldRole ?? a.payload?.previousRole, to: a.payload?.newRole });
     default: return "—";
   }
 }
@@ -156,6 +154,8 @@ export default function ApprovalQueuePage() {
   const [busy,        setBusy]        = useState({});
   const [rejectOpen,  setRejectOpen]  = useState({});
   const [deleteConfirm, setDeleteConfirm] = useState(null);
+  const [tab, setTab] = useState("pending"); // pending | decided | expired (item 11)
+  const [typedName, setTypedName] = useState(""); // typed confirmation for a delete approval
   const [notes, setNotes] = useState({}); // optional approve notes by approval id
   const notesRef = useRef({}); notesRef.current = notes; // eslint-disable-line react-hooks/refs
 
@@ -250,7 +250,7 @@ export default function ApprovalQueuePage() {
   // ── Account request actions ───────────────────────────────────────────────
   function handleApproveAcc(acc) {
     if (acc.actionType === 'DELETE_EMPLOYEE') {
-      setDeleteConfirm(acc);
+      setTypedName(""); setDeleteConfirm(acc);
       return;
     }
     const key = `acc-${acc._id}`;
@@ -337,11 +337,19 @@ export default function ApprovalQueuePage() {
         </PageHeader>
       </motion.div>
 
+      {/* Item 11: Pending / Decided / Expired */}
+      <div role="tablist" aria-label="Approval requests" className="flex gap-1 border-b border-border-subtle">
+        {[["pending", `Pending (${totalPending})`], ["decided", "Decided"], ["expired", "Expired"]].map(([k, l]) => (
+          <button key={k} role="tab" type="button" aria-selected={tab === k} onClick={() => setTab(k)}
+            className={`-mb-px min-h-10 border-b-2 px-4 text-sm font-bold ${tab === k ? "border-[#14203D] text-text-primary" : "border-transparent text-text-secondary hover:text-text-primary"}`}>{l}</button>
+        ))}
+      </div>
+
       {/* Empty state */}
-      {totalPending === 0 && (
+      {tab === "pending" && totalPending === 0 && (
         <EmptyState
           heading="No approvals waiting."
-          body="Account requests from managers will appear here."
+          body="Account requests from the Org admin will appear here."
           action={{label:"Refresh", onClick:load}}
         />
       )}
@@ -357,10 +365,17 @@ export default function ApprovalQueuePage() {
         confirmLabel="Delete account"
         cancelLabel="Keep account"
         destructive
-      />
+        confirmDisabled={!deleteConfirmed(typedName, deleteConfirm?.targetEmployeeId?.name ?? deleteConfirm?.payload?.name)}
+      >
+        {/* Item 11: the name has to be typed, so a delete is never one careless click */}
+        <label htmlFor="delete-confirm-name" className="flex flex-col gap-1.5 text-sm font-semibold text-text-primary">
+          Type <strong>{deleteConfirm?.targetEmployeeId?.name ?? deleteConfirm?.payload?.name ?? "the name"}</strong> to confirm
+          <input id="delete-confirm-name" autoComplete="off" value={typedName} onChange={(e)=>setTypedName(e.target.value)} className="h-10 rounded-xl border border-ink/[0.15] px-3 text-sm font-normal"/>
+        </label>
+      </ConfirmModal>
 
       {/* ── Account Requests ── */}
-      {accounts.length > 0 && (
+      {tab === "pending" && accounts.length > 0 && (
         <motion.div initial={{opacity:0}} animate={{opacity:1}} transition={{delay:0.1}}
           className="flex flex-col gap-4">
           <SectionHeading label="Account Requests" count={accounts.length}/>
@@ -375,7 +390,12 @@ export default function ApprovalQueuePage() {
                     className={`rounded-2xl border glass-panel p-5 flex flex-col gap-3 ${focusId === String(acc._id) ? "border-accent ring-2 ring-accent/40" : "border-ink/[0.08]"}`}>
                     <div className="flex items-start justify-between gap-3 flex-wrap">
                       <div className="flex min-w-0 flex-1 basis-64 flex-col gap-1.5">
-                        <ActionBadge type={acc.actionType}/>
+                        <div className="flex flex-wrap items-center gap-2">
+                          <ActionBadge type={acc.actionType}/>
+                          {/* Item 11: an orange tag once a request has waited 3 days or more */}
+                          {isWaiting(acc.createdAt) && <span className="rounded-md border border-orange-500/30 bg-orange-500/10 px-2 py-0.5 text-xs font-bold text-[#9A3A06]">Waiting {waitingDays(acc.createdAt)} days</span>}
+                        </div>
+                        {conflictNote(acc, accounts) && <p role="status" className="text-xs font-semibold text-[#9A3A06]">{conflictNote(acc, accounts)}</p>}
                         <p className="line-clamp-2 text-sm font-semibold text-text-primary leading-snug" title={accountDesc(acc)}>{accountDesc(acc)}</p>
                         {acc.actionType==='CREATE_EMPLOYEE' && acc.payload?.email && (
                           <p className="text-xs text-slate-500">{acc.payload.email}</p>
@@ -447,7 +467,8 @@ export default function ApprovalQueuePage() {
           </motion.div>
         </motion.div>
       )}
-      <DecisionHistory path="/api/approvals/decisions" headers={{ Authorization: `Bearer ${token}` }} />
+      {tab === "decided" && <DecisionHistory key="decided" path="/api/approvals/decisions" headers={{ Authorization: `Bearer ${token}` }} />}
+      {tab === "expired" && <DecisionHistory key="expired" path="/api/approvals/decisions" headers={{ Authorization: `Bearer ${token}` }} scopes={[["expired", "Expired"]]} title="Expired requests (nobody decided in time)" />}
     </div>
   );
 }

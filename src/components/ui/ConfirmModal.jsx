@@ -12,7 +12,8 @@ export default function ConfirmModal({
   cancelLabel  = "Cancel",
   destructive  = false,
   loading      = false,
-  children,          // optional extra content (e.g. a choice) under the body
+  confirmDisabled = false, // e.g. until a name has been typed
+  children,         // optional extra content (e.g. a choice) under the body
   layer = "z-50",    // "z-[70]" when opened from inside a Drawer (z-60)
 }) {
   useEffect(() => {
@@ -71,7 +72,7 @@ export default function ConfirmModal({
               <button
                 type="button"
                 onClick={onConfirm}
-                disabled={loading}
+                disabled={loading || confirmDisabled}
                 className="h-9 rounded-xl px-5 text-sm font-bold text-white transition-all disabled:opacity-40"
                 style={destructive
                   ? { background: "#D1291F" }

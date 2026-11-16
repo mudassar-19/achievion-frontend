@@ -155,7 +155,10 @@ export default function LeaderboardPage() {
     { key: "rank", label: "Rank", className: "w-24 whitespace-nowrap", render: (r) => <span className="inline-flex items-center gap-2"><span className="font-black tabular-nums text-text-primary">#{r.rank}</span><Change c={r.change} /></span> },
     { key: "person", label: "Person", className: "min-w-[220px]", render: (r) => <Person r={r} /> },
     { key: "level", label: "Level", render: (r) => <span className="tabular-nums">{r.level}</span> },
-    { key: "xp", label: "XP", render: (r) => <span className="font-bold tabular-nums text-text-primary">{n(r.xp)}</span> },
+    // Item 36: XP says where it came from (tasks, challenges, badges, streaks, a Director correction), so "0 tasks done" next to XP makes sense
+    { key: "xp", label: "XP", render: (r) => (
+      <span className="flex flex-col"><span className="font-bold tabular-nums text-text-primary">{n(r.xp)}</span>
+        {r.xpBySource?.length > 0 && <span className="text-[11px] leading-tight text-text-secondary">{r.xpBySource.slice(0, 3).map((s) => `${s.label} ${n(s.xp)}`).join(" · ")}</span>}</span>) },
     { key: "tasks", label: "Tasks done", render: (r) => <span className="tabular-nums">{n(r.tasksCompleted)}</span> },
     { key: "ontime", label: "On-time %", render: (r) => <span className="tabular-nums">{r.onTimePct == null ? "—" : `${r.onTimePct}%`}</span> },
     { key: "streak", label: "Streak", render: (r) => <span className="inline-flex items-center gap-1 tabular-nums">{r.streak > 0 && <Flame size={13} className="text-[#B25E00]" aria-hidden />}{r.streak} {r.streak === 1 ? "day" : "days"}</span> },

@@ -7,8 +7,8 @@ const SCOPES = [["decided", "All decided"], ["rejected", "Rejected"], ["suspende
 const TONE = { APPROVED: "bg-emerald-500/10 text-emerald-700 border-emerald-500/25", REJECTED: "bg-rose-500/10 text-rose-700 border-rose-500/25", EXPIRED: "bg-ink/[0.05] text-text-secondary border-ink/[0.1]" };
 const when = (d) => (d ? new Date(d).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" }) : "");
 
-export default function DecisionHistory({ path, headers }) {
-  const [scope, setScope] = useState("decided");
+export default function DecisionHistory({ path, headers, scopes = SCOPES, title = "Decided requests" }) {
+  const [scope, setScope] = useState(scopes[0][0]);
   const [rows, setRows] = useState(null);
   const [error, setError] = useState(null);
   const load = useCallback(() => {
@@ -20,13 +20,13 @@ export default function DecisionHistory({ path, headers }) {
   return (
     <section aria-label="Decided requests" className="flex flex-col gap-3">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <h2 className="text-sm font-black text-text-primary">Decided requests</h2>
-        <div role="group" aria-label="Which decided requests" className="flex gap-1.5">
-          {SCOPES.map(([k, l]) => (
+        <h2 className="text-sm font-black text-text-primary">{title}</h2>
+        {scopes.length > 1 && <div role="group" aria-label="Which decided requests" className="flex gap-1.5">
+          {scopes.map(([k, l]) => (
             <button key={k} type="button" aria-pressed={scope === k} onClick={() => setScope(k)}
               className={`min-h-8 rounded-full border px-3 text-xs font-semibold ${scope === k ? "border-[#14203D] bg-[#14203D] text-white" : "border-border-subtle bg-white text-text-primary hover:bg-bg-muted"}`}>{l}</button>
           ))}
-        </div>
+        </div>}
       </div>
       {error && <p role="alert" className="text-sm text-danger">{error}</p>}
       {!error && rows === null && <p role="status" className="text-sm text-text-secondary">Loading…</p>}

@@ -4,6 +4,7 @@ import { BarChart2, CheckSquare, Clock, AlertTriangle, TrendingUp, Zap, FileText
 import PageHeader from "@/components/ui/PageHeader";
 import api from "@/lib/api";
 import { useRoleTheme } from "@/utils/roleTheme";
+import RecapCards from "@/components/director/RecapCards";
 
 // ── Bar colors per category (neutral, accessible) ─────────────────────────────
 const BAR_COLORS = [
@@ -224,7 +225,9 @@ function RecapsTab() {
   const [celebration,  setCelebration]  = useState(false);
   const [aiUnavailable,setAiUnavailable]= useState(false);
   const [summarizing,  setSummarizing]  = useState(false);
-  const [aiSummary,    setAiSummary]    = useState(null);
+  const [aiSummary,    setAiSummary]    = useState(null); // { text, period }
+  const [summaryErr,   setSummaryErr]   = useState("");
+  const [genNote,      setGenNote]      = useState("");
 
   async function load() {
     try {
@@ -236,26 +239,28 @@ function RecapsTab() {
   useEffect(() => { load(); }, []);
 
   async function generate() {
-    setGenerating(true); setGenErr("");
+    setGenerating(true); setGenErr(""); setGenNote("");
     try {
-      await api.post("/api/director/recaps/generate", { type: genType });
+      const r = await api.post("/api/director/recaps/generate", { type: genType });
+      if (r.aiNote) setGenNote(r.aiNote); // the recap is saved; only the AI sentence is missing
       await load();
       setCelebration(true);
       setTimeout(() => setCelebration(false), 2500);
     } catch (ex) {
-      setGenErr(ex?.message ?? "Generation failed.");
+      setGenErr(ex?.message ?? "Generation failed. Press Generate now to try again.");
     } finally { setGenerating(false); }
   }
 
+  // Item 26: a failure says what happened and offers Retry; the call can take up to ~20 s (the AI chain waits that long per provider).
   async function getWeeklySummary() {
-    setSummarizing(true);
+    setSummarizing(true); setSummaryErr("");
     try {
-      const { summary } = await api.post("/api/director/ai/weekly-summary");
-      setAiSummary(summary);
+      const { summary, period } = await api.post("/api/director/ai/weekly-summary");
+      setAiSummary({ text: summary, period });
     } catch (e) {
       if (e?.status === 503) setAiUnavailable(true);
-      else if (e?.status === 400) setAiSummary(null); // disabled in settings
-      else setAiSummary(null);
+      setAiSummary(null);
+      setSummaryErr(e?.network ? e.message : e?.status === 429 ? "The daily AI limit is reached. Try again tomorrow." : e?.status === 503 ? "AI is not configured on this server." : "The AI is busy or slow right now. Nothing was lost: press Retry.");
     } finally { setSummarizing(false); }
   }
 
@@ -277,14 +282,17 @@ function RecapsTab() {
           ) : (
             <button onClick={getWeeklySummary} disabled={summarizing}
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold border border-violet-200 text-violet-600 hover:bg-violet-100 disabled:opacity-50 min-h-[32px]">
-              <Sparkles size={11} /> {summarizing ? "Generating…" : "Get AI summary"}
+              <Sparkles size={11} /> {summarizing ? "Writing the summary…" : summaryErr ? "Retry" : "Get AI summary"}
             </button>
           )}
         </div>
+        {summarizing && <p role="status" className="w-full text-xs text-violet-700">Reading this week's numbers and writing the summary. This can take up to 20 seconds.</p>}
+        {summaryErr && !summarizing && <p role="alert" className="w-full text-xs font-semibold text-[#B01F17]">{summaryErr}</p>}
         {aiSummary && (
           <p className="w-full text-xs text-violet-700">
-            <span className="text-[10px] font-bold text-violet-400 uppercase tracking-wider mr-1">AI-generated</span>
-            {aiSummary}
+            <span className="text-[10px] font-bold text-violet-400 uppercase tracking-wider mr-1">AI-generated, advice only</span>
+            {aiSummary.period && <span className="mr-1 font-semibold">This week ({aiSummary.period}):</span>}
+            {aiSummary.text}
           </p>
         )}
       </div>
@@ -309,7 +317,8 @@ function RecapsTab() {
             {generating ? "Generating…" : "Generate now"}
           </button>
           {genErr && <p className="text-xs text-red-600">{genErr}</p>}
-          {celebration && <p className="text-xs font-bold" style={{ color: ACCENT }}>Recap generated!</p>}
+          {celebration && <p className="text-xs font-bold" style={{ color: ACCENT }}>Recap saved in Past Recaps below.</p>}
+          {genNote && <p role="status" className="w-full text-xs text-text-secondary">{genNote}</p>}
         </div>
       </Section>
 
@@ -325,20 +334,13 @@ function RecapsTab() {
                 <div className="flex items-center justify-between gap-2">
                   <div>
                     <p className="text-sm font-bold text-text-primary">{r.periodLabel}</p>
-                    <p className="text-[12px] text-slate-500 capitalize">{r.type} · {new Date(r.createdAt).toLocaleDateString("en-US",{month:"short",day:"numeric",year:"numeric"})}</p>
+                    {/* "Covers" is the period of the numbers; "generated on" is only when it was made (item 26) */}
+                    <p className="text-[12px] text-slate-500"><span className="capitalize">{r.type}</span> recap{r.periodRange ? ` · covers ${r.periodRange}` : ""} · generated on {new Date(r.createdAt).toLocaleDateString("en-US",{month:"short",day:"numeric",year:"numeric"})}</p>
                   </div>
                   <span className="text-[11px] px-2 py-0.5 rounded-full border border-ink/[0.08] text-slate-500 capitalize">{r.type}</span>
                 </div>
-                {r.cards?.length > 0 && (
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                    {r.cards.map((c, i) => (
-                      <div key={i} className="rounded-xl bg-ink/[0.03] border border-ink/[0.05] px-3 py-2">
-                        <p className="text-lg font-black tabular-nums" style={{ color: ACCENT }}>{c.metric?.value ?? "—"}</p>
-                        <p className="text-[11px] font-semibold text-slate-500">{c.title}</p>
-                      </div>
-                    ))}
-                  </div>
-                )}
+                {r.cards?.length > 0 && <RecapCards cards={r.cards} cols="grid-cols-2 sm:grid-cols-4" />}
+                {r.aiSummary && <p className="text-xs text-violet-800"><span className="mr-1 text-[10px] font-bold uppercase tracking-wider text-violet-400">AI-generated</span>{r.aiSummary}</p>}
               </div>
             ))}
           </div>

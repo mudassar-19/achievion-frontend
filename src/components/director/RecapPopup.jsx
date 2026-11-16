@@ -4,6 +4,7 @@ import { X, Calendar } from "lucide-react";
 import api from "@/lib/api";
 import gsap from "gsap";
 import useUiStore from "@/stores/uiStore";
+import RecapCards from "@/components/director/RecapCards";
 
 const ACCENT = "#4B2FC4";
 const REDUCED = typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -123,19 +124,11 @@ export default function RecapPopup() {
 
             <div className="relative z-10 text-center">
               <h2 className="text-base font-black text-text-primary mb-1">{recap.periodLabel}</h2>
-              <p className="text-xs text-slate-500 capitalize">{recap.type} recap is ready</p>
+              <p className="text-xs text-slate-500 capitalize">{recap.type} recap is ready{recap.periodRange ? ` · covers ${recap.periodRange}` : ""}</p>
             </div>
 
-            {recap.cards?.length > 0 && (
-              <div className="relative z-10 grid grid-cols-2 gap-2 w-full">
-                {recap.cards.slice(0, 4).map((c, i) => (
-                  <div key={i} className="rounded-xl bg-ink/[0.03] border border-ink/[0.07] px-3 py-2">
-                    <p className="text-lg font-black tabular-nums" style={{ color: ACCENT }}>{c.metric?.value ?? "—"}</p>
-                    <p className="text-[11px] font-semibold text-slate-500 leading-tight">{c.title}</p>
-                  </div>
-                ))}
-              </div>
-            )}
+            {recap.cards?.length > 0 && <div className="relative z-10 w-full"><RecapCards cards={recap.cards} limit={4} cols="grid-cols-2" /></div>}
+            {recap.aiSummary && <p className="relative z-10 text-xs text-slate-600"><span className="mr-1 text-[10px] font-bold uppercase tracking-wider text-violet-500">AI-generated</span>{recap.aiSummary}</p>}
 
             <button
               onClick={dismiss}
