@@ -83,7 +83,7 @@ export default function EmployeeShell() {
     bottomNav: [{ icon: Settings, label: "Settings", to: "/workspace/settings" }],
     menu: [
       { icon: User,              label: "Profile",     to: "/workspace/profile" },
-      { icon: SlidersHorizontal, label: "Preferences", to: "/workspace/settings" },
+      { icon: SlidersHorizontal, label: "Settings", to: "/workspace/settings" }, // UI-E2b: the page has no Preferences tab any more
     ],
     notificationsPath: "/workspace/notifications",
     notifLabel: (n) => n.title || n.type,

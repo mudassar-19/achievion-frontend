@@ -7,6 +7,9 @@ import { create } from "zustand";
  *  - celebrations preference + the level-up overlay
  */
 function readCelebrations() {
+  // UI-E2 (item 40): the person no longer picks this; the device's "reduce motion" setting decides. With it on, celebrations
+  // are quiet (plain toasts, no full-screen effects). The organization's celebration level is in Organization settings.
+  try { if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return "quiet"; } catch { /* no matchMedia */ }
   try {
     const v = localStorage.getItem("achievion-celebrations");
     return v === "quiet" || v === "off" ? v : "full";

@@ -4,6 +4,8 @@ import { Sparkles, X, Send, RefreshCw, ChevronRight, ExternalLink } from "lucide
 import Tally from "@/components/ui/Tally";
 import Markdown, { SourceChips } from "@/components/ui/Markdown";
 import api from "@/lib/api";
+import useAuthStore from "@/stores/authStore";
+import { loadChats, saveChats, upsertChat } from "@/lib/aiChats";
 
 export const AI_W = 420;
 
@@ -14,7 +16,7 @@ const tintOf = (accent) => (a) => (accent === DIRECTOR ? `rgba(75,47,196,${a})` 
 // Quick prompts per page context
 const QUICK = {
   Dashboard: ["What needs my attention this week?", "Any projects at risk of missing deadline?"],
-  Portfolio: ["Which projects are most delayed?", "Show me projects on hold or frozen"],
+  Projects:  ["Which projects are most delayed?", "Show me projects on hold or frozen"],
   Capacity:  ["Which teams are overloaded?", "Suggest a workload rebalancing action"],
   Risk:      ["What are the top risks right now?", "Are any risks approaching critical priority?"],
   Goals:     ["Which goals are behind target?", "Summarise org goals progress"],
@@ -59,7 +61,7 @@ function TypingBubble({ tint = tintOf(DIRECTOR) }) {
         {[0, 1, 2].map((i) => (
           <span
             key={i}
-            className="w-1.5 h-1.5 rounded-full bg-[#4B2FC4]/40 animate-bounce motion-reduce:animate-none"
+            className="w-1.5 h-1.5 rounded-full bg-[#4B2FC4]/40 animate-pulse motion-reduce:animate-none"
             style={{ animationDelay: `${i * 120}ms`, background: tint(0.4) }}
           />
         ))}
@@ -90,6 +92,8 @@ export default function AiPanel({
   const bottomRef  = useRef(null);
   const inputRef   = useRef(null);
   const streamRef  = useRef(null);
+  const logRef     = useRef([]);    // this panel conversation as saved in the shared history
+  const chatIdRef  = useRef(null);
 
   // Status check on open (Director); other portals pass `configured`
   useEffect(() => {
@@ -161,13 +165,23 @@ export default function AiPanel({
       }
       return;
     }
+    // UI-E2 (item 30): the Director's questions go into the same history as the full Ask page (lib/aiChats.js).
+    const uid = String(useAuthStore.getState().user?._id ?? useAuthStore.getState().user?.id ?? "");
+    const record = (msg) => {
+      logRef.current = [...logRef.current, msg];
+      chatIdRef.current ??= `panel-${Date.now().toString(36)}`;
+      saveChats(uid, upsertChat(loadChats(uid), { id: chatIdRef.current, firstQuestion: logRef.current[0]?.text ?? q, messages: logRef.current }));
+    };
+    record({ role: "user", text: q });
     try {
       const res = await api.post("/api/director/ai/ask", { question: q });
       setLoading(false);
       if (res.notEnoughData) {
         streamWords("Not enough indexed data to answer. Try reindexing from the Ask ACHIEVION page.");
+        record({ role: "ai", text: "The knowledge index is empty. Refresh it on the Ask ACHIEVION page.", citations: [] });
       } else {
         streamWords(res.answer, { citations: res.citations ?? [] });
+        record({ role: "ai", text: res.answer, citations: res.citations ?? [] });
       }
     } catch (err) {
       setLoading(false);
@@ -228,7 +242,7 @@ export default function AiPanel({
               {headerActions}
               {fullScreenPath && (
                 <a
-                  href={fullScreenPath}
+                  href={chatIdRef.current && !onAsk ? `${fullScreenPath}?chat=${chatIdRef.current}` : fullScreenPath}
                   title="Open full screen"
                   aria-label="Open AI full screen"
                   className="h-7 w-7 rounded-lg flex items-center justify-center text-slate-400 hover:bg-ink/[0.06] hover:text-text-primary transition-colors"

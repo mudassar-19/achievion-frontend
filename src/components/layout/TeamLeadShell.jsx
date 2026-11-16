@@ -37,7 +37,7 @@ const CFG = {
   bottomNav: [{ icon: Settings, label: "Settings", to: "/teamlead/settings" }],
   menu: [
     { icon: User,              label: "Profile",     to: "/teamlead/profile" },
-    { icon: SlidersHorizontal, label: "Preferences", to: "/teamlead/settings" },
+    { icon: SlidersHorizontal, label: "Settings", to: "/teamlead/settings" }, // UI-E2b: the page has no Preferences tab any more
   ],
   topbarExtra: <ViewAsMenu />,
   notificationsPath: "/teamlead/notifications",

@@ -1,13 +1,12 @@
 import { useEffect, useState, useMemo, useCallback } from "react";
 import { DIRECTOR_FEATURES as DF } from "@/lib/directorFeatures";
 import { motion, AnimatePresence } from "framer-motion";
-import { FolderKanban, Search, ChevronUp, ChevronDown, X, Zap, Loader2, Check, Bookmark, Trash2, Plus, ExternalLink } from "lucide-react";
+import { FolderKanban, Search, ChevronUp, ChevronDown, X, Zap, Loader2, Check, Bookmark, Trash2, Plus } from "lucide-react";
 import { Link } from "react-router-dom";
 import api from "@/lib/api";
 import usePerfLog from "@/hooks/usePerfLog";
 import useUiStore from "@/stores/uiStore";
 import PageHeader from "@/components/ui/PageHeader";
-import Drawer from "@/components/ui/Drawer";
 import Skeleton, { SkeletonLine } from "@/components/ui/Skeleton";
 import EmptyState from "@/components/ui/EmptyState";
 import ErrorState from "@/components/ui/ErrorState";
@@ -122,65 +121,6 @@ function XpPoolEditor({ projectId, current, onSave }) {
   );
 }
 
-// ── Project Drawer (read-only — UX 3.2 no edits in Portfolio) ─────────────────
-function ProjectDrawer({ proj, onClose }) {
-  // Keep Drawer always mounted (open={!!proj}) so its useEffect([open])
-  // can restore focus to the trigger row on close. If we returned null here,
-  // the Drawer would unmount before the close-effect runs.
-  return (
-    <Drawer open={!!proj} onClose={onClose} title={proj?.title ?? ""} width={440}>
-      {proj && (
-        <div className="flex flex-col gap-6 px-6 py-5">
-
-          {/* Status + lead */}
-          <div className="flex items-center gap-3">
-            <StatusChip status={proj.status} />
-            <div className="flex items-center gap-2 ml-auto">
-              <div className="h-7 w-7 rounded-full overflow-hidden border border-ink/10 bg-bg-base shrink-0">
-                <img src={avatarUrl("bottts", proj.leadName)}
-                  alt={proj.leadName} className="h-full w-full object-cover" loading="lazy"/>
-              </div>
-              <div>
-                <p className="text-[14px] text-slate-500 leading-none">Manager</p>
-                <p className="text-xs font-bold text-text-primary leading-snug mt-0.5">{proj.leadName}</p>
-              </div>
-            </div>
-          </div>
-
-          {/* Completion */}
-          <div>
-            <div className="flex items-center justify-between mb-2">
-              <p className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-500">Completion</p>
-              <span className="text-sm font-black text-text-primary">{proj.completion}%</span>
-            </div>
-            <div className="h-2 rounded-full bg-ink/[0.06] overflow-hidden">
-              <motion.div
-                initial={{ width: 0 }}
-                animate={{ width: `${proj.completion}%` }}
-                transition={{ duration: 1, ease: [0.4,0,0.2,1] }}
-                className="h-full rounded-full bg-[#4B2FC4]"
-              />
-            </div>
-          </div>
-
-          {/* XP pool — read-only; editing moves to Settings (DIR-12, Slice 2b) */}
-          <div className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-[#FFC21A]/[0.06] border border-[#8A6200]/15">
-            <Zap size={12} className="text-[#7A5200]" strokeWidth={2.5}/>
-            <span className="text-[14px] text-slate-500">XP pool:</span>
-            <span className="text-xs font-black text-[#7A5200]">{proj.xpPool?.toLocaleString()} XP</span>
-          </div>
-
-          {/* Link to full project detail page (DIR-02.2) */}
-          <Link to={`/director/projects/${proj.id}`}
-            className="flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl border border-[#4B2FC4]/20 text-xs font-bold text-[#4B2FC4] hover:bg-[#4B2FC4]/[0.05] transition-colors">
-            <ExternalLink size={12} /> View full detail
-          </Link>
-        </div>
-      )}
-    </Drawer>
-  );
-}
-
 // ── Skeleton rows ─────────────────────────────────────────────────────────────
 function TableSkeleton() {
   return (
@@ -284,7 +224,6 @@ export default function ProjectManagementPage() {
   const [sortCol,   setSortCol]   = useState("title");
   const [sortDir,   setSortDir]   = useState("asc");
   const [page,      setPage]      = useState(1);
-  const [drawer,    setDrawer]    = useState(null);
   const [celebrateProject, setCelebrateProject] = useState(null);
 
   const CELEBRATED_KEY = "achievion-dir-celebrated-projects";
@@ -367,7 +306,6 @@ export default function ProjectManagementPage() {
     try {
       await api.patch(`/api/director/projects/${projectId}/xp-pool`, { xpPool: newXp });
       setProjects(prev => prev.map(p => p.id === projectId ? {...p, xpPool: newXp} : p));
-      if (drawer?.id === projectId) setDrawer(d => ({...d, xpPool: newXp}));
       addToast({ type: "xp", message: `XP pool updated to ${newXp.toLocaleString()} XP.` });
     } catch (err) {
       addToast({ type: "error", message: err?.message ?? "Failed to update XP pool." });
@@ -388,7 +326,7 @@ export default function ProjectManagementPage() {
       {/* Header */}
       <motion.div initial={{opacity:0,y:14}} animate={{opacity:1,y:0}} transition={{duration:0.34}}>
         <PageHeader
-          title="Portfolio"
+          title="Projects"
           subtitle={!loading && !error ? `${projects.length} project${projects.length !== 1 ? "s" : ""}` : undefined}
         />
       </motion.div>
@@ -510,11 +448,14 @@ export default function ProjectManagementPage() {
             ) : (
               <AnimatePresence initial={false}>
                 {visible.map((proj, i) => (
-                  <motion.button
+                  <motion.div
                     key={proj.id}
                     initial={{opacity:0,x:-8}} animate={{opacity:1,x:0}}
                     transition={{duration:0.22, delay:i*0.03}}
-                    onClick={()=>setDrawer(proj)}
+                  >
+                  {/* UI-B: the row is a link to the full project page (the drawer is gone). */}
+                  <Link
+                    to={`/director/projects/${proj.id}`}
                     className="grid gap-4 px-6 py-4 border-b border-ink/[0.04] hover:bg-ink/[0.03] transition-colors w-full text-left"
                     style={{gridTemplateColumns: COLS.map(c=>c.flex).join(" ")}}
                   >
@@ -536,10 +477,11 @@ export default function ProjectManagementPage() {
                         ? <span className="text-sm text-text-primary tabular-nums">
                             {new Date(proj.deadline).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })}
                           </span>
-                        : <span className="text-xs text-slate-500">—</span>
+                        : <span className="text-sm text-slate-500">No deadline set</span>
                       }
                     </div>
-                  </motion.button>
+                  </Link>
+                  </motion.div>
                 ))}
               </AnimatePresence>
             )}
@@ -573,9 +515,6 @@ export default function ProjectManagementPage() {
           )}
         </>
       )}
-
-      {/* Project drawer */}
-      <ProjectDrawer proj={drawer} onClose={()=>setDrawer(null)}/>
 
       {/* FL-06 project-complete celebration */}
       <ProjectCelebrationOverlay project={celebrateProject} onClose={()=>setCelebrateProject(null)}/>

@@ -36,7 +36,7 @@ const CFG = {
   bottomNav: [{ icon: Settings, label: "Settings", to: "/manager/settings" }],
   menu: [
     { icon: User,              label: "Profile",     to: "/manager/profile" },
-    { icon: SlidersHorizontal, label: "Preferences", to: "/manager/settings" },
+    { icon: SlidersHorizontal, label: "Settings", to: "/manager/settings" }, // UI-E2b: the page has no Preferences tab any more
   ],
   notificationsPath: "/manager/notifications",
   topbarExtra: <ViewAsMenu />,

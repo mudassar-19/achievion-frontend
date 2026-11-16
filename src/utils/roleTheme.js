@@ -80,12 +80,10 @@ export function isSeniorRole(role) {
 // Base path of the shell a role uses (Manager moved to /manager in V2 Phase 3 · M-1).
 export const portalBase = (role) => (role === "Manager" ? "/manager" : "/workspace");
 
-// U-1 (D-131): the landing page picked in Settings → Preferences (keys checked by the server per role).
-const LANDING_BASE = { Director: "/director", Manager: "/manager", "Team Lead": "/teamlead" };
+// UI-E2 (item 40): sign-in always opens Home. The old "Open after sign-in" choice (Settings → Preferences) is gone and an
+// old stored value is ignored.
 export function homePathFor(user) {
-  const key = user?.settings?.preferences?.landing;
-  if (!key || key === "home" || !/^[a-z]+$/.test(key)) return dashboardPathForRole(user?.role);
-  return `${LANDING_BASE[user.role] ?? "/workspace"}/${key}`;
+  return dashboardPathForRole(user?.role);
 }
 
 export function dashboardPathForRole(role) {

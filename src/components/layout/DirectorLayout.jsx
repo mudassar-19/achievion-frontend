@@ -21,7 +21,7 @@ function aiContext(pathname) {
   if (pathname.includes("/risk"))      return "Risk";
   if (pathname.includes("/goals"))     return "Goals";
   if (pathname.includes("/reports"))   return "Reports";
-  if (pathname.includes("/portfolio")) return "Portfolio";
+  if (pathname.includes("/projects"))  return "Projects";
   if (pathname.includes("/dashboard")) return "Dashboard";
   return "Org";
 }
@@ -55,10 +55,11 @@ export default function DirectorLayout() {
 
   const cfg = {
     role: "director", portal: "Director", portalSub: "Command Portal", storageKey: "achievion-director-rail",
+    phoneDrawer: true, // UI-E1: under 640px the rail starts closed and the menu button opens it over the page
     nav: [
       { label: "Main", items: [
         { icon: LayoutDashboard, label: "Home",             to: "/director", end: true },
-        { icon: FolderKanban,    label: "Portfolio",        to: "/director/projects" },
+        { icon: FolderKanban,    label: "Projects",         to: "/director/projects" },
         { icon: Leaf,            label: "Progress Garden",  to: "/director/garden" },
         { icon: Users,           label: "Team",             to: "/director/roles" },
       ] },
@@ -81,11 +82,11 @@ export default function DirectorLayout() {
       ] },
     ],
     menu: [
-      { icon: User,     label: "Profile",       to: "/director/profile" },
-      { icon: Bell,     label: "Notifications", to: "/director/notifications" },
-      { icon: Trophy,   label: "Leaderboard",   to: "/director/leaderboard" },
-      { icon: User,     label: "My settings",   to: "/director/account-settings" },
-      { icon: Settings, label: "Settings",      to: "/director/settings" },
+      // UI-E1b (item 47, FLG-10): Profile and My settings are one page; the org-level Settings says so.
+      { icon: User,     label: "Account settings",      to: "/director/account-settings" },
+      { icon: Bell,     label: "All notifications",     to: "/director/notifications" },
+      { icon: Trophy,   label: "Leaderboard",           to: "/director/leaderboard" },
+      { icon: Settings, label: "Organization settings", to: "/director/settings" },
     ],
     notifTarget: (n) => (n.type === "approval_required" ? APPROVAL_TARGET : null),
     topbarExtra: <ViewAsMenu />,

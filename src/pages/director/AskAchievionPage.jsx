@@ -1,443 +1,262 @@
-import { useState, useRef, useEffect, useCallback } from "react";
-import { motion } from "framer-motion";
+// Ask ACHIEVION, full page (UI-E2, master list item 30): the chat in the middle, recent chats on the right (it can be
+// folded away), a light page with no gradients, text at 4.5:1 or better, the shared markdown renderer, no mascot.
+// History is the same store the top-bar AI panel writes to (lib/aiChats.js): a panel question shows up here.
+import { useState, useRef, useEffect, useCallback, useMemo } from "react";
+import { useSearchParams } from "react-router-dom";
+import { motion, useReducedMotion } from "framer-motion";
 import Markdown, { SourceChips } from "@/components/ui/Markdown";
 import {
-  Sparkles, Send, RefreshCw,
-  Plus, Trash2, Database,
+  Sparkles, Send, RefreshCw, Plus, Trash2, Database, Pencil, Check, X, PanelRightClose, PanelRightOpen, History,
   BarChart2, Users, AlertTriangle, Target, Layers, Zap,
 } from "lucide-react";
-import Tally from "@/components/ui/Tally";
 import api from "@/lib/api";
+import useAuthStore from "@/stores/authStore";
+import ConfirmModal from "@/components/ui/ConfirmModal";
+import { loadChats, saveChats, upsertChat, renameChat, deleteChat, uniqueTitles } from "@/lib/aiChats";
 
-// ── Helpers ───────────────────────────────────────────────────────────────────
 const uid = () => Math.random().toString(36).slice(2) + Date.now().toString(36);
 
-function relDate(iso) {
-  const d = new Date(iso), now = new Date();
-  const diff = (now - d) / 1000;
+function whenText(iso) {
+  if (!iso) return "";
+  const d = new Date(iso), diff = (Date.now() - d) / 1000;
   if (diff < 60) return "Just now";
-  if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
-  if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
-  return d.toLocaleDateString(undefined, { month: "short", day: "numeric" });
+  if (diff < 3600) return `${Math.floor(diff / 60)} min ago`;
+  if (diff < 86400) return `${Math.floor(diff / 3600)} h ago`;
+  return d.toLocaleDateString(undefined, { month: "short", day: "numeric", year: d.getFullYear() === new Date().getFullYear() ? undefined : "numeric" });
 }
 
-// ── Storage ───────────────────────────────────────────────────────────────────
-const STORAGE_KEY = "achievion-ai-chats";
-function loadChats() {
-  try { return JSON.parse(localStorage.getItem(STORAGE_KEY) ?? "[]"); } catch { return []; }
-}
-function saveChats(chats) {
-  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(chats.slice(0, 40))); } catch {}
-}
-
-// ── Suggestion cards ──────────────────────────────────────────────────────────
 const SUGGESTIONS = [
-  { icon: AlertTriangle, label: "Risk",        color: "#f59e0b", text: "What are the top risks in our organization right now?" },
-  { icon: Layers,        label: "Projects",    color: "#6366f1", text: "Which projects are at risk of missing their deadline?" },
-  { icon: Users,         label: "Team",        color: "#10b981", text: "How is team performance looking this month?" },
-  { icon: BarChart2,     label: "Highlights",  color: "#8b5cf6", text: "Summarise this week's organizational highlights" },
-  { icon: Target,        label: "Goals",       color: "#ec4899", text: "Which goals are behind target this quarter?" },
-  { icon: Zap,           label: "Actions",     color: "#f97316", text: "What should I focus on as Director this week?" },
+  { icon: AlertTriangle, label: "Risk", text: "What are the top risks in our organization right now?" },
+  { icon: Layers, label: "Projects", text: "Which projects are at risk of missing their deadline?" },
+  { icon: Users, label: "Team", text: "How is team performance looking this month?" },
+  { icon: BarChart2, label: "Highlights", text: "Summarise this week's organizational highlights" },
+  { icon: Target, label: "Goals", text: "Which goals are behind target this quarter?" },
+  { icon: Zap, label: "Actions", text: "What should I focus on as Director this week?" },
 ];
 
-// ── Message component ─────────────────────────────────────────────────────────
-function Message({ msg, index }) {
+function Message({ msg }) {
   const isUser = msg.role === "user";
-
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 12 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.25, delay: Math.min(index * 0.04, 0.2) }}
-    >
-      {isUser ? (
-        <div className="flex justify-end px-6 md:px-16">
-          <div
-            className="max-w-[68%] rounded-2xl rounded-br-none px-4 py-3 text-sm text-white leading-relaxed"
-            style={{
-              background: "linear-gradient(135deg,#4c1d95,#6d28d9)",
-              boxShadow: "0 4px 16px rgba(109,40,217,0.3)",
-            }}
-          >
-            {msg.text}
-          </div>
-        </div>
-      ) : (
-        <div className="flex gap-3 px-6 md:px-16">
-          <div className="shrink-0 mt-0.5">
-            <Tally pose={msg.error ? "alert" : "idle"} size={28} />
-          </div>
-          <div className="flex-1 min-w-0 max-w-[80%]">
-            {msg.error ? (
-              <div className="text-sm text-rose-600 bg-rose-50 border border-rose-100 rounded-xl px-4 py-3">
-                {msg.text}
-              </div>
-            ) : (
-              <>
-                <div
-                  className="text-sm text-slate-700 leading-relaxed rounded-2xl rounded-bl-none px-4 py-3"
-                  style={{
-                    background: "white",
-                    boxShadow: "0 2px 12px rgba(109,40,217,0.08), 0 1px 3px rgba(0,0,0,0.06)",
-                  }}
-                >
-                  <Markdown text={msg.text} accent="#6d28d9" />
-                </div>
-                {msg.citations?.length > 0 && <SourceChips citations={msg.citations} className="mt-2" />}
-              </>
-            )}
-          </div>
-        </div>
-      )}
-    </motion.div>
-  );
-}
-
-// ── Typing indicator ──────────────────────────────────────────────────────────
-function TypingIndicator() {
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: 8 }}
-      animate={{ opacity: 1, y: 0 }}
-      className="flex gap-3 px-6 md:px-16"
-    >
-      <Tally pose="thinking" size={28} className="shrink-0 mt-0.5" />
-      <div
-        className="flex items-center gap-1.5 px-4 py-3 rounded-2xl rounded-bl-none"
-        style={{ background: "white", boxShadow: "0 2px 12px rgba(109,40,217,0.08)" }}
-      >
-        {[0, 1, 2].map((i) => (
-          <span
-            key={i}
-            className="w-2 h-2 rounded-full bg-violet-300 animate-bounce"
-            style={{ animationDelay: `${i * 140}ms` }}
-          />
-        ))}
+    <div className={`flex gap-3 px-4 sm:px-8 ${isUser ? "justify-end" : ""}`}>
+      {!isUser && <span aria-hidden="true" className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-accent-tint text-accent-text"><Sparkles size={15} /></span>}
+      <div className={`min-w-0 max-w-[85%] ${isUser ? "" : "flex-1"}`}>
+        {isUser ? (
+          <p className="whitespace-pre-wrap rounded-2xl rounded-br-md bg-accent-tint px-4 py-3 text-sm leading-relaxed text-text-primary [overflow-wrap:anywhere]">{msg.text}</p>
+        ) : msg.error ? (
+          <p role="alert" className="rounded-2xl border border-[#D1291F]/30 bg-[#D1291F]/[0.06] px-4 py-3 text-sm text-[#8F1912] [overflow-wrap:anywhere]">{msg.text}</p>
+        ) : (
+          <>
+            <div className="rounded-2xl rounded-bl-md border border-border-subtle bg-white px-4 py-3 text-sm leading-relaxed text-text-primary [overflow-wrap:anywhere]"><Markdown text={msg.text} accent="#4B2FC4" /></div>
+            {msg.citations?.length > 0 && <SourceChips citations={msg.citations} className="mt-2" />}
+          </>
+        )}
       </div>
-    </motion.div>
+    </div>
   );
 }
 
-// ── Main page ─────────────────────────────────────────────────────────────────
+function Typing() {
+  return (
+    <div className="flex gap-3 px-4 sm:px-8" role="status" aria-label="ACHIEVION is writing">
+      <span aria-hidden="true" className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-accent-tint text-accent-text"><Sparkles size={15} /></span>
+      <span className="flex items-center gap-1.5 rounded-2xl rounded-bl-md border border-border-subtle bg-white px-4 py-3.5">
+        {[0, 1, 2].map((i) => <span key={i} className="h-2 w-2 animate-pulse rounded-full bg-accent/60 motion-reduce:animate-none" style={{ animationDelay: `${i * 140}ms` }} />)}
+      </span>
+    </div>
+  );
+}
+
 export default function AskAchievionPage() {
-  const [chats,        setChats]        = useState(() => loadChats());
-  const [activeChatId, setActiveChatId] = useState(null);
-  const [messages,     setMessages]     = useState([]);
-  const [input,        setInput]        = useState("");
-  const [loading,      setLoading]      = useState(false);
-  const [reindexing,   setReindexing]   = useState(false);
-  const [reindexMsg,   setReindexMsg]   = useState(null);
-  const bottomRef  = useRef(null);
-  const inputRef   = useRef(null);
-  const textareaRef = useRef(null);
+  const user = useAuthStore((s) => s.user);
+  const userId = String(user?._id ?? user?.id ?? "");
+  const reduce = useReducedMotion();
+  const [sp, setSp] = useSearchParams();
+  const [chats, setChats] = useState(() => loadChats(userId));
+  const [activeId, setActiveId] = useState(null);
+  const [messages, setMessages] = useState([]);
+  const [input, setInput] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [reindex, setReindex] = useState({ busy: false, result: null });
+  const [panelOpen, setPanelOpen] = useState(() => window.matchMedia("(min-width: 1024px)").matches);
+  const [renaming, setRenaming] = useState(null); // { id, value }
+  const [deleting, setDeleting] = useState(null); // chat
+  const bottomRef = useRef(null), inputRef = useRef(null);
 
-  useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: "smooth" }); }, [messages, loading]);
-  useEffect(() => { if (!loading) inputRef.current?.focus(); }, [activeChatId, loading]);
+  const titles = useMemo(() => uniqueTitles(chats), [chats]);
+  const save = useCallback((next) => { setChats(next); saveChats(userId, next); }, [userId]);
 
-  function persistMessages(msgs, chatId, title) {
-    setChats((prev) => {
-      const next = [...prev];
-      const idx  = next.findIndex((c) => c.id === chatId);
-      const entry = {
-        id: chatId, title,
-        messages: msgs.filter((m) => !m.loading),
-        createdAt: next[idx]?.createdAt ?? new Date().toISOString(),
-      };
-      if (idx >= 0) next[idx] = entry; else next.unshift(entry);
-      saveChats(next);
-      return next;
-    });
-  }
+  useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: reduce ? "auto" : "smooth" }); }, [messages, loading, reduce]);
+  useEffect(() => { if (!loading) inputRef.current?.focus(); }, [activeId, loading]);
+
+  // ?chat=<id> opens that chat (the top-bar panel links here).
+  const wanted = sp.get("chat");
+  useEffect(() => {
+    if (!wanted) return;
+    const c = loadChats(userId).find((x) => x.id === wanted);
+    if (c) { setChats(loadChats(userId)); setActiveId(c.id); setMessages(c.messages ?? []); } // eslint-disable-line react-hooks/set-state-in-effect
+  }, [wanted, userId]);
 
   const send = useCallback(async (text) => {
     const q = (text ?? input).trim();
     if (!q || loading) return;
     setInput("");
-    if (textareaRef.current) { textareaRef.current.style.height = "auto"; }
-
-    const chatId = activeChatId ?? uid();
-    if (!activeChatId) setActiveChatId(chatId);
-
-    const title   = q.slice(0, 50) + (q.length > 50 ? "…" : "");
-    const userMsg = { role: "user", text: q };
-    const newMsgs = [...messages, userMsg];
-    setMessages([...newMsgs, { role: "ai", loading: true }]);
-    persistMessages(newMsgs, chatId, chats.find((c) => c.id === chatId)?.title ?? title);
-
+    const chatId = activeId ?? uid();
+    if (!activeId) setActiveId(chatId);
+    const history = messages.filter((m) => !m.error).slice(-6).map((m) => ({ role: m.role, text: m.text }));
+    const withQ = [...messages, { role: "user", text: q }];
+    setMessages(withQ);
+    let list = upsertChat(chats, { id: chatId, firstQuestion: q, messages: withQ }); save(list);
     setLoading(true);
+    let reply;
     try {
-      // Send last 6 non-loading messages as history
-      const history = messages
-        .filter((m) => !m.loading && !m.error)
-        .slice(-6)
-        .map((m) => ({ role: m.role, text: m.text }));
-
-      const res = await api.post("/api/director/ai/ask", { question: q, history });
-
-      const aiMsg = res.notEnoughData
-        ? { role: "ai", text: "The knowledge index is empty. Click 'Refresh knowledge index' in the sidebar to index your org data.", citations: [] }
+      const res = await api.post("/api/director/ai/ask", { question: q, history }, { silent: true });
+      reply = res.notEnoughData
+        ? { role: "ai", text: "The knowledge index is empty. Use “Refresh knowledge index” above to index your organization's data.", citations: [] }
         : { role: "ai", text: res.answer, citations: res.citations ?? [] };
-
-      const finalMsgs = [...newMsgs, aiMsg];
-      setMessages(finalMsgs);
-      persistMessages(finalMsgs, chatId, title);
     } catch (err) {
-      const errMsg = { role: "ai", error: true, text: err?.message ?? "Something went wrong. Please try again." };
-      const finalMsgs = [...newMsgs, errMsg];
-      setMessages(finalMsgs);
-      persistMessages(finalMsgs, chatId, title);
-    } finally {
-      setLoading(false);
+      reply = { role: "ai", error: true, text: err?.message ?? "Something went wrong. Try again." };
     }
-  }, [input, loading, messages, activeChatId, chats]);
+    const done = [...withQ, reply];
+    setMessages(done);
+    list = upsertChat(list, { id: chatId, firstQuestion: q, messages: done }); save(list);
+    setLoading(false);
+  }, [input, loading, messages, activeId, chats, save]);
 
   function newChat() {
-    setActiveChatId(null);
-    setMessages([]);
-    setInput("");
-    if (textareaRef.current) textareaRef.current.style.height = "auto";
+    setActiveId(null); setMessages([]); setInput(""); setSp({}, { replace: true });
     setTimeout(() => inputRef.current?.focus(), 60);
   }
-
-  function openChat(chat) {
-    setActiveChatId(chat.id);
-    setMessages(chat.messages ?? []);
-    setInput("");
+  function openChat(c) {
+    setActiveId(c.id); setMessages(c.messages ?? []); setInput(""); setSp({ chat: c.id }, { replace: true });
+    if (!window.matchMedia("(min-width: 1024px)").matches) setPanelOpen(false);
+  }
+  function confirmDelete() {
+    save(deleteChat(chats, deleting.id));
+    if (activeId === deleting.id) newChat();
+    setDeleting(null);
+  }
+  function commitRename() {
+    if (renaming) save(renameChat(chats, renaming.id, renaming.value));
+    setRenaming(null);
+  }
+  async function refreshIndex() {
+    setReindex({ busy: true, result: null });
+    try { const r = await api.post("/api/director/ai/reindex", {}, { silent: true }); setReindex({ busy: false, result: { ok: true, count: r.indexed ?? 0 } }); }
+    catch { setReindex({ busy: false, result: { ok: false } }); }
   }
 
-  function deleteChat(e, chatId) {
-    e.stopPropagation();
-    setChats((prev) => { const n = prev.filter((c) => c.id !== chatId); saveChats(n); return n; });
-    if (activeChatId === chatId) newChat();
-  }
-
-  async function reindex() {
-    setReindexing(true); setReindexMsg(null);
-    try {
-      const r = await api.post("/api/director/ai/reindex");
-      setReindexMsg({ ok: true, count: r.indexed ?? 0 });
-    } catch {
-      setReindexMsg({ ok: false });
-    } finally {
-      setReindexing(false);
-    }
-  }
-
-  const hasMessages = messages.some((m) => !m.loading);
-  const displayMessages = messages.filter((m, i) => !m.loading || i === messages.length - 1);
+  const hasMessages = messages.length > 0;
+  const activeTitle = activeId ? titles[activeId] : null;
 
   return (
-    <div className="flex h-full overflow-hidden" style={{ background: "#f8f7ff" }}>
-
-      {/* ── Sidebar ────────────────────────────────────────────────────────── */}
-      <aside
-        className="w-64 shrink-0 flex flex-col h-full overflow-hidden"
-        style={{
-          background: "linear-gradient(180deg,#1e1040 0%,#2d1670 60%,#3b1a8a 100%)",
-          borderRight: "1px solid rgba(139,92,246,0.2)",
-        }}
-      >
-        {/* Header */}
-        <div className="px-4 pt-5 pb-4 shrink-0">
-          <div className="flex items-center gap-3 mb-4 px-1">
-            <div
-              className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0"
-              style={{ background: "rgba(139,92,246,0.3)", border: "1px solid rgba(139,92,246,0.4)" }}
-            >
-              <Sparkles size={14} className="text-violet-300" />
-            </div>
-            <div>
-              <p className="text-xs font-bold text-white tracking-wider uppercase">Ask ACHIEVION</p>
-              <p className="text-[10px] text-violet-400/70 font-medium">AI Director Assistant</p>
-            </div>
+    <div className="relative flex h-full overflow-hidden bg-bg-base">
+      <div className="flex min-w-0 flex-1 flex-col">
+        <header className="flex flex-wrap items-center gap-x-3 gap-y-2 border-b border-border-subtle bg-bg-surface px-4 py-3 sm:px-8">
+          <span aria-hidden="true" className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-accent-tint text-accent-text"><Sparkles size={17} /></span>
+          <div className="min-w-0 flex-1">
+            <h1 className="truncate text-base font-black text-text-primary" title={activeTitle ?? "Ask ACHIEVION"}>{activeTitle ?? "Ask ACHIEVION"}</h1>
+            <p className="truncate text-xs text-text-secondary">Your AI analyst for projects, people, risks and goals. It only suggests; you decide.</p>
           </div>
-          <button
-            type="button"
-            onClick={newChat}
-            className="w-full flex items-center justify-center gap-2 rounded-xl px-3 py-2.5 text-sm font-semibold text-white transition-all hover:brightness-110 active:scale-[0.97]"
-            style={{
-              background: "rgba(139,92,246,0.25)",
-              border: "1px solid rgba(139,92,246,0.4)",
-            }}
-          >
-            <Plus size={14} strokeWidth={2.5} />
-            New chat
+          <button type="button" onClick={refreshIndex} disabled={reindex.busy} aria-live="polite"
+            className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-border-subtle bg-white px-3 text-[13px] font-bold text-text-primary hover:bg-bg-muted disabled:opacity-50">
+            {reindex.busy ? <RefreshCw size={13} className="animate-spin motion-reduce:animate-none" aria-hidden="true" /> : <Database size={13} aria-hidden="true" />}
+            {reindex.busy ? "Refreshing…" : reindex.result?.ok ? `${reindex.result.count} documents indexed` : reindex.result?.ok === false ? "Refresh failed. Try again" : "Refresh knowledge index"}
           </button>
-        </div>
-
-        {/* Chat list */}
-        <div className="flex-1 overflow-y-auto px-3 pb-2" style={{ scrollbarWidth: "none" }}>
-          {chats.length === 0 ? (
-            <p className="text-xs text-violet-400/40 text-center mt-6 px-3 leading-relaxed">
-              No chats yet.<br />Ask your first question.
-            </p>
-          ) : (
-            <div className="flex flex-col gap-0.5">
-              {chats.map((chat) => (
-                <button
-                  key={chat.id}
-                  type="button"
-                  onClick={() => openChat(chat)}
-                  className="group w-full text-left rounded-xl px-3 py-2.5 transition-all relative"
-                  style={activeChatId === chat.id
-                    ? { background: "rgba(139,92,246,0.2)", border: "1px solid rgba(139,92,246,0.35)" }
-                    : { border: "1px solid transparent" }}
-                >
-                  <p className="text-[12px] font-medium text-violet-100/75 truncate pr-5 group-hover:text-white/90 transition-colors">{chat.title}</p>
-                  <p className="text-[10px] text-violet-400/40 mt-0.5 font-medium">{relDate(chat.createdAt)}</p>
-                  <button
-                    type="button"
-                    onClick={(e) => deleteChat(e, chat.id)}
-                    aria-label="Delete chat"
-                    className="absolute right-2 top-2.5 opacity-0 group-hover:opacity-50 hover:!opacity-100 transition-opacity text-violet-300 hover:text-rose-400"
-                  >
-                    <Trash2 size={10} />
-                  </button>
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
-
-        {/* Footer — reindex */}
-        <div className="shrink-0 px-3 py-3.5" style={{ borderTop: "1px solid rgba(139,92,246,0.15)" }}>
-          <button
-            type="button"
-            onClick={reindex}
-            disabled={reindexing}
-            className="w-full flex items-center gap-2 text-[11px] font-medium py-2 px-2.5 rounded-lg transition-colors hover:bg-white/5"
-            style={{ color: reindexMsg?.ok === false ? "#f87171" : reindexMsg?.ok ? "#34d399" : "rgba(167,139,250,0.6)" }}
-          >
-            {reindexing
-              ? <RefreshCw size={11} className="animate-spin shrink-0" />
-              : <Database size={11} className="shrink-0" />}
-            {reindexing ? "Refreshing…"
-              : reindexMsg?.ok === true ? `✓ ${reindexMsg.count} docs indexed`
-              : reindexMsg?.ok === false ? "Reindex failed — retry?"
-              : "Refresh knowledge index"}
+          <button type="button" onClick={() => setPanelOpen((v) => !v)} aria-expanded={panelOpen} aria-controls="ai-recent"
+            className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-border-subtle bg-white px-3 text-[13px] font-bold text-text-primary hover:bg-bg-muted">
+            {panelOpen ? <PanelRightClose size={14} aria-hidden="true" /> : <PanelRightOpen size={14} aria-hidden="true" />} Recent chats
           </button>
-        </div>
-      </aside>
+        </header>
 
-      {/* ── Chat area ────────────────────────────────────────────────────────── */}
-      <div className="flex-1 flex flex-col h-full overflow-hidden">
-
-        {/* Messages */}
-        <div className="flex-1 overflow-y-auto py-8 flex flex-col gap-5" style={{ scrollbarWidth: "thin", scrollbarColor: "rgba(139,92,246,0.2) transparent" }}>
-
+        <div className="flex-1 overflow-y-auto py-6" aria-live="polite">
           {!hasMessages ? (
-            /* ── Welcome ── */
-            <div className="flex flex-col items-center justify-center flex-1 px-8 gap-8">
-              {/* Hero */}
-              <div className="flex flex-col items-center gap-4 text-center">
-                <div className="relative">
-                  <div
-                    className="absolute inset-0 rounded-full opacity-20 blur-3xl"
-                    style={{ background: "radial-gradient(circle, #8b5cf6 0%, transparent 70%)", transform: "scale(2)" }}
-                  />
-                  <div
-                    className="relative w-16 h-16 rounded-2xl flex items-center justify-center"
-                    style={{
-                      background: "white",
-                      boxShadow: "0 8px 32px rgba(109,40,217,0.2), 0 2px 8px rgba(0,0,0,0.08)",
-                    }}
-                  >
-                    <Tally pose="idle" size={44} />
-                  </div>
-                </div>
-                <div>
-                  <h1 className="text-2xl font-black text-slate-800 tracking-tight">Ask ACHIEVION</h1>
-                  <p className="text-sm text-slate-500 mt-1.5 max-w-xs leading-relaxed">
-                    Your AI director analyst — ask anything about your team, projects, risks, or goals.
-                  </p>
-                </div>
+            <div className="mx-auto flex min-h-full max-w-3xl flex-col items-center justify-center gap-6 px-4 text-center sm:px-8">
+              <div>
+                <h2 className="text-2xl font-black tracking-tight text-text-primary">Ask ACHIEVION</h2>
+                <p className="mx-auto mt-1.5 max-w-md text-sm leading-relaxed text-text-secondary">Ask anything about your team, projects, risks or goals. Answers come with their sources.</p>
               </div>
-
-              {/* Suggestion grid */}
-              <div className="grid grid-cols-2 lg:grid-cols-3 gap-2.5 w-full max-w-2xl">
-                {SUGGESTIONS.map(({ icon: Icon, label, color, text }) => (
-                  <button
-                    key={text}
-                    type="button"
-                    onClick={() => send(text)}
-                    className="group text-left rounded-xl p-3.5 transition-all hover:scale-[1.02] active:scale-[0.98] bg-white"
-                    style={{ boxShadow: "0 2px 8px rgba(0,0,0,0.06)", border: "1px solid rgba(0,0,0,0.06)" }}
-                  >
-                    <div className="flex items-center gap-2 mb-2">
-                      <div className="w-6 h-6 rounded-lg flex items-center justify-center shrink-0" style={{ background: `${color}18` }}>
-                        <Icon size={12} style={{ color }} />
-                      </div>
-                      <span className="text-[10px] font-bold uppercase tracking-wider" style={{ color }}>{label}</span>
-                    </div>
-                    <p className="text-[12px] text-slate-500 leading-snug group-hover:text-slate-700 transition-colors">{text}</p>
-                  </button>
+              <ul className="grid w-full grid-cols-1 gap-2.5 min-[560px]:grid-cols-2 lg:grid-cols-3">
+                {SUGGESTIONS.map(({ icon: Icon, label, text }) => (
+                  <li key={text}>
+                    <button type="button" onClick={() => send(text)} className="flex h-full w-full flex-col gap-1.5 rounded-xl border border-border-subtle bg-white p-3.5 text-left transition-colors hover:border-accent/40 hover:bg-accent-tint/50">
+                      <span className="flex items-center gap-2 text-xs font-bold text-accent-text"><Icon size={13} aria-hidden="true" />{label}</span>
+                      <span className="text-sm leading-snug text-text-primary">{text}</span>
+                    </button>
+                  </li>
                 ))}
-              </div>
+              </ul>
             </div>
           ) : (
-            /* ── Messages ── */
-            <div className="flex flex-col gap-5 pb-2">
-              {displayMessages.map((msg, i) =>
-                msg.loading ? (
-                  <TypingIndicator key="loading" />
-                ) : (
-                  <Message key={`${activeChatId}-${i}`} msg={msg} index={i} />
-                )
-              )}
+            <div className="mx-auto flex max-w-3xl flex-col gap-5 pb-2">
+              {messages.map((m, i) => <Message key={`${activeId}-${i}`} msg={m} />)}
+              {loading && <Typing />}
               <div ref={bottomRef} />
             </div>
           )}
         </div>
 
-        {/* ── Input bar ── */}
-        <div
-          className="shrink-0 px-6 md:px-16 py-4"
-          style={{ background: "rgba(248,247,255,0.95)", borderTop: "1px solid rgba(139,92,246,0.12)" }}
-        >
-          <form
-            onSubmit={(e) => { e.preventDefault(); send(); }}
-            className="flex items-end gap-3 rounded-2xl px-4 py-3 bg-white"
-            style={{
-              border: "1.5px solid rgba(109,40,217,0.2)",
-              boxShadow: "0 4px 20px rgba(109,40,217,0.08)",
-            }}
-          >
-            <textarea
-              ref={(el) => { inputRef.current = el; textareaRef.current = el; }}
-              aria-label="Ask a question"
-              placeholder="Ask about projects, risks, team performance, goals…"
-              value={input}
-              onChange={(e) => {
-                setInput(e.target.value);
-                e.target.style.height = "auto";
-                e.target.style.height = Math.min(e.target.scrollHeight, 140) + "px";
-              }}
+        <div className="shrink-0 border-t border-border-subtle bg-bg-surface px-4 py-3 sm:px-8">
+          <form onSubmit={(e) => { e.preventDefault(); send(); }} className="field mx-auto flex max-w-3xl items-end gap-3 rounded-2xl border border-border-subtle bg-white px-4 py-2.5">
+            <textarea ref={inputRef} name="question" autoComplete="off" aria-label="Ask a question" placeholder="Ask about projects, risks, people or goals…" value={input} rows={1} disabled={loading} maxLength={1000}
+              onChange={(e) => { setInput(e.target.value); e.target.style.height = "auto"; e.target.style.height = `${Math.min(e.target.scrollHeight, 140)}px`; }}
               onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(); } }}
-              disabled={loading}
-              rows={1}
-              className="flex-1 resize-none bg-transparent text-sm text-slate-700 placeholder:text-slate-400 focus:outline-none disabled:opacity-50 leading-relaxed"
-              style={{ maxHeight: 140 }}
-            />
-            <button
-              type="submit"
-              disabled={loading || !input.trim()}
-              aria-label="Send"
-              className="shrink-0 w-9 h-9 rounded-xl flex items-center justify-center transition-all disabled:opacity-30 hover:brightness-110 active:scale-95"
-              style={{
-                background: "linear-gradient(135deg,#4c1d95,#6d28d9)",
-                boxShadow: "0 3px 10px rgba(109,40,217,0.35)",
-              }}
-            >
-              {loading
-                ? <RefreshCw size={14} className="animate-spin text-white" />
-                : <Send size={14} className="text-white" />}
+              className="max-h-36 min-w-0 flex-1 resize-none bg-transparent py-1 text-sm leading-relaxed text-text-primary placeholder:text-text-tertiary focus:outline-none disabled:opacity-60" />
+            <button type="submit" disabled={loading || !input.trim()} aria-label="Send question" className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-accent text-white disabled:opacity-35">
+              {loading ? <RefreshCw size={15} className="animate-spin motion-reduce:animate-none" aria-hidden="true" /> : <Send size={15} aria-hidden="true" />}
             </button>
           </form>
-          <p className="text-center text-[11px] text-slate-400 mt-2 font-medium">
-            AI sirf suggest karta hai · Shift+Enter for new line
-          </p>
+          <p className="mx-auto mt-1.5 max-w-3xl text-center text-xs text-text-secondary">Shift + Enter for a new line.</p>
         </div>
       </div>
+
+      {panelOpen && (
+        <motion.aside id="ai-recent" aria-label="Recent chats" initial={reduce ? false : { opacity: 0, x: 16 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.18 }}
+          className="absolute inset-y-0 right-0 z-10 flex w-full max-w-[20rem] shrink-0 flex-col border-l border-border-subtle bg-bg-surface shadow-[-8px_0_24px_-12px_rgba(20,32,61,0.25)] lg:static lg:z-auto lg:w-72 lg:max-w-none lg:shadow-none">
+          <div className="flex items-center justify-between gap-2 border-b border-border-subtle px-3 py-3">
+            <h2 className="flex items-center gap-2 text-sm font-black text-text-primary"><History size={15} aria-hidden="true" /> Recent chats</h2>
+            <span className="flex items-center gap-1">
+              <button type="button" onClick={newChat} className="inline-flex h-9 items-center gap-1 rounded-lg bg-accent px-3 text-[13px] font-bold text-white"><Plus size={14} aria-hidden="true" /> New chat</button>
+              <button type="button" onClick={() => setPanelOpen(false)} aria-label="Fold the recent chats away" className="flex h-9 w-9 items-center justify-center rounded-lg text-text-secondary hover:bg-bg-muted lg:hidden"><X size={16} aria-hidden="true" /></button>
+            </span>
+          </div>
+          {chats.length === 0 ? (
+            <p className="px-4 py-8 text-center text-sm text-text-secondary">No chats yet. Ask your first question and it is saved here.</p>
+          ) : (
+            <ul className="flex-1 overflow-y-auto p-2">
+              {chats.map((c) => {
+                const on = activeId === c.id, editing = renaming?.id === c.id;
+                return (
+                  <li key={c.id} className={`group rounded-xl ${on ? "bg-accent-tint" : "hover:bg-bg-muted"}`}>
+                    {editing ? (
+                      <form onSubmit={(e) => { e.preventDefault(); commitRename(); }} className="flex items-center gap-1 p-2">
+                        <input autoFocus aria-label="Chat name" name="chatName" autoComplete="off" value={renaming.value} maxLength={60} onChange={(e) => setRenaming({ id: c.id, value: e.target.value })}
+                          onKeyDown={(e) => { if (e.key === "Escape") { e.stopPropagation(); setRenaming(null); } }} className="h-9 min-w-0 flex-1 rounded-lg border border-border-subtle bg-white px-2 text-sm text-text-primary" />
+                        <button type="submit" aria-label="Save the name" className="flex h-9 w-9 items-center justify-center rounded-lg text-accent-text hover:bg-white"><Check size={15} aria-hidden="true" /></button>
+                        <button type="button" onClick={() => setRenaming(null)} aria-label="Cancel renaming" className="flex h-9 w-9 items-center justify-center rounded-lg text-text-secondary hover:bg-white"><X size={15} aria-hidden="true" /></button>
+                      </form>
+                    ) : (
+                      <div className="flex items-center gap-1">
+                        <button type="button" onClick={() => openChat(c)} aria-current={on ? "true" : undefined} title={titles[c.id]} className="min-w-0 flex-1 rounded-xl px-3 py-2.5 text-left">
+                          <span className={`block truncate text-sm text-text-primary ${on ? "font-bold" : "font-semibold"}`}>{titles[c.id]}</span>
+                          <span className="block text-xs text-text-secondary">{whenText(c.updatedAt ?? c.createdAt)}</span>
+                        </button>
+                        <span className="flex shrink-0 items-center pr-1 opacity-100 sm:opacity-0 sm:transition-opacity sm:focus-within:opacity-100 sm:group-hover:opacity-100">
+                          <button type="button" onClick={() => setRenaming({ id: c.id, value: titles[c.id] })} aria-label={`Rename "${titles[c.id]}"`} className="flex h-9 w-9 items-center justify-center rounded-lg text-text-secondary hover:bg-white hover:text-text-primary"><Pencil size={14} aria-hidden="true" /></button>
+                          <button type="button" onClick={() => setDeleting(c)} aria-label={`Delete "${titles[c.id]}"`} className="flex h-9 w-9 items-center justify-center rounded-lg text-text-secondary hover:bg-white hover:text-[#B01F17]"><Trash2 size={14} aria-hidden="true" /></button>
+                        </span>
+                      </div>
+                    )}
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+          <p className="border-t border-border-subtle px-4 py-2.5 text-xs leading-snug text-text-secondary">Chats are kept in this browser, for you only.</p>
+        </motion.aside>
+      )}
+
+      <ConfirmModal open={!!deleting} onClose={() => setDeleting(null)} onConfirm={confirmDelete} destructive confirmLabel="Delete chat"
+        title="Delete this chat?" body={deleting ? `"${titles[deleting.id]}" and its messages are removed from this browser. This cannot be undone.` : ""} />
     </div>
   );
 }

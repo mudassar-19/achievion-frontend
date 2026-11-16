@@ -2,6 +2,7 @@ import { Navigate, Outlet } from "react-router-dom";
 import { motion } from "framer-motion";
 import Tally from "@/components/ui/Tally";
 import useAuthStore from "@/stores/authStore";
+import useOrgAuthStore from "@/stores/orgAuthStore";
 
 // ── Full-screen loading shimmer shown while the token is being verified ───────
 function AuthLoading() {
@@ -29,11 +30,13 @@ function AuthLoading() {
 export default function ProtectedRoute() {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   const authReady       = useAuthStore((s) => s.authReady);
+  const hasOrgSession   = useOrgAuthStore((s) => !!s.orgToken);
 
   if (!authReady) return <AuthLoading />;
 
   if (!isAuthenticated) {
-    return <Navigate to="/login" replace />;
+    // UI-C (FLG-9): an Org Admin who opens a portal address (chat included) goes back to their own dashboard.
+    return <Navigate to={hasOrgSession ? "/org/dashboard" : "/login"} replace />;
   }
 
   return <Outlet />;

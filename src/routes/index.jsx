@@ -73,7 +73,7 @@ const ProjectManagementPage = lazy(() => import("@/pages/director/ProjectManagem
 const AuditLogPage = lazy(() => import("@/pages/director/AuditLogPage"));
 const DirectorAnomaliesPage = lazy(() => import("@/pages/director/DirectorAnomaliesPage"));
 const DirectorReportsPage = lazy(() => import("@/pages/director/DirectorReportsPage"));
-const DirectorProfilePage = lazy(() => import("@/pages/director/DirectorProfilePage"));
+const DirectorAccountPage = lazy(() => import("@/pages/director/DirectorAccountPage"));
 const DirectorNotificationsPage = lazy(() => import("@/pages/director/DirectorNotificationsPage"));
 const DirectorSettingsPage = lazy(() => import("@/pages/director/DirectorSettingsPage"));
 const DirectorWorkspaceSettingsPage = lazy(() => import("@/pages/director/DirectorWorkspaceSettingsPage"));
@@ -89,6 +89,7 @@ const CapacityHeatmapPage   = lazy(() => import("@/pages/director/CapacityHeatma
 const TeamWorkloadPage      = lazy(() => import("@/pages/director/TeamWorkloadPage"));
 const DeptDetailPage            = lazy(() => import("@/pages/director/DeptDetailPage"));
 const DirectorProjectDetailPage = lazy(() => import("@/pages/director/ProjectDetailPage"));
+const DirectorProjectModulePage = lazy(() => import("@/pages/director/ProjectModulePage"));
 const SurveyPage               = lazy(() => import("@/pages/SurveyPage"));
 const CollaborationBridgePage  = lazy(() => import("@/pages/CollaborationBridgePage"));
 const OrgDashboard = lazy(() => import("@/pages/org/OrgDashboard"));
@@ -244,6 +245,10 @@ const router = createBrowserRouter([{
           { path: "/org/employees/deleted",  element: <S><PastEmployeesPage /></S>   },
           { path: "/org/past-employees",     element: <S><PastEmployeesPage /></S>   },
           { path: "/org/approvals",          element: <S><OrgApprovalsPage /></S>    },
+          // UI-C (FLG-9): no chat in the Org Admin portal; chat addresses go back to the dashboard.
+          { path: "/org/chat/*",             element: <Navigate to="/org/dashboard" replace /> },
+          { path: "/org/collaboration/*",    element: <Navigate to="/org/dashboard" replace /> },
+          { path: "/org/announcements/*",    element: <Navigate to="/org/dashboard" replace /> },
         ],
       },
     ],
@@ -418,9 +423,9 @@ const router = createBrowserRouter([{
               { path: "audit-log",        element: <S><AuditLogPage /></S>                },
               { path: "reports",          element: <S><DirectorReportsPage /></S>         },
               { path: "anomalies",        element: <S><DirectorAnomaliesPage /></S>       }, // Batch 5 (D9)
-              { path: "account-settings",   element: <S><SettingsPage /></S>                           }, // U-1: personal settings
+              { path: "account-settings",   element: <S><DirectorAccountPage /></S>                    }, // UI-E1b (FLG-10): Profile + My settings in one page
               { path: "leaderboard",        element: <S><LeaderboardPage /></S>                        }, // U-1 (D-133): org view, Director is not ranked
-              { path: "profile",            element: <S><DirectorProfilePage /></S>                   },
+              { path: "profile",            element: <Navigate to="/director/account-settings" replace /> }, // UI-E1b: old address
               { path: "notifications",      element: <S><DirectorNotificationsPage /></S>             },
               { path: "settings",           element: <S><DirectorSettingsPage /></S>                  },
               { path: "workspace-settings", element: <S><DirectorWorkspaceSettingsPage /></S>         },
@@ -434,6 +439,10 @@ const router = createBrowserRouter([{
               { path: "capacity/teams",    element: <S><TeamWorkloadPage /></S>                     },
               { path: "dept/:deptName",    element: <S><DeptDetailPage /></S>                       },
               { path: "projects/:id",      element: <S><DirectorProjectDetailPage /></S>            },
+              { path: "projects/:id/modules/:moduleId", element: <S><DirectorProjectModulePage /></S> }, // UI-B
+              // UI-B: "Portfolio" is now "Projects"; old links keep working.
+              { path: "portfolio",         element: <ToManager to="/director/projects" /> },
+              { path: "portfolio/:id",     element: <ToManager to="/director/projects/:id" /> },
               { path: "ask",               element: <S><AskAchievionPage /></S>                     },
               { path: "chat",              element: <S><CollaborationBridgePage /></S>               },
             ],

@@ -1,9 +1,9 @@
-// Shared Settings page, role-aware (U-1, D-131). Sections: Account, Security, Notifications, Preferences.
+// Shared Settings page, role-aware (U-1, D-131). Sections: Account, Security, Notifications.
 // What a role can switch comes from GET /api/auth/settings/options, so every toggle maps to a real notification type.
 import ProfileDetails from "@/components/ui/ProfileDetails";
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import { User, Shield, Bell, SlidersHorizontal, Eye, EyeOff, Lock, Loader2 } from "lucide-react";
+import { User, Shield, Bell, Eye, EyeOff, Lock, Loader2 } from "lucide-react";
 import useAuthStore from "@/stores/authStore";
 import useUiStore from "@/stores/uiStore";
 import api from "@/lib/api";
@@ -17,8 +17,7 @@ const SECTIONS = [
   { key: "account", label: "Account", icon: User },
   { key: "security", label: "Security", icon: Shield },
   { key: "notifications", label: "Notifications", icon: Bell },
-  { key: "preferences", label: "Preferences", icon: SlidersHorizontal },
-];
+]; // UI-E2 (item 40): Preferences is gone. The AI button is always in the top bar and sign-in always opens Home.
 const ACCOUNT_PREFS = ["timezone", "dateFormat", "timeFormat"];
 const DATE_FORMATS = [["mdy", "Nov 5, 2026"], ["dmy", "5 Nov 2026"], ["iso", "2026-11-05"]];
 const ZONES = (() => { try { return Intl.supportedValuesOf("timeZone"); } catch { return []; } })();
@@ -131,50 +130,9 @@ function SecuritySection() {
 }
 
 // ── Celebrations (localStorage, applies per browser) ─────────────────────────
-function CelebrationSettings() {
-  const celebrations    = useUiStore((s) => s.celebrations);
-  const setCelebrations = useUiStore((s) => s.setCelebrations);
 
-  const celebOptions = [
-    { value: "full",  label: "Full",  desc: "Mascot in toasts and full-screen moments." },
-    { value: "quiet", label: "Quiet", desc: "Plain toasts only, no full-screen effects." },
-    { value: "off",   label: "Off",   desc: "No celebration effects at all." },
-  ];
-
-  return (
-    <div className="flex flex-col gap-4 pt-2">
-      <h3 className="text-sm font-black text-text-primary">Celebrations</h3>
-      <p className="text-[13px] text-text-secondary -mt-2">These apply on this browser and save right away.</p>
-
-      <div className="flex flex-col gap-2 rounded-xl border border-border-subtle bg-bg-surface px-4 py-3">
-        <p className="text-[13px] text-text-secondary">Visual effects for badges and level-ups.</p>
-        <div className="flex flex-wrap gap-2 mt-1" role="radiogroup" aria-label="Celebration style">
-          {celebOptions.map((o) => (
-            <label
-              key={o.value}
-              className={[
-                "flex min-h-[36px] cursor-pointer items-center rounded-lg border px-3 text-sm font-semibold transition-colors",
-                celebrations === o.value
-                  ? "border-accent bg-accent-tint text-accent-text"
-                  : "border-border-subtle text-text-secondary hover:bg-bg-muted",
-                "focus-within:outline focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-[var(--focus)]",
-              ].join(" ")}
-            >
-              <input type="radio" name="celebrations" value={o.value} checked={celebrations === o.value}
-                onChange={() => setCelebrations(o.value)} className="sr-only" />
-              {o.label}
-            </label>
-          ))}
-        </div>
-        <p className="text-[13px] text-text-secondary mt-1">
-          {celebOptions.find((o) => o.value === celebrations)?.desc}
-        </p>
-      </div>
-    </div>
-  );
-}
-
-export default function SettingsPage() {
+// embedded (UI-E1b): shown inside the Director's Account settings page, which supplies the page and the heading.
+export default function SettingsPage({ embedded = false }) {
   const user     = useAuthStore((s) => s.user);
   const setUser  = useAuthStore((s) => s.setUser);
   const setToken = useAuthStore((s) => s.setToken);
@@ -202,7 +160,6 @@ export default function SettingsPage() {
     return {
       account: draft.name.trim() !== saved.name || ACCOUNT_PREFS.some((k) => draft.prefs[k] !== saved.prefs[k]),
       notifications: !same(draft.notifs, saved.notifs) || draft.emailNotif !== saved.emailNotif,
-      preferences: ["landing", "aiPanel"].some((k) => draft.prefs[k] !== saved.prefs[k]),
     };
   }, [saved, draft]);
 
@@ -226,7 +183,7 @@ export default function SettingsPage() {
         const d = await api.patch("/api/auth/me", { name: draft.name.trim() });
         name = d.user?.name ?? draft.name.trim(); next.name = name;
       }
-      const keys = active === "account" ? ACCOUNT_PREFS : active === "preferences" ? ["landing", "aiPanel"] : [];
+      const keys = active === "account" ? ACCOUNT_PREFS : [];
       if (keys.length && keys.some((k) => draft.prefs[k] !== saved.prefs[k])) {
         const prefs = { ...saved.prefs, ...Object.fromEntries(keys.map((k) => [k, draft.prefs[k]])) };
         settings = (await api.patch("/api/auth/settings", { preferences: prefs })).settings; next.prefs = prefs;
@@ -242,12 +199,31 @@ export default function SettingsPage() {
   }
   function discard() {
     setDraft((d) => active === "account" ? { ...d, name: saved.name, prefs: { ...d.prefs, ...Object.fromEntries(ACCOUNT_PREFS.map((k) => [k, saved.prefs[k]])) } }
-      : active === "notifications" ? { ...d, notifs: saved.notifs, emailNotif: saved.emailNotif } : { ...d, prefs: { ...d.prefs, landing: saved.prefs.landing, aiPanel: saved.prefs.aiPanel } });
+      : active === "notifications" ? { ...d, notifs: saved.notifs, emailNotif: saved.emailNotif } : d);
   }
 
   const body = () => {
     if (active === "security") return <SecuritySection />;
-    if (active === "account") return (
+    if (active === "notifications") return (
+      <div className="flex flex-col gap-5">
+        <Heading title="Notifications" sub="Choose which updates reach your bell. Things that need your action are always on." />
+        <div className="flex max-w-2xl flex-col gap-2">
+          {opts.groups.map((g) => (
+            <Row key={g.key} title={g.label} desc={g.desc}>
+              {g.locked
+                ? <span className="inline-flex shrink-0 items-center gap-1 text-[13px] font-semibold text-text-secondary"><Lock size={13} aria-hidden />Always on</span>
+                : <Toggle label={g.label} on={draft.notifs[g.key]} onChange={(v) => setDraft((d) => ({ ...d, notifs: { ...d.notifs, [g.key]: v } }))} />}
+            </Row>
+          ))}
+          <Row title="Email notifications" desc="Send an email for task assignments, reviews, and deadline reminders when you are offline (more than 5 minutes inactive).">
+            <Toggle label="Email notifications" on={draft.emailNotif} onChange={(v) => setDraft((d) => ({ ...d, emailNotif: v }))} />
+          </Row>
+          {/* UI-E2 (item 40): Preferences and Celebrations are gone from this page. The Manager's workload limit link moved here. */}
+          {user?.role === "Manager" && <Row title="Workload limit" desc="When someone counts as over capacity. It applies to your whole team."><Link to="/manager/resources?limit=1" className={BTN.secondary}>Open on Resources</Link></Row>}
+        </div>
+      </div>
+    );
+    return (
       <div className="flex flex-col gap-5">
         <Heading title="Account" sub="Your name as others see it. Email and role are set by your organization." />
         <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
@@ -279,45 +255,12 @@ export default function SettingsPage() {
         </>)}
       </div>
     );
-    if (active === "notifications") return (
-      <div className="flex flex-col gap-5">
-        <Heading title="Notifications" sub="Choose which updates reach your bell. Things that need your action are always on." />
-        <div className="flex max-w-2xl flex-col gap-2">
-          {opts.groups.map((g) => (
-            <Row key={g.key} title={g.label} desc={g.desc}>
-              {g.locked
-                ? <span className="inline-flex shrink-0 items-center gap-1 text-[13px] font-semibold text-text-secondary"><Lock size={13} aria-hidden />Always on</span>
-                : <Toggle label={g.label} on={draft.notifs[g.key]} onChange={(v) => setDraft((d) => ({ ...d, notifs: { ...d.notifs, [g.key]: v } }))} />}
-            </Row>
-          ))}
-          <Row title="Email notifications" desc="Send an email for task assignments, reviews, and deadline reminders when you are offline (more than 5 minutes inactive).">
-            <Toggle label="Email notifications" on={draft.emailNotif} onChange={(v) => setDraft((d) => ({ ...d, emailNotif: v }))} />
-          </Row>
-        </div>
-        <CelebrationSettings />
-      </div>
-    );
-    return (
-      <div className="flex flex-col gap-5">
-        <Heading title="Preferences" sub="How the app opens and behaves for you." />
-        <div className="grid max-w-2xl grid-cols-1 gap-5 sm:grid-cols-2">
-          <Field label="Open after sign-in" htmlFor="set-land">
-            <select id="set-land" className={input} value={draft.prefs.landing} onChange={(e) => setPref("landing", e.target.value)}>
-              {opts.landings.map((l) => <option key={l.key} value={l.key}>{l.label}</option>)}
-            </select>
-          </Field>
-        </div>
-        <div className="flex max-w-2xl flex-col gap-2">
-          {opts.aiPanel && <Row title="AI panel" desc="Show the AI button and side panel in the top bar."><Toggle label="AI panel" on={draft.prefs.aiPanel !== false} onChange={(v) => setPref("aiPanel", v)} /></Row>}
-          {user?.role === "Manager" && <Row title="Workload limit" desc="When someone counts as over capacity. It applies to your whole team."><Link to="/manager/resources?limit=1" className={BTN.secondary}>Open on Resources</Link></Row>}
-        </div>
-      </div>
-    );
   };
 
+  const Wrap = embedded ? "div" : Page;
   return (
-    <Page>
-      <PageHeader title="Settings" subtitle="Your account, password, notifications and preferences." />
+    <Wrap {...(embedded ? { className: "flex flex-col gap-6" } : {})}>
+      {!embedded && <PageHeader title="Settings" subtitle="Your account, password and notifications." />}
       {error ? <ErrorState message={error} /> : !draft ? <div className="h-64 animate-pulse rounded-2xl bg-ink/[0.05]" /> : (
         <div className="flex flex-col gap-6 md:flex-row">
           <nav aria-label="Settings sections" className="flex shrink-0 gap-1 overflow-x-auto md:w-48 md:flex-col">
@@ -343,6 +286,6 @@ export default function SettingsPage() {
           </section>
         </div>
       )}
-    </Page>
+    </Wrap>
   );
 }

@@ -422,7 +422,8 @@ function SecurityTab({ user }) {
 }
 
 // ── DirectorProfilePage ───────────────────────────────────────────────────────
-export default function DirectorProfilePage() {
+// embedded (UI-E1b, FLG-10): shown inside Account settings, which has its own heading and a Security section.
+export default function DirectorProfilePage({ embedded = false }) {
   const user     = useAuthStore((s) => s.user);
   const setUser  = useAuthStore((s) => s.setUser);
   const setToken = useAuthStore((s) => s.setToken);
@@ -480,15 +481,15 @@ export default function DirectorProfilePage() {
         )}
       </AnimatePresence>
 
-      <div className="px-4 sm:px-8 py-8 min-h-full max-w-[1280px] mx-auto flex flex-col gap-6">
+      <div className={embedded ? "flex flex-col gap-6" : "px-4 sm:px-8 py-8 min-h-full max-w-[1280px] mx-auto flex flex-col gap-6"}>
 
         {/* Heading */}
-        <motion.div initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }}>
+        {!embedded && <motion.div initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }}>
           <PageHeader title="Profile & Security" subtitle="Account overview, security settings, and active sessions." />
-        </motion.div>
+        </motion.div>}
 
         {/* ── Tab bar ───────────────────────────────────────────────────────── */}
-        <div className="flex gap-1 border-b border-ink/[0.07] -mt-2">
+        <div className={`flex gap-1 border-b border-ink/[0.07] -mt-2 ${embedded ? "hidden" : ""}`}>
           {[{ id: "profile", label: "Profile" }, { id: "security", label: "Security" }].map((tab) => (
             <button
               key={tab.id}
@@ -506,7 +507,7 @@ export default function DirectorProfilePage() {
           ))}
         </div>
 
-        {activeTab === "security" && <SecurityTab user={user} />}
+        {activeTab === "security" && !embedded && <SecurityTab user={user} />}
 
         {activeTab === "profile" && <>
 

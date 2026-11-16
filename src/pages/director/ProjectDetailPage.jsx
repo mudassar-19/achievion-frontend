@@ -1,155 +1,145 @@
-// DIR-02.2: Project detail — read-only (status, deadline, manager, progress, risks, extensions, workload)
-// D-027: NO individual performance scores.
-import { useState, useEffect } from "react";
-import { useParams, Link } from "react-router-dom";
-import { motion } from "framer-motion";
-import { FolderOpen, ArrowLeft, User, Calendar, AlertTriangle, RefreshCw, Clock } from "lucide-react";
-import api from "@/lib/api";
+// Director project page (UI-B, master list item 5): list -> project overview -> module detail. READ-ONLY.
+// D-027: no individual performance scores. Data: GET /api/director/projects/:id/overview.
+import { Link, useParams } from "react-router-dom";
+import { ClipboardList, Gauge, Layers, ListChecks, CalendarRange, ShieldAlert } from "lucide-react";
+import { DIRECTOR_FEATURES as DF } from "@/lib/directorFeatures";
+import Page from "@/components/ui/Page";
 import PageHeader from "@/components/ui/PageHeader";
-import { SkeletonLine } from "@/components/ui/Skeleton";
+import Breadcrumb from "@/components/ui/Breadcrumb";
+import Panel from "@/components/ui/Panel";
+import EmptyState from "@/components/ui/EmptyState";
 import ErrorState from "@/components/ui/ErrorState";
+import HealthBadge from "@/components/ui/HealthBadge";
+import StatusChip from "@/components/ui/StatusChip";
+import useLoad from "@/pages/manager/project/useLoad";
+import { fmt } from "@/pages/manager/project/format";
+import { NotSet, DateText, Field, Summary, Stat, Stats, ProgressBar, TaskStatusBar, ProjectStatusChip, ModuleStateChip, PageSkeleton } from "./project/parts";
 
-const STATUS_COLOR = {
-  Active:    "bg-emerald-500/10 text-emerald-700",
-  Delayed:   "bg-rose-500/10 text-rose-700",
-  "On Hold": "bg-amber-500/10 text-amber-700",
-  Planning:  "bg-[#4B2FC4]/10 text-[#4B2FC4]",
-  Completed: "bg-emerald-500/10 text-emerald-700",
+const EXT = {
+  pending: ["pending", "Waiting for a decision"], approved: ["approved", "Approved"], rejected: ["rejected", "Rejected"],
+  counter_proposed: ["pending", "Counter-proposed"], auto_applied: ["approved", "Applied automatically"],
 };
+const plural = (n, one, many = `${one}s`) => `${n} ${n === 1 ? one : many}`;
 
-function ProgressBar({ pct }) {
-  const color = pct >= 80 ? "bg-emerald-500" : pct >= 50 ? "bg-[#4B2FC4]" : "bg-amber-500";
+function ModuleRow({ projectId, m }) {
   return (
-    <div className="flex items-center gap-3 w-full">
-      <div className="flex-1 h-2 rounded-full bg-ink/[0.08] overflow-hidden">
-        <motion.div className={`h-full rounded-full ${color}`}
-          initial={{ width: 0 }} animate={{ width: `${pct}%` }}
-          transition={{ duration: 0.6, ease: "easeOut" }} />
-      </div>
-      <span className="text-xs font-bold tabular-nums text-text-secondary w-10 text-right">{pct}%</span>
-    </div>
+    <li>
+      <Link to={`/director/projects/${projectId}/modules/${m.id}`}
+        className="grid grid-cols-1 items-center gap-x-5 gap-y-2 px-5 py-3.5 text-sm hover:bg-ink/[0.03] md:grid-cols-[minmax(0,2fr)_minmax(0,1.1fr)_minmax(0,1.3fr)_minmax(0,1.2fr)_auto]">
+        <span className="min-w-0">
+          <span title={m.title} className="block truncate font-bold text-text-primary">{m.title}</span>
+          <span className="mt-1 flex items-center gap-2"><ModuleStateChip state={m.state} />
+            {m.overdue > 0 && <span className="text-xs font-semibold text-[#B01F17]">{m.overdue} overdue</span>}</span>
+        </span>
+        <span className="min-w-0 truncate text-text-primary" title={m.teamLead?.name}>
+          <span className="text-text-secondary md:hidden">Team Lead: </span>{m.teamLead?.name ?? <NotSet>No Team Lead yet</NotSet>}
+        </span>
+        <span className="flex min-w-0 items-center gap-3">
+          <ProgressBar pct={m.progressPct} label={`${m.title} progress`} className="flex-1" />
+          <span className="min-w-[5.5rem] shrink-0 whitespace-nowrap text-right text-xs tabular-nums text-text-secondary"><strong className="text-sm text-text-primary">{m.progressPct}%</strong> · {m.done}/{m.tasks}</span>
+        </span>
+        <span className="min-w-0 text-[13px] text-text-secondary">
+          {m.startDate || m.dueDate
+            ? <span className="tabular-nums">{m.startDate ? fmt(m.startDate) : "No start date"} to {m.dueDate ? fmt(m.dueDate) : "no deadline"}</span>
+            : <NotSet>No dates set</NotSet>}
+        </span>
+        <span className="justify-self-start md:justify-self-end"><HealthBadge score={m.health.score} band={m.health.band} /></span>
+      </Link>
+    </li>
   );
 }
 
 export default function ProjectDetailPage() {
   const { id } = useParams();
-  const [data,    setData]    = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [error,   setError]   = useState(null);
-
-  useEffect(() => {
-    api.get(`/api/director/projects/${id}`)
-      .then(d => setData(d))
-      .catch(e => setError(e?.message ?? "Failed to load project."))
-      .finally(() => setLoading(false));
-  }, [id]);
-
-  if (loading) return (
-    <div className="px-4 sm:px-8 py-8 max-w-[960px] mx-auto flex flex-col gap-6">
-      <SkeletonLine width="200px" height={20} />
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-        {[1,2,3,4].map(i => <div key={i} className="h-20 rounded-2xl bg-ink/[0.04] animate-pulse" />)}
-      </div>
-    </div>
-  );
+  const { data: p, error, reload } = useLoad(`/api/director/projects/${id}/overview`);
 
   if (error) return (
-    <div className="px-4 sm:px-8 py-8"><ErrorState message={error} /></div>
+    <Page>
+      {/not found|invalid project id/i.test(error)
+        ? <EmptyState heading="This project does not exist or is not in your organization." action={{ label: "Back to Projects", to: "/director/projects" }} />
+        : <ErrorState message={error} onRetry={reload} />}
+    </Page>
   );
+  if (!p) return <Page><PageSkeleton label="Loading project" /></Page>;
 
-  if (!data) return null;
-
-  const deadlineStr = data.deadline ? new Date(data.deadline).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "—";
-  const statusCls = STATUS_COLOR[data.status] ?? "bg-ink/[0.08] text-text-secondary";
-
+  const { tasks: t, modules: mod, hours } = p;
+  const leads = p.teamLeads.map((l) => l.name).join(", ");
   return (
-    <div className="flex flex-col gap-6 px-4 sm:px-8 py-8 max-w-[960px] mx-auto w-full">
-      <Link to="/director/projects" aria-label="Back to Portfolio"
-        className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold text-slate-400 hover:text-text-primary hover:bg-ink/[0.04] transition-colors min-h-[32px] w-fit">
-        <ArrowLeft size={14} /> Portfolio
-      </Link>
+    <Page>
+      <div>
+        <Breadcrumb items={[{ label: "Projects", to: "/director/projects" }, { label: p.title }]} />
+        <PageHeader title={p.title}
+          subtitle={<span className="inline-flex flex-wrap items-center gap-2"><ProjectStatusChip status={p.status} size="xs" /><HealthBadge score={p.health.score} band={p.health.band} /></span>} />
+        {p.description && <p title={p.description} className="mt-2 max-w-[75ch] text-sm leading-relaxed text-text-secondary [overflow-wrap:anywhere] line-clamp-2">{p.description}</p>}
+      </div>
 
-      <PageHeader
-        title={data.title}
-        subtitle={data.description || data.category}
-        icon={<FolderOpen size={20} />}
-        badge={<span className={`px-2.5 py-0.5 rounded-full text-xs font-bold ${statusCls}`}>{data.status}</span>}
-      />
+      <Panel title="Summary" icon={ClipboardList}>
+        <Summary>
+          <Field label="Status">{p.status}</Field>
+          <Field label="Deadline"><DateText value={p.deadline} empty="No deadline set" /></Field>
+          <Field label="Manager" title={p.manager?.name}>{p.manager?.name ?? <NotSet />}</Field>
+          <Field label={p.teamLeads.length === 1 ? "Team Lead" : "Team Leads"} title={leads || undefined}>{leads || <NotSet />}</Field>
+          <Field label="Category">{p.category ?? <NotSet />}</Field>
+          <Field label="Priority">{p.priority ?? <NotSet />}</Field>
+        </Summary>
+      </Panel>
 
-      {/* Meta row */}
-      <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
-        className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-        <div className="rounded-2xl border border-ink/[0.08] glass-panel p-4 flex flex-col gap-1">
-          <span className="text-xs text-slate-400 flex items-center gap-1"><User size={11} /> Manager</span>
-          <p className="text-sm font-bold text-text-primary">{data.manager?.name ?? "—"}</p>
-        </div>
-        <div className="rounded-2xl border border-ink/[0.08] glass-panel p-4 flex flex-col gap-1">
-          <span className="text-xs text-slate-400 flex items-center gap-1"><Calendar size={11} /> Deadline</span>
-          <p className="text-sm font-bold text-text-primary">{deadlineStr}</p>
-        </div>
-        <div className="rounded-2xl border border-ink/[0.08] glass-panel p-4 flex flex-col gap-1">
-          <span className="text-xs text-slate-400">Tasks</span>
-          <p className="text-sm font-bold text-text-primary">{data.taskStats?.done ?? 0} / {data.taskStats?.total ?? 0} done</p>
-        </div>
-        <div className="rounded-2xl border border-ink/[0.08] glass-panel p-4 flex flex-col gap-1">
-          <span className="text-xs text-slate-400 flex items-center gap-1"><Clock size={11} /> Open hours</span>
-          <p className="text-sm font-bold text-text-primary">{data.taskStats?.openHours ?? 0}h</p>
-        </div>
-      </motion.div>
+      <Panel title="Progress" icon={Gauge} delay={0.05}>
+        <Stats>
+          <Stat label="Complete" value={`${p.progress}%`} detail={t.total ? `${t.done} of ${plural(t.total, "task")} done` : "No tasks yet"}>
+            <ProgressBar pct={p.progress} label="Project progress" className="mt-2.5" />
+          </Stat>
+          <Stat label="Modules done" value={mod.done} unit={`of ${mod.total}`} detail={mod.total ? `${mod.running} running · ${mod.remaining} not started` : "No modules yet"} />
+          <Stat label="Tasks overdue" value={t.overdue} tone={t.overdue > 0 ? "danger" : undefined} detail={`${t.inProgress} in progress · ${t.inReview} in review`} />
+          <Stat label="Open hours" value={hours.open} unit="h" detail={hours.planned ? `of ${hours.planned} h planned` : "No task has an estimate"} />
+        </Stats>
+      </Panel>
 
-      {/* Progress */}
-      <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}
-        className="rounded-2xl border border-ink/[0.08] glass-panel p-5 flex flex-col gap-3">
-        <p className="text-sm font-semibold text-text-primary">Progress</p>
-        <ProgressBar pct={data.progress} />
-      </motion.div>
+      <Panel title={`Modules (${mod.total})`} icon={Layers} delay={0.1}>
+        {p.moduleList.length
+          ? <ul className="divide-y divide-ink/[0.05]">{p.moduleList.map((m) => <ModuleRow key={m.id} projectId={p.id} m={m} />)}</ul>
+          : <p className="px-5 py-4 text-sm text-text-secondary">No modules yet. The Manager splits the project into modules and gives each one a Team Lead.</p>}
+      </Panel>
 
-      {/* Risks */}
-      {data.risks?.length > 0 && (
-        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }}
-          className="rounded-2xl border border-ink/[0.08] glass-panel p-5 flex flex-col gap-3">
-          <p className="text-sm font-semibold text-text-primary flex items-center gap-1.5">
-            <AlertTriangle size={14} className="text-amber-500" /> Open Risks ({data.risks.length})
-          </p>
-          <div className="flex flex-col gap-2">
-            {data.risks.map((r, i) => (
-              <div key={i} className="flex items-center justify-between gap-2 text-xs border-b border-ink/[0.05] pb-2 last:border-0 last:pb-0">
-                <span className="text-text-primary font-medium">{r.title}</span>
-                <span className={`px-2 py-0.5 rounded-full font-bold shrink-0 ${r.severity === "Critical" ? "bg-rose-100 text-rose-700" : r.severity === "High" ? "bg-amber-100 text-amber-700" : "bg-ink/[0.08] text-text-secondary"}`}>
-                  {r.severity ?? "—"}
-                </span>
-              </div>
-            ))}
-          </div>
-        </motion.div>
+      <Panel title="Tasks by status" icon={ListChecks} delay={0.15}>
+        <TaskStatusBar counts={t} />
+      </Panel>
+
+      {DF.risks && (
+        <Panel title={`Open risks (${p.risks.length})`} icon={ShieldAlert} delay={0.2}>
+          {p.risks.length ? (
+            <ul className="divide-y divide-ink/[0.05]">
+              {p.risks.map((r) => (
+                <li key={r.id} className="flex items-center justify-between gap-3 px-5 py-3 text-sm">
+                  <span title={r.title} className="min-w-0 truncate font-semibold text-text-primary">{r.title}</span>
+                  <span className="shrink-0 text-xs tabular-nums text-text-secondary">{r.category} · rating {r.rating} of 25</span>
+                </li>
+              ))}
+            </ul>
+          ) : <p className="px-5 py-4 text-sm text-text-secondary">No open risks on this project.</p>}
+        </Panel>
       )}
 
-      {/* Extension history */}
-      {data.extensions?.length > 0 && (
-        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}
-          className="rounded-2xl border border-ink/[0.08] glass-panel p-5 flex flex-col gap-3">
-          <p className="text-sm font-semibold text-text-primary flex items-center gap-1.5">
-            <RefreshCw size={14} className="text-[#4B2FC4]" /> Extension History ({data.extensions.length})
-          </p>
-          <div className="flex flex-col gap-2">
-            {data.extensions.map((e, i) => (
-              <div key={i} className="text-xs border-b border-ink/[0.05] pb-2 last:border-0 last:pb-0">
-                <div className="flex items-center justify-between gap-2">
-                  <span className="text-text-primary font-medium">{e.taskTitle}</span>
-                  <span className={`px-2 py-0.5 rounded-full font-bold shrink-0 ${e.status === "APPROVED" ? "bg-emerald-100 text-emerald-700" : e.status === "REJECTED" ? "bg-rose-100 text-rose-700" : "bg-amber-100 text-amber-700"}`}>
-                    {e.status}
+      <Panel title={`Extension history (${p.extensions.length})`} icon={CalendarRange} delay={0.2}>
+        {p.extensions.length ? (
+          <ul className="divide-y divide-ink/[0.05]">
+            {p.extensions.map((e) => {
+              const [chip, label] = EXT[e.status] ?? ["on_hold", e.status];
+              return (
+                <li key={e.id} className="flex flex-wrap items-start justify-between gap-x-4 gap-y-1.5 px-5 py-3 text-sm">
+                  <span className="min-w-0 flex-1 basis-60">
+                    <span title={e.subject ?? "Project deadline"} className="block truncate font-semibold text-text-primary">{e.subject ?? "Project deadline"}</span>
+                    <span className="block text-xs text-text-secondary [overflow-wrap:anywhere] line-clamp-2" title={e.reason}>
+                      {plural(e.requestedDays, "day")} asked on {fmt(e.requestedAt)}{e.reason ? ` · ${e.reason}` : ""}
+                    </span>
                   </span>
-                </div>
-                {e.reason && <p className="text-slate-400 mt-0.5 truncate">{e.reason}</p>}
-              </div>
-            ))}
-          </div>
-        </motion.div>
-      )}
-
-      {data.risks?.length === 0 && data.extensions?.length === 0 && (
-        <p className="text-sm text-slate-400 text-center py-4">No risks or extension requests for this project.</p>
-      )}
-    </div>
+                  <StatusChip status={chip} label={label} size="xs" />
+                </li>
+              );
+            })}
+          </ul>
+        ) : <p className="px-5 py-4 text-sm text-text-secondary">No deadline extension was asked for on this project.</p>}
+      </Panel>
+    </Page>
   );
 }

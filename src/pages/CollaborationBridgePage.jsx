@@ -6,9 +6,12 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   MessageSquare, Plus, Search, X, Send, Loader2,
-  ChevronRight, ChevronDown, Pencil, Trash2,
-  Pin, RefreshCw, Settings, BellOff, SmilePlus, Inbox,
+  ChevronRight, ChevronDown, ArrowLeft,
+  RefreshCw, Settings, BellOff, Inbox,
 } from "lucide-react";
+import useDmPeople from "@/hooks/useDmPeople";
+import { badge, chatTitle, dmName } from "@/lib/chatFormat";
+import { ChatMessages } from "@/components/widgets/ChatMessage";
 import api from "@/lib/api";
 import socket from "@/utils/socket";
 import useAuthStore from "@/stores/authStore";
@@ -20,17 +23,7 @@ import {
 
 // Server rules: server/services/chatRules.js (D-074). Communities: Director + Manager create.
 const CAN_CREATE_COMMUNITY = ["Director", "Manager"];
-const REACTIONS = ["👍", "❤️", "😂", "🎉", "😮", "🙏"]; // same set as the server
-
-// ── Helpers ───────────────────────────────────────────────────────────────────
-function timeLabel(iso) {
-  if (!iso) return "";
-  const d = new Date(iso);
-  const sameDay = d.toDateString() === new Date().toDateString();
-  return sameDay
-    ? d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
-    : d.toLocaleDateString([], { month: "short", day: "numeric" }) + " " + d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
-}
+// Messages, time stamps and DM names: components/widgets/ChatMessage.jsx, lib/chatFormat.js, hooks/useDmPeople.js (UI-C).
 
 const COMMUNITY_ICONS = ["💬", "🏢", "📁", "🚀", "🎨", "⚙️", "🔬", "📊", "🌐", "💡", "🎯", "🤝"];
 
@@ -363,9 +356,9 @@ function DmModal({ onClose, onOpen }) {
               <button key={u._id} onClick={() => open(u)}
                 className="flex items-center gap-2.5 px-3 py-2 rounded-xl hover:bg-ink/[0.06] text-left">
                 <Avatar user={u} size={28} />
-                <div>
-                  <p className="text-xs font-bold text-text-primary">{u.name}</p>
-                  <p className="text-[10px] text-slate-400">{u.role}</p>
+                <div className="min-w-0">
+                  <p className="text-xs font-bold text-text-primary truncate" title={u.name}>{u.name}</p>
+                  <p className="text-[11px] text-text-tertiary truncate">{u.role}</p>
                 </div>
               </button>
             ))}
@@ -377,108 +370,8 @@ function DmModal({ onClose, onOpen }) {
   );
 }
 
-// ── Message Item ──────────────────────────────────────────────────────────────
-function Reactions({ msg, currentUserId, onReact }) {
-  const groups = {};
-  for (const r of msg.reactions ?? []) (groups[r.emoji] ??= []).push(String(r.userId?._id ?? r.userId));
-  const entries = Object.entries(groups);
-  if (!entries.length) return null;
-  return (
-    <div className="flex flex-wrap gap-1 mt-1">
-      {entries.map(([emoji, ids]) => {
-        const mine = ids.includes(String(currentUserId));
-        return (
-          <button key={emoji} type="button" onClick={() => onReact(msg._id, emoji)} aria-pressed={mine}
-            aria-label={`${emoji} ${ids.length}${mine ? ", you reacted" : ""}`}
-            className={`inline-flex items-center gap-1 rounded-full border px-1.5 py-0.5 text-[11px] tabular-nums transition-colors ${mine ? "border-[#4B2FC4]/40 bg-[#4B2FC4]/[0.08] text-[#4B2FC4] font-bold" : "border-border-subtle text-text-secondary hover:bg-ink/[0.04]"}`}>
-            <span aria-hidden="true">{emoji}</span>{ids.length}
-          </button>
-        );
-      })}
-    </div>
-  );
-}
-
-function MessageItem({ msg, currentUserId, isGroupAdmin, onEdit, onDelete, onPin, onReact }) {
-  const [picker, setPicker]     = useState(false);
-  const [editing, setEditing]   = useState(false);
-  const [editText, setEditText] = useState(msg.content ?? "");
-  const [hover, setHover]       = useState(false);
-  const inputRef = useRef(null);
-  useEffect(() => { if (editing) inputRef.current?.focus(); }, [editing]);
-
-  const isOptimistic = String(msg._id).startsWith("opt-");
-  const isMe         = (msg.sender?._id ?? msg.sender?.toString()) === currentUserId;
-  const isDeleted    = !!msg.deletedAt;
-
-  function saveEdit() {
-    if (editText.trim() && editText !== msg.content) onEdit(msg._id, editText.trim());
-    setEditing(false);
-  }
-
-  return (
-    <div className="flex gap-3 px-4 py-1.5 rounded-xl group"
-      style={{ background: hover ? "rgba(75,47,196,0.03)" : "transparent" }}
-      onMouseEnter={() => setHover(true)} onMouseLeave={() => setHover(false)}>
-      <Avatar user={msg.sender} size={30} />
-      <div className="flex-1 min-w-0">
-        <div className="flex items-baseline gap-2">
-          <span className="text-xs font-bold text-text-primary">{msg.sender?.name ?? "Unknown"}</span>
-          <span className="text-[10px] text-slate-400">{timeLabel(msg.createdAt)}</span>
-          {msg.editedAt && <span className="text-[10px] text-slate-400 italic">(edited)</span>}
-          {msg.isPinned && <Pin size={9} className="text-amber-400" />}
-        </div>
-        {isDeleted ? (
-          <p className="text-xs text-slate-400 italic mt-0.5">This message was deleted.</p>
-        ) : editing ? (
-          <div className="flex gap-2 mt-1">
-            <input ref={inputRef} value={editText} onChange={(e) => setEditText(e.target.value)}
-              onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) saveEdit(); if (e.key === "Escape") setEditing(false); }}
-              className="flex-1 px-2 py-1 text-xs rounded-lg border border-[#4B2FC4]/30 focus:outline-none" />
-            <button onClick={saveEdit} className="text-[10px] font-bold text-[#4B2FC4]">Save</button>
-            <button onClick={() => setEditing(false)} className="text-[10px] text-slate-400">Cancel</button>
-          </div>
-        ) : (
-          <p className="text-xs text-text-primary leading-relaxed mt-0.5 break-words">{msg.content}</p>
-        )}
-        {!isDeleted && <Reactions msg={msg} currentUserId={currentUserId} onReact={onReact} />}
-        {picker && (
-          <div role="group" aria-label="Pick a reaction" className="mt-1 inline-flex gap-0.5 rounded-full border border-border-subtle bg-bg-surface px-1 py-0.5 shadow-[0_4px_12px_-4px_rgba(20,32,61,0.25)]">
-            {REACTIONS.map((e) => (
-              <button key={e} type="button" onClick={() => { onReact(msg._id, e); setPicker(false); }} aria-label={`React ${e}`}
-                className="h-7 w-7 rounded-full text-base hover:bg-ink/[0.06] transition-transform hover:scale-110">{e}</button>
-            ))}
-          </div>
-        )}
-      </div>
-      {hover && !isDeleted && !isOptimistic && (
-        <div className="flex items-center gap-0.5 self-start mt-1 opacity-0 group-hover:opacity-100 transition-opacity">
-          <button onClick={() => setPicker((v) => !v)} className="p-1 rounded hover:bg-ink/[0.08]" title="React" aria-label="React to message">
-            <SmilePlus size={11} className="text-text-secondary" />
-          </button>
-          {isMe && (
-            <button onClick={() => setEditing(true)} className="p-1 rounded hover:bg-ink/[0.08]" title="Edit">
-              <Pencil size={10} className="text-slate-400" />
-            </button>
-          )}
-          {(isMe || isGroupAdmin) && (
-            <button onClick={() => onDelete(msg._id)} className="p-1 rounded hover:bg-rose-50" title="Delete">
-              <Trash2 size={10} className="text-rose-400" />
-            </button>
-          )}
-          {isGroupAdmin && (
-            <button onClick={() => onPin(msg._id)} className="p-1 rounded hover:bg-amber-50" title="Pin">
-              <Pin size={10} className="text-amber-400" />
-            </button>
-          )}
-        </div>
-      )}
-    </div>
-  );
-}
-
 // ── Hierarchical Sidebar ──────────────────────────────────────────────────────
-function CommunitySidebar({ communities, dms, activeGroupId, onSelectGroup, onSelectDm, userRole, onCreateCommunity, onCreateGroup, onRequestGroup, onOpenCommunity, onJoin, search, setSearch }) {
+function CommunitySidebar({ communities, dms, personOf, activeGroupId, onSelectGroup, onSelectDm, userRole, onCreateCommunity, onCreateGroup, onRequestGroup, onOpenCommunity, onJoin, search, setSearch }) {
   const [collapsed, setCollapsed] = useState({});
 
   function toggle(id) { setCollapsed((s) => ({ ...s, [id]: !s[id] })); }
@@ -494,7 +387,7 @@ function CommunitySidebar({ communities, dms, activeGroupId, onSelectGroup, onSe
       })).filter((c) => c.name.toLowerCase().includes(q) || (c.groups?.length ?? 0) > 0 || (c.joinable?.length ?? 0) > 0)
     : communities;
 
-  const filteredDms = dms.filter((d) => !search || (d._dmTarget?.name ?? d.name ?? "").toLowerCase().includes(q));
+  const filteredDms = dms.filter((d) => !search || dmName(personOf(d)).toLowerCase().includes(q));
 
   return (
     <div className="flex flex-col h-full">
@@ -591,19 +484,19 @@ function CommunitySidebar({ communities, dms, activeGroupId, onSelectGroup, onSe
 
         {filteredDms.length > 0 && (
           <div className="mt-3">
-            <p className="px-3 text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-1">Direct Messages</p>
+            <p className="px-3 text-xs font-bold text-text-primary mb-1">Direct messages</p>
             {filteredDms.map((dm) => {
-              const name = dm._dmTarget?.name ?? dm.name;
+              const person = personOf(dm), name = dmName(person);
               return (
-                <button key={dm._id} onClick={() => onSelectDm(dm)}
+                <button key={dm._id} onClick={() => onSelectDm(dm)} aria-current={activeGroupId === dm._id ? "true" : undefined}
                   className={`flex items-center gap-2 w-full px-3 py-1.5 rounded-lg text-left text-xs transition-colors ${
-                    activeGroupId === dm._id ? "font-bold text-white" : "text-slate-500 hover:text-text-primary hover:bg-ink/[0.05]"
+                    activeGroupId === dm._id ? "font-bold text-white" : "text-text-secondary hover:text-text-primary hover:bg-ink/[0.05]"
                   }`}
                   style={activeGroupId === dm._id ? { background: ACCENT } : {}}>
-                  <MessageSquare size={11} className="shrink-0" />
+                  <Avatar user={{ name }} size={20} />
                   <span className="min-w-0 flex-1 truncate" title={name}>{name}</span>
                   {(dm.unread ?? 0) > 0 && activeGroupId !== dm._id && (
-                    <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full text-white shrink-0" style={{ background: ACCENT }}>{dm.unread}</span>
+                    <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full text-white shrink-0 tabular-nums" style={{ background: ACCENT }} aria-label={`${dm.unread} unread`}>{badge(dm.unread)}</span>
                   )}
                 </button>
               );
@@ -612,7 +505,7 @@ function CommunitySidebar({ communities, dms, activeGroupId, onSelectGroup, onSe
         )}
 
         {filtered.length === 0 && filteredDms.length === 0 && (
-          <p className="text-xs text-text-tertiary text-center px-4 py-6">{search ? "No groups match." : "You're not in a community yet."}</p>
+          <p className="text-xs text-text-secondary text-center px-4 py-6">{search ? "No group or person matches this search." : "You are not in a community yet. You can still send a direct message."}</p>
         )}
       </div>
 
@@ -621,7 +514,7 @@ function CommunitySidebar({ communities, dms, activeGroupId, onSelectGroup, onSe
         <button onClick={() => document.dispatchEvent(new CustomEvent("collab:openDm"))}
           className="w-full flex items-center justify-center gap-1.5 py-2 rounded-lg text-xs font-semibold text-[#4B2FC4] hover:bg-[#4B2FC4]/08 border border-[#4B2FC4]/20 transition-colors"
           style={{ background: "rgba(75,47,196,0.04)" }}>
-          <MessageSquare size={11} /> New DM
+          <MessageSquare size={11} /> New direct message
         </button>
       </div>
     </div>
@@ -658,6 +551,7 @@ export default function CollaborationBridgePage({ startWith = null }) {
   const inputRef    = useRef(null);
   const typingTimer = useRef(null);
   const clientIdRef = useRef(0);
+  const personOf    = useDmPeople(dms, currentId);
 
   // Load data
   const loadCommunities = useCallback(async () => {
@@ -862,14 +756,17 @@ export default function CollaborationBridgePage({ startWith = null }) {
   const canSend = !activeGroup || activeGroup.type === "dm" || sendMode !== "admins" || isGroupAdmin
     || (activeGroup.posterIds ?? []).some((p) => String(p) === currentId);
   const drawerCommunity = comDrawer ? communities.find((c) => c._id === comDrawer.id) : null;
+  const activeTitle = activeGroup ? chatTitle(activeGroup, personOf(activeGroup)) : "";
+  const closeConversation = () => { socket.emit("chat:leave", { channelId: activeGroup?._id }); setActiveGroup(null); setMessages([]); };
 
   return (
     <div className="flex h-full bg-bg-base overflow-hidden">
-      {/* Sidebar */}
-      <aside className="w-60 shrink-0 flex flex-col border-r border-ink/[0.08]" style={{ background: "#F5F6FA" }}>
+      {/* Sidebar — under 640px the list and the conversation take turns (UI-C) */}
+      <aside className={`${activeGroup ? "hidden sm:flex" : "flex"} w-full sm:w-60 shrink-0 flex-col border-r border-ink/[0.08]`} style={{ background: "#F5F6FA" }}>
         <CommunitySidebar
           communities={communities}
           dms={dms}
+          personOf={personOf}
           activeGroupId={activeGroup?._id}
           onSelectGroup={selectGroup}
           onSelectDm={selectDm}
@@ -885,31 +782,44 @@ export default function CollaborationBridgePage({ startWith = null }) {
       </aside>
 
       {/* Main */}
-      <div className="flex-1 flex flex-col min-w-0">
+      <div className={`${activeGroup ? "flex" : "hidden sm:flex"} flex-1 flex-col min-w-0`}>
         {activeGroup ? (
           <>
             {/* Header */}
-            <div className="flex items-center gap-3 px-5 py-3 shrink-0 border-b border-ink/[0.08]"
+            <div className="flex items-center gap-3 px-3 sm:px-5 py-3 shrink-0 border-b border-ink/[0.08]"
               style={{ background: "#F5F6FA" }}>
-              <span className="text-lg shrink-0" aria-hidden="true">{activeGroup.icon ?? (activeGroup.type === "dm" ? "👤" : "💬")}</span>
+              <button type="button" onClick={closeConversation} aria-label="Back to conversations"
+                className="sm:hidden flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-text-secondary hover:bg-ink/[0.06]">
+                <ArrowLeft size={16} aria-hidden="true" />
+              </button>
+              {activeGroup.type === "dm"
+                ? <Avatar user={{ name: activeTitle }} size={30} />
+                : <span className="text-lg shrink-0" aria-hidden="true">{activeGroup.icon ?? "💬"}</span>}
               <div className="flex-1 min-w-0">
-                <h1 className="text-sm font-bold text-text-primary truncate">
-                  {activeGroup.type === "dm" ? (activeGroup._dmTarget?.name ?? activeGroup.name) : activeGroup.type === "announcement" ? "Announcements" : `#${activeGroup.name}`}
-                </h1>
+                <h1 className="text-sm font-bold text-text-primary truncate" title={activeTitle}>{activeTitle}</h1>
                 {activeCommunity && (
-                  <p className="text-[11px] text-text-tertiary truncate">{activeCommunity.icon} {activeCommunity.name}</p>
+                  <p className="text-[11px] text-text-tertiary truncate" title={activeCommunity.name}>{activeCommunity.icon} {activeCommunity.name}</p>
                 )}
+                {activeGroup.type === "dm" && <p className="text-[11px] text-text-tertiary truncate">{personOf(activeGroup)?.role ?? "Direct message"}</p>}
               </div>
               {activeGroup.type !== "dm" && (
                 <button onClick={() => setShowGroupInfo(true)} aria-label="Group settings"
-                  className="px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors flex items-center gap-1.5 text-text-secondary hover:bg-ink/[0.06]">
-                  <Settings size={14} aria-hidden="true" /> Group settings
+                  className="shrink-0 px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors flex items-center gap-1.5 text-text-secondary hover:bg-ink/[0.06]">
+                  <Settings size={14} aria-hidden="true" /> <span className="hidden sm:inline">Group settings</span>
                 </button>
               )}
             </div>
 
             {/* Messages */}
-            <div className="flex-1 overflow-y-auto py-2">
+            <div className="flex-1 overflow-y-auto pb-3">
+              {!msgLoading && messages.length === 0 && (
+                <p className="px-6 py-12 text-center text-sm text-text-secondary">
+                  {!canSend ? "No announcements here yet." : activeGroup.type === "dm" ? `No messages with ${activeTitle} yet. Write the first one below.` : "No messages in this group yet. Write the first one below."}
+                </p>
+              )}
+              {msgLoading && messages.length === 0 && (
+                <p className="flex items-center justify-center gap-2 py-12 text-sm text-text-secondary"><Loader2 size={14} className="animate-spin" aria-hidden="true" /> Loading messages…</p>
+              )}
               {hasMore && (
                 <div className="flex justify-center py-2">
                   <button onClick={() => loadMessages(activeGroup._id, messages[0]?.createdAt)} disabled={msgLoading}
@@ -919,17 +829,8 @@ export default function CollaborationBridgePage({ startWith = null }) {
                   </button>
                 </div>
               )}
-              {messages.map((msg) => (
-                <MessageItem
-                  key={msg._id} msg={msg}
-                  currentUserId={currentId}
-                  isGroupAdmin={isGroupAdmin}
-                  onEdit={handleEdit}
-                  onDelete={handleDelete}
-                  onPin={handlePin}
-                  onReact={handleReact}
-                />
-              ))}
+              <ChatMessages messages={messages} currentUserId={currentId} isGroupAdmin={isGroupAdmin}
+                onEdit={handleEdit} onDelete={handleDelete} onPin={handlePin} onReact={handleReact} />
               {typingUsers.length > 0 && (
                 <p className="px-4 py-1 text-[11px] text-slate-400 italic">
                   {typingUsers.map((u) => u.name).join(", ")} {typingUsers.length === 1 ? "is" : "are"} typing…
@@ -948,8 +849,9 @@ export default function CollaborationBridgePage({ startWith = null }) {
                   <textarea ref={inputRef} value={input} onChange={onInputChange} rows={1}
                     onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendMessage(); } }}
                     aria-label={activeGroup.type === "announcement" ? "Write an announcement" : "Message"}
-                    placeholder={activeGroup.type === "announcement" ? "Write an announcement for everyone in this community…" : `Message ${activeGroup.type === "dm" ? (activeGroup._dmTarget?.name ?? "") : "#" + activeGroup.name}`}
-                    className="flex-1 bg-transparent text-sm text-text-primary placeholder:text-slate-400 focus:outline-none resize-none max-h-32"
+                    placeholder={activeGroup.type === "announcement" ? "Write an announcement for everyone in this community…" : `Message ${activeTitle}`}
+                    maxLength={2000}
+                    className="min-w-0 flex-1 bg-transparent text-sm text-text-primary placeholder:text-slate-400 focus:outline-none resize-none max-h-32"
                     style={{ lineHeight: "1.5" }} />
                   <button onClick={sendMessage} disabled={sending || !input.trim()} aria-label={activeGroup.type === "announcement" ? "Post announcement" : "Send message"}
                     className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0 disabled:opacity-30"

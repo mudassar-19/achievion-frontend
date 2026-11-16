@@ -265,7 +265,7 @@ function DuesWidget({ duesData, loading }) {
       icon={Clock}
       iconColor="#B01F17"
       delay={0.3}
-      action={{ to: "/director/projects", label: "Portfolio" }}
+      action={{ to: "/director/projects", label: "Projects" }}
     >
       {projects.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-8 gap-2">

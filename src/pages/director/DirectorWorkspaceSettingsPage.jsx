@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
+import { Link } from "react-router-dom";
 import { Building2, Loader2, Zap, Check, ImageUp } from "lucide-react";
 import BrandingCard from "./BrandingCard";
 import api       from "@/lib/api";
@@ -63,52 +64,7 @@ function EditableField({ label, value, onChange }) {
   );
 }
 
-// ── Number config row ─────────────────────────────────────────────────────────
-function NumberRow({ label, description, value, onChange, min = 0, max = 10, step = 0.1 }) {
-  return (
-    <div className="flex items-center justify-between py-3 border-b border-ink/[0.04] last:border-0">
-      <div>
-        <p className="text-xs font-semibold text-text-primary">{label}</p>
-        {description && <p className="text-[14px] text-slate-600 mt-0.5">{description}</p>}
-      </div>
-      <div className="flex items-center gap-2">
-        <button
-          type="button"
-          aria-label={`Decrease ${label}`}
-          onClick={() => onChange(Math.max(min, +(value - step).toFixed(2)))}
-          className="h-8 w-8 rounded-md bg-ink/[0.05] hover:bg-ink/[0.1] text-slate-400 text-sm font-bold flex items-center justify-center transition-colors"
-        >
-          −
-        </button>
-        <span className="w-12 text-center text-xs font-black tabular-nums" style={{ color: "var(--accent)" }}>{value}</span>
-        <button
-          type="button"
-          aria-label={`Increase ${label}`}
-          onClick={() => onChange(Math.min(max, +(value + step).toFixed(2)))}
-          className="h-8 w-8 rounded-md bg-ink/[0.05] hover:bg-ink/[0.1] text-slate-400 text-sm font-bold flex items-center justify-center transition-colors"
-        >
-          +
-        </button>
-      </div>
-    </div>
-  );
-}
-
-
 // ── Page ──────────────────────────────────────────────────────────────────────
-const DEFAULT_GAMIFICATION = {
-  xpMultipliers: {
-    Feature:       1.0,
-    Bug:           0.8,
-    Design:        0.9,
-    Testing:       0.7,
-    DevOps:        0.9,
-    Documentation: 0.5,
-  },
-  streakBonus:     1.1,
-  badgeThresholds: { firstTask: 1, tenTasks: 10, streak7: 7, streak30: 30 },
-};
-
 export default function DirectorWorkspaceSettingsPage() {
   const theme    = useRoleTheme();
   const addToast = useUiStore((s) => s.addToast);
@@ -123,7 +79,6 @@ export default function DirectorWorkspaceSettingsPage() {
   const [foundedDate,  setFoundedDate]  = useState("");
   const [memberCount,  setMemberCount]  = useState(0);
   const [companySize,  setCompanySize]  = useState("");
-  const [gamification, setGamification] = useState(DEFAULT_GAMIFICATION);
 
   // Load workspace settings on mount
   useEffect(() => {
@@ -135,9 +90,6 @@ export default function DirectorWorkspaceSettingsPage() {
         setFoundedDate(d.createdAt ?? "");
         setMemberCount(d.memberCount ?? 0);
         setCompanySize(d.companySize  ?? "");
-        if (d.gamificationRules) {
-          setGamification((prev) => ({ ...prev, ...d.gamificationRules }));
-        }
       })
       .catch(() => addToast({ type: "error", message: "Failed to load workspace settings." }))
       .finally(() => setLoading(false));
@@ -150,7 +102,6 @@ export default function DirectorWorkspaceSettingsPage() {
       await api.patch("/api/director/workspace-settings", {
         name:              orgName.trim(),
         companySize,
-        gamificationRules: gamification,
       });
       addToast({ type: "success", message: "Workspace settings saved." });
     } catch (err) {
@@ -158,17 +109,6 @@ export default function DirectorWorkspaceSettingsPage() {
     } finally {
       setSaving(false);
     }
-  }
-
-  // Gamification helpers
-  function setXpMult(type, val) {
-    setGamification((prev) => ({
-      ...prev,
-      xpMultipliers: { ...prev.xpMultipliers, [type]: val },
-    }));
-  }
-  function setStreakBonus(val) {
-    setGamification((prev) => ({ ...prev, streakBonus: val }));
   }
 
   if (loading) {
@@ -205,50 +145,11 @@ export default function DirectorWorkspaceSettingsPage() {
           <BrandingCard />
         </Section>
 
-        {/* ── Gamification Rules ───────────────────────────────────────────── */}
-        <Section icon={Zap} title="Gamification Rules" description="XP multipliers and streak bonuses applied to all tasks organization-wide." delay={0.15}>
-          <p className="text-[14px] font-bold uppercase tracking-[0.12em] text-slate-600 mb-2">XP Multipliers by Task Type</p>
-          {Object.entries(gamification.xpMultipliers).map(([type, val]) => (
-            <NumberRow
-              key={type}
-              label={type}
-              description={`Multiplied against base task XP for "${type}" tasks`}
-              value={val}
-              onChange={(v) => setXpMult(type, v)}
-              min={0.1}
-              max={5}
-              step={0.1}
-            />
-          ))}
-          <div className="mt-4 pt-4 border-t border-ink/[0.06]">
-            <p className="text-[14px] font-bold uppercase tracking-[0.12em] text-slate-600 mb-2">Streak Bonus</p>
-            <NumberRow
-              label="Daily Streak Multiplier"
-              description="Applied to XP when a member has an active streak"
-              value={gamification.streakBonus}
-              onChange={setStreakBonus}
-              min={1.0}
-              max={3.0}
-              step={0.05}
-            />
-          </div>
-          <div className="mt-4 pt-4 border-t border-ink/[0.06]">
-            <p className="text-[14px] font-bold uppercase tracking-[0.12em] text-slate-600 mb-2">Badge Unlock Thresholds</p>
-            {Object.entries(gamification.badgeThresholds).map(([key, val]) => (
-              <NumberRow
-                key={key}
-                label={{ streak7: "7-Day Streak", streak30: "30-Day Streak" }[key] ?? key.replace(/([A-Z])/g, " $1").replace(/^./, (s) => s.toUpperCase())}
-                value={val}
-                onChange={(v) => setGamification((prev) => ({
-                  ...prev,
-                  badgeThresholds: { ...prev.badgeThresholds, [key]: Math.round(v) },
-                }))}
-                min={1}
-                max={100}
-                step={1}
-              />
-            ))}
-          </div>
+        {/* ── Gamification rules moved to Settings > Gamification (UI-E1): one place, with bounds, preview and restore ── */}
+        <Section icon={Zap} title="Gamification rules" description="XP multipliers, the streak bonus and badge numbers are now edited in Settings." delay={0.15}>
+          <Link to="/director/settings?section=gamification" className="inline-flex h-10 items-center rounded-xl border border-border-subtle bg-white px-4 text-sm font-bold text-text-primary hover:bg-ink/[0.04]">
+            Open Settings, Gamification
+          </Link>
         </Section>
 
         {/* ── Save button ──────────────────────────────────────────────────── */}

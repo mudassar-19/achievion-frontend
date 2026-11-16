@@ -3,7 +3,8 @@
 // optional AI panel slot. Colour comes only from the role accent tokens (--c-accent on [data-role]),
 // so the Director stays plum and every other role gets its own accent with the same pixels.
 import OrgLogo from "@/components/ui/OrgLogo";
-import { Outlet, NavLink, useNavigate } from "react-router-dom";
+import { Outlet, NavLink, useNavigate, useLocation } from "react-router-dom";
+import ChatDock from "@/components/widgets/ChatDock";
 import { useEffect, useState, useRef, useCallback } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import ToastContainer from "@/components/ui/ToastContainer";
@@ -498,10 +499,9 @@ function ShellRail({ cfg, expanded, pinned, onPin, width, onNavigate }) {
  * notifSignal: bump to refetch the bell. aiPanel: ({ open, onClose }) => node; omit to hide the AI slot.
  */
 export default function PortalShell({ cfg, notifSignal, aiPanel: aiPanelProp, children }) {
-  // U-1 (D-131): Settings → Preferences can switch the AI panel off.
-  const aiOff    = useAuthStore((s) => s.user?.settings?.preferences?.aiPanel === false);
+  // UI-E2 (item 40): the AI button is always in the top bar; an old "AI panel off" choice is ignored.
   const isViewAs = useAuthStore((s) => !!s.viewAs);
-  const aiPanel  = (aiOff || isViewAs) ? undefined : aiPanelProp;
+  const aiPanel  = isViewAs ? undefined : aiPanelProp;
   // D-109 P6: filter sensitive nav items when in view-as
   const activeCfg = isViewAs ? { ...cfg, nav: filterNavForViewAs(cfg.nav), bottomNav: filterNavForViewAs(cfg.bottomNav ?? []) } : cfg;
   const [aiOpen, setAiOpen] = useState(false);
@@ -546,6 +546,12 @@ export default function PortalShell({ cfg, notifSignal, aiPanel: aiPanelProp, ch
     document.addEventListener("keydown", onKey);
     return () => document.removeEventListener("keydown", onKey);
   }, [aiPanel]);
+
+  // UI-C: ChatDock in every portal on this shell (the Org Admin portal has its own layout and no chat, FLG-9).
+  // Hidden on the Chat page itself and in View as (the server refuses chat reads there).
+  const { pathname } = useLocation();
+  const chatPath = cfg.nav.flatMap((g) => g.items).find((i) => /\/chat$/.test(i.to))?.to;
+  const showDock = !!chatPath && !isViewAs && !/\/(chat|announcements)$/.test(pathname);
 
   const railW = phone ? 0 : railExpanded ? D_RAIL_EXP : D_RAIL_W;
   const closeAi = useCallback(() => setAiOpen(false), []);
@@ -599,6 +605,7 @@ export default function PortalShell({ cfg, notifSignal, aiPanel: aiPanelProp, ch
         {children}
       </main>
 
+      {showDock && <ChatDock chatPath={chatPath} rightOffset={aiOpen ? AI_W : 0} />}
       <ToastContainer />
     </div>
   );
