@@ -40,3 +40,12 @@ test("one filter row: All, Critical, Needs action, FYI; each shows its own tier 
   assert.deepEqual(filterList(list, "needs_action").map((n) => n._id), [1]);
   assert.deepEqual(filterList(list, "fyi").map((n) => n._id), [3]);
 });
+
+import { bellText, bellTitle } from "./notifFormat.js";
+test("bell wording: load as a percent, name in the title, sentence case", () => {
+  const m = "Bilal Ahmed is at Over capacity x1.1 of daily capacity (limit 100%)";
+  assert.equal(bellText(m), "Bilal Ahmed is at 110% of daily capacity (limit 100%)");
+  assert.equal(bellTitle("Someone is over their limit", m), "Bilal Ahmed is over capacity");
+  assert.equal(bellTitle("Extension Approved", ""), "Extension approved");
+  assert.equal(bellTitle("Sprint closed: Sprint 2", ""), "Sprint closed: Sprint 2");
+});

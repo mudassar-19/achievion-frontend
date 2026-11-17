@@ -6,6 +6,7 @@ import Drawer from "@/components/ui/Drawer";
 import { BTN } from "@/components/ui/buttons";
 import { fmt } from "../project/format";
 import { pastStart, todayLocal } from "@/lib/taskDates";
+import DateInput from "@/components/ui/DateInput";
 
 const day = (d) => (d ? new Date(d).toISOString().slice(0, 10) : "");
 const blank = (projectId = "") => ({ name: "", goal: "", startDate: "", endDate: "", projectId });
@@ -92,11 +93,11 @@ export default function SprintDrawer({ open, onClose, sprint = null, projects = 
         </label>
         <div className="grid grid-cols-2 gap-3">
           <label htmlFor="sp-startDate" className="flex flex-col gap-1.5 font-bold text-text-primary">Start date
-            <input id="sp-startDate" type="date" min={edit ? undefined : todayLocal()} value={form.startDate} onChange={set("startDate")} disabled={active} aria-invalid={!!errors.startDate} className={field} />
+            <DateInput id="sp-startDate" min={edit ? undefined : todayLocal()} value={form.startDate} onChange={set("startDate")} disabled={active} aria-invalid={!!errors.startDate} className={field} />
             {errors.startDate && <span className={ERR}>{errors.startDate}</span>}
           </label>
           <label htmlFor="sp-endDate" className="flex flex-col gap-1.5 font-bold text-text-primary">End date
-            <input id="sp-endDate" type="date" min={form.startDate || undefined} value={form.endDate} onChange={set("endDate")} aria-invalid={!!errors.endDate} className={field} />
+            <DateInput id="sp-endDate" min={form.startDate || undefined} value={form.endDate} onChange={set("endDate")} aria-invalid={!!errors.endDate} className={field} />
             {errors.endDate && <span className={ERR}>{errors.endDate}</span>}
           </label>
         </div>

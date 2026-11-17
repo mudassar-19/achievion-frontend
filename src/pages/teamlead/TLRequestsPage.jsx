@@ -2,7 +2,8 @@
 // it is); reached from the notification. Decline needs a short note. Data: GET /api/teamlead/requests.
 import { useState } from "react";
 import { Link } from "react-router-dom";
-import { CalendarClock, RotateCcw } from "lucide-react";
+import { CalendarClock, RotateCcw, Shuffle } from "lucide-react";
+import { DeclineDialog, ReassignDialog } from "@/components/flows/Flows";
 import api from "@/lib/api";
 import useUiStore from "@/stores/uiStore";
 import Page from "@/components/ui/Page";
@@ -37,18 +38,34 @@ function Decide({ id, onDecide, allowLabel, declineLabel }) {
 export default function TLRequestsPage() {
   const addToast = useUiStore((s) => s.addToast);
   const { data, error, reload, setData } = useLoad("/api/teamlead/requests");
+  const re = useLoad("/api/teamlead/reallocation-requests?status=pending"); // Y-7: the Manager's requests
+  const team = useLoad("/api/teamlead/team");
+  const [accepting, setAccepting] = useState(null);
+  const [declining, setDeclining] = useState(null);
+  const reqs = (re.data?.items ?? []).filter((r) => r.kind === "reallocation");
   const done = (msg) => { addToast({ type: "success", message: msg }); api.get("/api/teamlead/requests").then(setData).catch(reload); };
-  const header = <PageHeader title="Requests" subtitle="Your people ask for more time or for one more try. You decide; they are told at once.">
+  const header = <PageHeader title="Action centre" subtitle="Your people ask for more time or for one more try. You decide; they are told at once.">
     <Link to="/teamlead/bugs" className={BTN.secondary}>Bugs to check</Link>{/* E-4: bug checks live on their own page */}
   </PageHeader>;
   if (error) return <Page>{header}<ErrorState message={error} onRetry={reload} /></Page>;
   if (!data) return <Page>{header}<div aria-busy="true" aria-label="Loading requests" className="flex flex-col gap-3">{[0, 1].map((i) => <Skeleton key={i} className="h-40 rounded-2xl" />)}</div></Page>;
-  const none = !data.extensions.length && !data.tries.length;
+  const none = !data.extensions.length && !data.tries.length && !reqs.length;
   return (
     <Page>
       {header}
       {none ? <Panel title="Open requests" icon={CalendarClock}><EmptyState pose="cheer" heading="No open requests" body="Requests for more time or one more try show up here." action={{ label: "Open Tasks", to: "/teamlead/tasks" }} /></Panel> : (
         <>
+          {reqs.length > 0 && (
+            <Panel title={`Reallocation requests (${reqs.length})`} icon={Shuffle}>
+              <ul className="divide-y divide-ink/[0.05]">{reqs.map((r) => (
+                <li key={r.id} className="flex flex-col gap-3 px-5 py-4 text-sm">
+                  <div className="min-w-0"><p className="font-bold text-text-primary [overflow-wrap:anywhere]">{r.task.title}</p>
+                    <p className="text-xs text-text-secondary">{r.project.title}{r.from ? ` · now with ${r.from.name}` : ""} · asked {fmtDateTime(r.createdAt)}</p>
+                    <p className="mt-1 whitespace-pre-wrap [overflow-wrap:anywhere]">{r.reason}</p></div>
+                  <span className="flex flex-wrap gap-2"><button type="button" className={BTN.primary} onClick={() => setAccepting(r)}>Accept and reassign</button><button type="button" className={BTN.secondary} onClick={() => setDeclining(r)}>Decline</button></span>
+                </li>))}</ul>
+            </Panel>
+          )}
           {data.extensions.length > 0 && (
             <Panel title={`More time (${data.extensions.length})`} icon={CalendarClock}>
               <ul className="divide-y divide-ink/[0.05]">{data.extensions.map((e) => (
@@ -76,6 +93,8 @@ export default function TLRequestsPage() {
           )}
         </>
       )}
+      <ReassignDialog task={accepting?.task} request={accepting} people={(team.data?.members ?? []).filter((m) => !['Director', 'Manager'].includes(m.role))} onClose={() => setAccepting(null)} onDone={() => { setAccepting(null); re.reload(); }} />
+      <DeclineDialog request={declining} onClose={() => setDeclining(null)} onDone={() => { setDeclining(null); re.reload(); }} />
     </Page>
   );
 }

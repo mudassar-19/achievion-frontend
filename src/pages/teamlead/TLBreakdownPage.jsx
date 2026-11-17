@@ -19,6 +19,7 @@ import ConfirmModal from "@/components/ui/ConfirmModal";
 import { BTN } from "@/components/ui/buttons";
 import useLoad from "../manager/project/useLoad";
 import { fmt } from "../manager/project/format";
+import DateInput from "@/components/ui/DateInput";
 
 const TYPES = ["Feature", "Bug", "Design", "Testing", "DevOps", "Documentation"];
 const PRIORITIES = ["Critical", "High", "Medium", "Low"];
@@ -259,7 +260,7 @@ export default function TLBreakdownPage() {
                         <td className="px-2 py-1.5"><select aria-label="Priority" value={r.priority} onChange={(e) => update(r.key, { priority: e.target.value })} className={cell}>{PRIORITIES.map((x) => <option key={x}>{x}</option>)}</select></td>
                         <td className="px-2 py-1.5"><select aria-label="Assignee" value={r.assigneeId} onChange={(e) => update(r.key, { assigneeId: e.target.value })} aria-invalid={!!er.assignee} className={cell}><option value="">Unassigned</option>{people.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}</select>
                           {er.assignee && <p className="mt-0.5 text-xs font-semibold text-[#B01F17]">{er.assignee}</p>}</td>
-                        <td className="px-2 py-1.5"><input aria-label="Deadline" type="date" value={r.deadline} onChange={(e) => update(r.key, { deadline: e.target.value })} className={cell} /></td>
+                        <td className="px-2 py-1.5"><DateInput aria-label="Deadline" value={r.deadline} onChange={(e) => update(r.key, { deadline: e.target.value })} className={cell} /></td>
                         <td className="px-2 py-1.5"><Deps row={r} rows={rows} existing={d.existingTasks} onChange={(v) => update(r.key, { dependsOn: v })} />
                           {er.dependsOn && <p className="mt-0.5 text-xs font-semibold text-[#B01F17]">{er.dependsOn}</p>}</td>
                         <td className="px-2 py-1.5 text-center"><input type="checkbox" aria-label="QA required" checked={r.qaRequired} onChange={(e) => update(r.key, { qaRequired: e.target.checked })} className="mt-2 h-4 w-4 accent-[var(--accent)]" /></td>

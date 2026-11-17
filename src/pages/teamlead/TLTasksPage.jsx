@@ -24,6 +24,7 @@ import { moveVerdict } from "@/utils/boardRules";
 import { fmt } from "../manager/project/format";
 import TaskFormDrawer from "./task/TaskFormDrawer";
 import TaskDetailDrawer from "./task/TaskDetailDrawer";
+import DateInput from "@/components/ui/DateInput";
 
 const TABS = [["all", "All"], ["created", "Created by me"], ["review", "Pending review"], ["done", "Completed"]];
 const STATUSES = ["Backlog", "To-Do", "In-Progress", "In-Review", "Done"];
@@ -235,7 +236,7 @@ export default function TLTasksPage() {
               {bulk.action === "assign" ? <select id="bulk-value" value={bulk.value} onChange={(e) => setBulk({ ...bulk, value: e.target.value })} className={select}><option value="">Pick a person…</option>{(opts?.assignees ?? []).map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}</select>
                 : bulk.action === "sprint" ? <select id="bulk-value" value={bulk.value} onChange={(e) => setBulk({ ...bulk, value: e.target.value })} className={`${select} max-w-[260px]`}><option value="">Pick a sprint…</option>{(opts?.sprints ?? []).map((x) => <option key={x.id} value={x.id}>{x.name}</option>)}</select>
                 : bulk.action === "priority" ? <select id="bulk-value" value={bulk.value} onChange={(e) => setBulk({ ...bulk, value: e.target.value })} className={select}><option value="">Pick…</option>{["Critical", "High", "Medium", "Low"].map((p) => <option key={p}>{p}</option>)}</select>
-                : bulk.action === "deadline" ? <input id="bulk-value" type="date" value={bulk.value} onChange={(e) => setBulk({ ...bulk, value: e.target.value })} className={select} />
+                : bulk.action === "deadline" ? <DateInput id="bulk-value" value={bulk.value} onChange={(e) => setBulk({ ...bulk, value: e.target.value })} className={select} />
                 : <input id="bulk-value" maxLength={24} autoComplete="off" value={bulk.value} onChange={(e) => setBulk({ ...bulk, value: e.target.value })} placeholder="Tag…" className={`${select} w-32`} />}
               <button type="button" className={BTN.primary} disabled={bulkBusy} onClick={applyBulk}>{bulkBusy ? "Applying…" : "Apply"}</button>
               <button type="button" className={BTN.ghost} onClick={() => setPicked(new Set())}>Clear</button>

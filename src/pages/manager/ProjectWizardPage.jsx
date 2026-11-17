@@ -13,6 +13,7 @@ import Breadcrumb from "@/components/ui/Breadcrumb";
 import ErrorState from "@/components/ui/ErrorState";
 import Skeleton from "@/components/ui/Skeleton";
 import { BTN } from "@/components/ui/buttons";
+import DateInput from "@/components/ui/DateInput";
 
 const STEPS_CREATE = ["details", "modules", "team", "review"];
 const STEPS_EDIT = ["details", "review"];
@@ -242,11 +243,11 @@ export default function ProjectWizardPage() {
             )}
             <div className="grid gap-5 sm:grid-cols-2">
               <Field id="startDate" label="Start date" required error={errors.startDate}>
-                <input id="startDate" type="date" min={mode === "create" ? today() : undefined} value={f.startDate} onChange={(e) => set("startDate", e.target.value)} className={inputCls(errors.startDate)} aria-invalid={!!errors.startDate} />
+                <DateInput id="startDate" min={mode === "create" ? today() : undefined} value={f.startDate} onChange={(e) => set("startDate", e.target.value)} className={inputCls(errors.startDate)} aria-invalid={!!errors.startDate} />
               </Field>
               <Field id="deadline" label="Deadline" required={mode === "create"} error={errors.deadline}
                 hint={mode === "edit" ? "To move the deadline, use Extend deadline on the project page." : undefined}>
-                <input id="deadline" type="date" min={f.startDate || today()} value={f.deadline} disabled={mode === "edit"} onChange={(e) => set("deadline", e.target.value)} className={inputCls(errors.deadline)} aria-invalid={!!errors.deadline} />
+                <DateInput id="deadline" min={f.startDate || today()} value={f.deadline} disabled={mode === "edit"} onChange={(e) => set("deadline", e.target.value)} className={inputCls(errors.deadline)} aria-invalid={!!errors.deadline} />
               </Field>
               <Field id="workingHoursPerDay" label="Working hours per day" error={errors.workingHoursPerDay}>
                 <input id="workingHoursPerDay" type="number" inputMode="numeric" min={1} max={24} value={f.workingHoursPerDay} onChange={(e) => set("workingHoursPerDay", e.target.value)} className={inputCls(errors.workingHoursPerDay)} />
@@ -286,7 +287,7 @@ export default function ProjectWizardPage() {
                   <div key={i} className="flex flex-wrap items-center gap-2 rounded-xl border border-ink/[0.07] p-3">
                     <input aria-label={`Module ${i + 1} name`} value={m.title} maxLength={80} placeholder="e.g. Login and accounts…" autoComplete="off"
                       onChange={(e) => upd({ title: e.target.value })} className="h-9 min-w-[200px] flex-1 rounded-xl px-3 text-sm" />
-                    <input type="date" aria-label={`Module ${i + 1} deadline`} value={m.dueDate} min={f.startDate || undefined} max={f.deadline || undefined}
+                    <DateInput aria-label={`Module ${i + 1} deadline`} value={m.dueDate} min={f.startDate || undefined} max={f.deadline || undefined}
                       onChange={(e) => upd({ dueDate: e.target.value })} className="h-9 rounded-xl px-3 text-sm" />
                     <span className="flex gap-1" role="group" aria-label={`Module ${i + 1} work types`}>
                       {ROLE_MIX.map(([val, lbl]) => {

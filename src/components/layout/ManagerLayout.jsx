@@ -6,15 +6,16 @@ import useNotificationStore, { notifRedirectPath } from "@/stores/notificationSt
 import PortalShell, { D_TOPBAR_H } from "./PortalShell";
 import ManagerAiPanel from "./ManagerAiPanel";
 import { ViewAsMenu } from "./ViewAs";
-import { LayoutDashboard, Inbox, FolderKanban, Timer, Target, ShieldAlert, Users, Trophy, MessageSquare, Settings, User, SlidersHorizontal, BarChart3, Megaphone } from "lucide-react";
+import { LayoutDashboard, ListChecks, ClipboardList, FolderKanban, Timer, Target, ShieldAlert, Users, Trophy, MessageSquare, Settings, User, SlidersHorizontal, BarChart3, Megaphone } from "lucide-react";
 
 const NAV = [
   { label: "Home", items: [
     { icon: LayoutDashboard, label: "Dashboard", to: "/manager", end: true },
-    { icon: Inbox,           label: "Inbox",     to: "/manager/inbox" },
+    { icon: ListChecks,      label: "Action centre", to: "/manager/inbox" }, // D-QA4-2: "Inbox" is only for messages
   ] },
   { label: "Plan",            items: [
     { icon: FolderKanban,  label: "Projects",      to: "/manager/projects" },
+    { icon: ClipboardList, label: "Tasks",         to: "/manager/tasks" }, // D-QA4-1: read-only list
     { icon: Timer,         label: "Sprints",       to: "/manager/sprints" },
   ] },
   { label: "People",          items: [{ icon: Users,         label: "Resources",     to: "/manager/resources" }] },

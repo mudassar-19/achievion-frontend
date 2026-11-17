@@ -13,6 +13,7 @@ import { reportQuery } from "./report/useReport";
 import { DeliveryTab, PeopleTab, XpTab, WellbeingTab, LessonsTab } from "./report/ReportTabs";
 import ExportDrawer from "./report/ExportDrawer";
 import { NarrativeCard } from "./ai/AiCards";
+import DateInput from "@/components/ui/DateInput";
 
 const TABS = [["delivery", "Delivery"], ["people", "People"], ["xp", "XP trend"], ["wellbeing", "Well-being"], ["lessons", "Lessons learned"]];
 const RANGES = [{ value: "7d", label: "7 days" }, { value: "30d", label: "30 days" }, { value: "month", label: "This month" }, { value: "custom", label: "Custom" }];
@@ -79,8 +80,8 @@ export default function ManagerReportsPage() {
         </div>
         {custom && tab !== "lessons" && (
           <div className="flex flex-wrap items-center gap-3 text-xs font-bold text-text-secondary">
-            <label className="flex items-center gap-2">From<input type="date" name="from" value={sp.get("from") ?? ""} max={sp.get("to") || today()} onChange={(e) => set({ from: e.target.value })} className={field} /></label>
-            <label className="flex items-center gap-2">To<input type="date" name="to" value={sp.get("to") ?? ""} min={sp.get("from") || undefined} max={today()} onChange={(e) => set({ to: e.target.value })} className={field} /></label>
+            <label className="flex items-center gap-2">From<DateInput name="from" value={sp.get("from") ?? ""} max={sp.get("to") || today()} onChange={(e) => set({ from: e.target.value })} className={field} /></label>
+            <label className="flex items-center gap-2">To<DateInput name="to" value={sp.get("to") ?? ""} min={sp.get("from") || undefined} max={today()} onChange={(e) => set({ to: e.target.value })} className={field} /></label>
             <span className="font-normal">Up to 366 days. Leave "To" empty for today.</span>
           </div>
         )}

@@ -18,6 +18,7 @@ import EmptyState from "@/components/ui/EmptyState";
 import ErrorState from "@/components/ui/ErrorState";
 import { avatarUrl } from "@/lib/avatar";
 import { fmtDate as dateStd, fmtDateTime as dateTimeStd, fmtTime as timeStd } from "@/lib/dates";
+import DateInput from "@/components/ui/DateInput";
 
 // ── Event configuration ────────────────────────────────────────────────────────
 // NOTE: 'performedBy' is NOT returned by GET /api/director/audit-log (backend gap).
@@ -508,12 +509,12 @@ export default function AuditLogPage() {
         {/* Date range (client-side) */}
         <div className="flex items-center gap-1.5 ml-2">
           <CalendarRange size={13} className="text-slate-500" aria-hidden="true"/>
-          <input type="date" value={dateFrom} onChange={e=>setDateFrom(e.target.value)}
+          <DateInput value={dateFrom} onChange={e=>setDateFrom(e.target.value)}
             max={dateTo || toISODate(new Date())}
             aria-label="Filter from date"
             className="bg-ink/[0.05] border border-ink/[0.10] rounded-lg px-2 py-1.5 text-xs text-text-primary focus:outline-none focus:border-ink/25 transition-colors"/>
           <span className="text-xs text-slate-500" aria-hidden="true">–</span>
-          <input type="date" value={dateTo} onChange={e=>setDateTo(e.target.value)}
+          <DateInput value={dateTo} onChange={e=>setDateTo(e.target.value)}
             min={dateFrom || undefined} max={toISODate(new Date())}
             aria-label="Filter to date"
             className="bg-ink/[0.05] border border-ink/[0.10] rounded-lg px-2 py-1.5 text-xs text-text-primary focus:outline-none focus:border-ink/25 transition-colors"/>

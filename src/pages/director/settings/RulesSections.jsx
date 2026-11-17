@@ -9,6 +9,7 @@ import api from "@/lib/api";
 import useUiStore from "@/stores/uiStore";
 import ConfirmModal from "@/components/ui/ConfirmModal";
 import { TASK_TYPES, BADGES, RECOMMENDED, ALERT_FIELDS, FISCAL_YEARS, withDefaults, toggleWeekend, extensionSentence } from "./rules";
+import DateInput from "@/components/ui/DateInput";
 
 const ACCENT = "#4B2FC4";
 const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
@@ -75,7 +76,7 @@ function HolidaysRow({ s, setS }) {
   return (
     <LabelRow label="Company holidays" htmlFor="wt-holiday" hint="Dates the whole company is off (for example Eid, 23 March). They count like weekend days.">
       <div className="flex flex-wrap items-center gap-2">
-        <input id="wt-holiday" type="date" value={day} onChange={(e) => setDay(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); add(); } }}
+        <DateInput id="wt-holiday" value={day} onChange={(e) => setDay(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); add(); } }}
           className="h-10 rounded-lg border border-border-subtle bg-white px-3 text-sm" />
         {day && <span className="text-xs text-text-secondary">{fmtDate(day)}</span>}
         <button type="button" onClick={add} disabled={!day || list.includes(day) || list.length >= 60}

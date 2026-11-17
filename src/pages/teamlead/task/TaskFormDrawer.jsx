@@ -14,6 +14,7 @@ import AttachPicker from "@/components/ui/AttachPicker";
 import { pastStart, todayLocal } from "@/lib/taskDates";
 import { suggestFor, fitWarning, domainWarning } from "@/lib/taskFit";
 import { TONE } from "../../manager/resources/tone";
+import DateInput from "@/components/ui/DateInput";
 
 const TYPES = ["Feature", "Bug", "Design", "Testing", "DevOps", "Documentation"];
 const PRIORITIES = ["Critical", "High", "Medium", "Low"];
@@ -267,9 +268,9 @@ export default function TaskFormDrawer({ open, task = null, preset = null, onClo
               )}
             </div>
             <div className="grid grid-cols-2 gap-3">
-              <label htmlFor="tf-startDate" className={lbl}>Start<input id="tf-startDate" type="date" min={editing ? undefined : todayLocal()} value={f.startDate} onChange={(e) => set("startDate", e.target.value)} aria-invalid={!!errors.startDate} className={field} />
+              <label htmlFor="tf-startDate" className={lbl}>Start<DateInput id="tf-startDate" min={editing ? undefined : todayLocal()} value={f.startDate} onChange={(e) => set("startDate", e.target.value)} aria-invalid={!!errors.startDate} className={field} />
                 {errors.startDate && <span className={ERR}>{errors.startDate}</span>}</label>
-              <label htmlFor="tf-deadline" className={lbl}>Deadline<input id="tf-deadline" type="date" min={f.startDate || undefined} value={f.deadline} onChange={(e) => set("deadline", e.target.value)} aria-invalid={!!errors.deadline} className={field} />
+              <label htmlFor="tf-deadline" className={lbl}>Deadline<DateInput id="tf-deadline" min={f.startDate || undefined} value={f.deadline} onChange={(e) => set("deadline", e.target.value)} aria-invalid={!!errors.deadline} className={field} />
                 {errors.deadline && <span className={ERR}>{errors.deadline}</span>}</label>
             </div>
             <label htmlFor="tf-sprintId" className={lbl}>Sprint

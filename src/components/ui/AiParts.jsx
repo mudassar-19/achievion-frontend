@@ -18,7 +18,7 @@ export function AiStatus({ call, loadingText = "Asking the AI…" }) {
 }
 
 export function AiTag() {
-  return <span className="inline-flex items-center gap-1 rounded-full bg-accent/[0.08] px-2 py-0.5 text-[11px] font-semibold text-accent-text"><Sparkles size={10} aria-hidden="true" />AI-generated</span>;
+  return <span className="inline-flex shrink-0 items-center gap-1 whitespace-nowrap rounded-full bg-accent/[0.08] px-2 py-0.5 text-[11px] font-semibold text-accent-text"><Sparkles size={10} aria-hidden="true" />AI-generated</span>;
 }
 
 // Thumbs up / down → AIFeedback (one vote per answer; clicking again changes it).

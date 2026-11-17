@@ -9,6 +9,8 @@ import api from "@/lib/api";
 import AiPanel from "./AiPanel";
 import { AiTag, AiFeedback } from "@/components/ui/AiParts";
 import { aiError } from "@/components/ui/aiCall";
+import AiEntities from "@/components/ui/EntityCard";
+import Select from "@/components/ui/Select";
 
 const ACCENT = "var(--accent)";
 const time = (d) => fmtTime(d);
@@ -51,7 +53,7 @@ export default function ManagerAiPanel({ open, onClose, topOffset, base = "/api/
     try {
       const r = await api.post(`${base}/ai/chat`, body, { silent: true });
       setChatId(r.chatId); setUsage(r.usage);
-      return { text: r.message.text, id: r.message.id, sources: r.message.sources };
+      return { text: r.message.text, id: r.message.id, sources: r.message.sources, entities: r.message.entities };
     } catch (e) {
       const s = aiError(e);
       if (s.status === "off") setCtx((c) => (c ? { ...c, configured: false } : c));
@@ -69,25 +71,23 @@ export default function ManagerAiPanel({ open, onClose, topOffset, base = "/api/
     try {
       const c = await api.get(`${base}/ai/chats/${id}`, { silent: true });
       setChatId(c.id); setHistory(null);
-      setReset((r) => ({ key: r.key + 1, messages: c.messages.map((m) => ({ id: m.id, role: m.role, text: m.text, sources: m.sources })) }));
+      setReset((r) => ({ key: r.key + 1, messages: c.messages.map((m) => ({ id: m.id, role: m.role, text: m.text, sources: m.sources, entities: m.entities })) }));
     } catch { setHistory(null); }
   }
 
   const limitHit = usage && usage.remaining === 0;
   const iconBtn = "flex h-7 w-7 items-center justify-center rounded-lg text-slate-500 transition-colors hover:bg-ink/[0.06] hover:text-text-primary";
 
+  // QA4 M-6: the themed Select, grouped; the "Project:" / "Sprint:" prefix becomes the group.
+  const keyOf = (c) => JSON.stringify({ kind: c.kind, ...(c.id && { id: c.id }), ...(c.query && { query: c.query }) });
+  const grp = (c) => (c.kind === "project" ? "Projects" : c.kind === "sprint" ? "Sprints" : "This page and team");
   const chip = context && (
-    <label className="relative min-w-0 flex-1">
-      <span className="sr-only">Context for the AI</span>
-      <select value={pick ? JSON.stringify(pick) : ""} title={context.label}
-        onChange={(e) => setPick(e.target.value ? JSON.parse(e.target.value) : null)}
-        className="w-full max-w-[160px] cursor-pointer truncate rounded-full border border-accent/20 bg-accent/[0.08] py-0.5 pl-2 pr-5 text-[11px] font-semibold text-accent-text">
-        <option value="">{pick ? "This page" : context.label}</option>
-        {(ctx.choices ?? []).filter((c) => !(c.kind === context.kind && (c.id ?? null) === (context.id ?? null) && !pick)).map((c) => (
-          <option key={`${c.kind}-${c.id ?? c.query ?? ""}`} value={JSON.stringify({ kind: c.kind, ...(c.id && { id: c.id }), ...(c.query && { query: c.query }) })}>{c.label}</option>
-        ))}
-      </select>
-    </label>
+    <Select className="min-w-0 max-w-[180px] flex-1" buttonClassName="!h-7 !rounded-full !border-accent/20 !bg-accent/[0.08] !px-2.5 !text-[11px] !font-semibold !text-accent-text"
+      label="Context for the AI" value={pick ? keyOf(pick) : ""} onChange={(v) => setPick(v ? JSON.parse(v) : null)}
+      options={[{ value: "", label: pick ? "This page" : context.label, group: grp({ kind: "page" }) },
+        ...(ctx.choices ?? []).filter((c) => !(c.kind === context.kind && (c.id ?? null) === (context.id ?? null) && !pick))
+          .map((c) => ({ value: keyOf(c), label: String(c.label).replace(/^(Project|Sprint): /, ""), group: grp(c) }))
+          .sort((x, y) => x.group.localeCompare(y.group))]} />
   );
 
   const top = (
@@ -108,18 +108,15 @@ export default function ManagerAiPanel({ open, onClose, topOffset, base = "/api/
           <span className="text-text-secondary">{ctx.insight.body}</span>
         </Card>
       )}
-      {!history && (ctx?.cards ?? []).map((c) => <Card key={c.key} to={c.to} action={c.action}><span>{c.text}</span></Card>)}
+      {!history && (ctx?.cards ?? []).filter((c) => !(ctx?.insight && /over capacity|overloaded/i.test(c.text ?? ""))).map(// M-5: one card per topic, the insight already says it
+(c) => <Card key={c.key} to={c.to} action={c.action}><span>{c.text}</span></Card>)}
       {failed && <p role="alert" className="text-xs text-text-secondary">Suggestions could not be loaded. <button type="button" onClick={load} className="font-bold text-accent-text underline">Retry</button></p>}
-      {usage && (
-        <p className="text-[11px] text-slate-500" role="status">
-          {limitHit ? `Daily limit reached (${usage.limit}). Resets at ${time(usage.resetsAt)}.` : `${usage.remaining} of ${usage.limit} AI requests left today.`}
-        </p>
-      )}
     </>
   );
 
   const renderMeta = (m) => m.id && (
     <div className="flex max-w-full flex-wrap items-center gap-1.5 pl-1">
+      <AiEntities entities={m.entities} />
       <AiTag />
       {(m.sources ?? []).map((s) => (
         <Link key={s.key} to={s.to} className="inline-flex min-h-7 items-center rounded-full border border-ink/[0.1] bg-white px-2 text-[11px] font-semibold text-text-secondary hover:text-text-primary">{s.label}</Link>
@@ -141,7 +138,7 @@ export default function ManagerAiPanel({ open, onClose, topOffset, base = "/api/
       quickPrompts={ctx?.prompts ?? []}
       welcome={welcome}
       placeholder={placeholder}
-      footer="AI can make mistakes. Check the sources."
+      footer={`${usage ? `${limitHit ? `Daily limit reached (${usage.limit}). Resets at ${time(usage.resetsAt)}.` : `${usage.remaining} of ${usage.limit} AI requests left today.`} · ` : ""}AI can make mistakes. Check the sources.`}
       onAsk={ask} renderMeta={renderMeta}
       resetKey={reset.key} initialMessages={reset.messages}
       inputDisabled={!!limitHit} />

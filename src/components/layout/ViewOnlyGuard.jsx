@@ -6,7 +6,7 @@ import { useLocation, useNavigate } from "react-router-dom";
 import useViewOnly from "@/hooks/useViewOnly";
 
 // Labels that write. Matched at the start of a button's text or aria-label.
-const WRITE = /^(new|create|add|save|submit|approve|reject|delete|remove|edit|start|log time|send|post|invite|assign|publish|upload|check.?in|archive|restore|deactivate|suspend|reactivate|adjust|reopen|resolve|dismiss|confirm|apply|rename|change|reply|mark|request|decline|counter|extend|escalate|generate|buy|claim|equip|redeem|purchase|use |join|leave|follow|vote|react|retry|close project|close with|cancel task|save current)/i;
+const WRITE = /^(new|create|add|save|submit|approve|reject|delete|remove|edit|start|log time|send|post|invite|assign|publish|upload|check.?in|archive|restore|deactivate|suspend|reactivate|adjust|reopen|resolve|dismiss|confirm|apply|rename|change|reply|mark|request|decline|counter|extend|escalate|generate|buy|claim|equip|redeem|purchase|use |join|leave|follow|vote|react|nudge|reassign|handover|retry|close project|close with|cancel task|save current)/i;
 const KEEP = "[data-view-as-banner],[data-keep-in-view-only],nav,[role=search],[role=tablist]";
 const SEL = "button,[role=button],input[type=submit]";
 

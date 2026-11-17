@@ -1,6 +1,6 @@
 // One module (or a whole project) for the Team Lead (V2 Phase 4 · T-1 + T-2, UX TL v4 §3.2, D-115, D-119, D-122).
 // Tabs (?tab=): Overview | Breakdown (T-3) | Tasks | Team | Timeline | History. Actions: Accept (new module), Create
-// tasks (only after Accept, D-119), Ask a question, Request deadline change (reason; the Manager decides in the Inbox),
+// tasks (only after Accept, D-119), Ask a question, Request deadline change (reason; the Manager decides in the Action centre),
 // Mark ready for QA sign-off (D-021). Task click → task detail drawer.
 import { useEffect, useState } from "react";
 import { useParams, useSearchParams, Link } from "react-router-dom";
@@ -25,6 +25,7 @@ import { STATUS_KEY, TONE } from "../manager/resources/tone";
 import TaskFormDrawer from "./task/TaskFormDrawer";
 import TaskDetailDrawer from "./task/TaskDetailDrawer";
 import Handoff, { QaChecklist } from "./TLHandoff";
+import DateInput from "@/components/ui/DateInput";
 
 const TABS = [["overview", "Overview"], ["breakdown", "Breakdown"], ["tasks", "Tasks"], ["handoff", "Handoff"], ["team", "Team"], ["timeline", "Timeline"], ["history", "History"]];
 const TASK_CHIP = { Backlog: "on_hold", "To-Do": "planned", "In-Progress": "maintenance", "In-Review": "pending", Done: "completed" };
@@ -143,7 +144,7 @@ export default function TLModulePage() {
     if (!date) er.newDate = "Pick the new deadline.";
     if (text.trim().length < 10) er.reason = "Write a reason of at least 10 characters.";
     setErr(er); if (Object.keys(er).length) { document.getElementById(er.newDate ? "dl-date" : "dl-reason")?.focus(); return; }
-    post(`/api/teamlead/modules/${projectId}/deadline-request`, { newDate: date, reason: text.trim(), moduleId: moduleId || undefined }, (r) => `Request sent to ${r.to}. They decide in their Inbox.`);
+    post(`/api/teamlead/modules/${projectId}/deadline-request`, { newDate: date, reason: text.trim(), moduleId: moduleId || undefined }, (r) => `Request sent to ${r.to}. They decide in their Action centre.`);
   }
 
   if (error) return <Page>{/^Module not found/.test(error) ? <EmptyState heading="This module does not exist or is not one of yours." action={{ label: "Back to modules", to: "/teamlead/modules" }} /> : <ErrorState message={error} onRetry={reload} />}</Page>;
@@ -248,9 +249,9 @@ export default function TLModulePage() {
       <Drawer open={dialog === "deadline"} onClose={() => setDialog(null)} title="Request a deadline change" width={440}
         footer={<div className="flex justify-end gap-2"><button type="button" className={BTN.secondary} onClick={() => setDialog(null)}>Cancel</button><button type="submit" form="dl-form" className={BTN.primary} disabled={busy}>{busy ? "Sending…" : "Send request"}</button></div>}>
         <form id="dl-form" onSubmit={requestDeadline} className="flex flex-col gap-3 p-5 text-sm">
-          <p className="text-text-secondary">Current deadline: {m.deadline ? fmt(m.deadline) : "none"}. {m.manager?.name ?? "Your Manager"} decides; the request shows in their Inbox.</p>
+          <p className="text-text-secondary">Current deadline: {m.deadline ? fmt(m.deadline) : "none"}. {m.manager?.name ?? "Your Manager"} decides; the request shows in their Action centre.</p>
           {err.form && <p role="alert" className={ERR}>{err.form}</p>}
-          <label htmlFor="dl-date" className="flex flex-col gap-1.5 font-bold">New deadline<input id="dl-date" type="date" min={today()} value={date} onChange={(e) => setDate(e.target.value)} aria-invalid={!!err.newDate} className="h-10 w-48 rounded-xl px-3 font-normal" />
+          <label htmlFor="dl-date" className="flex flex-col gap-1.5 font-bold">New deadline<DateInput id="dl-date" min={today()} value={date} onChange={(e) => setDate(e.target.value)} aria-invalid={!!err.newDate} className="h-10 w-48 rounded-xl px-3 font-normal" />
             {err.newDate && <span className={ERR}>{err.newDate}</span>}</label>
           <label htmlFor="dl-reason" className="flex flex-col gap-1.5 font-bold">Reason<textarea id="dl-reason" rows={4} maxLength={1000} value={text} onChange={(e) => setText(e.target.value)} aria-invalid={!!err.reason} placeholder="What changed and why the extra time is needed…" className="rounded-xl p-3 font-normal" />
             {err.reason && <span className={ERR}>{err.reason}</span>}</label>

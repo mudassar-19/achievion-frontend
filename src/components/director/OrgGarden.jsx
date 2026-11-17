@@ -1,7 +1,8 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import gsap from "gsap";
 import { fmtDateShort } from "@/lib/dates";
+import { bandOfProject } from "@/lib/healthBand";
 /**
  * ProgressGarden (formerly OrgGarden) — D-208 (UI-A1b); rebuilt in QA3 round 4 (C-21, C-4, C-22; D-QA3B-12).
  * One component for the Garden page (variant "full") and the dashboard (variant "mini").
@@ -16,9 +17,9 @@ import { fmtDateShort } from "@/lib/dates";
 function bandColors(band) {
   if (band === "On track")
     return { base: "#0C5E2A", mid: "#14803A", top: "#1DA64D", hi: "#2DC95E" };
-  if (band === "At risk")
+  if (band === "Needs attention")
     return { base: "#526A14", mid: "#6A8A1C", top: "#82A828", hi: "#9CC835" };
-  if (band === "Off track")
+  if (band === "At risk" || band === "Off track")
     return { base: "#8A2010", mid: "#AA3020", top: "#C85030", hi: "#E07048" };
   // "Not started" — neutral grey
   return   { base: "#6B7280", mid: "#9CA3AF", top: "#D1D5DB", hi: "#E5E7EB" };
@@ -220,8 +221,8 @@ function MiniFullTree({ c }) {
 
 function GardenLegend() {
   const cOnTrack  = bandColors("On track");
-  const cAtRisk   = bandColors("At risk");
-  const cOffTrack = bandColors("Off track");
+  const cAttention = bandColors("Needs attention");
+  const cAtRisk    = bandColors("At risk");
   const cNeutral  = bandColors("Not started");
 
   const stages = [
@@ -232,8 +233,8 @@ function GardenLegend() {
 
   const bands = [
     { label: "On track",    swatch: `linear-gradient(135deg,${cOnTrack.base},${cOnTrack.hi})` },
-    { label: "At risk",     swatch: `linear-gradient(135deg,${cAtRisk.base},${cAtRisk.hi})`   },
-    { label: "Off track",   swatch: `linear-gradient(135deg,${cOffTrack.base},${cOffTrack.hi})` },
+    { label: "Needs attention", swatch: `linear-gradient(135deg,${cAttention.base},${cAttention.hi})` },
+    { label: "At risk",     swatch: `linear-gradient(135deg,${cAtRisk.base},${cAtRisk.hi})` },
     { label: "Not started", swatch: `linear-gradient(135deg,${cNeutral.base},${cNeutral.hi})`  },
   ];
 
@@ -280,7 +281,7 @@ function GardenEmpty() {
 // ─── Main component ───────────────────────────────────────────────────────────
 // projects: [{ id, title, status, healthScore, healthBand, progressPct, deadline, manager }] in the order the page lists them.
 // filter: a health band or "All": trees outside it fade, the rest get a ring (the scene follows the filter chips).
-const BAND_PRIORITY = { "Off track": 0, "At risk": 1, "On track": 2, "Not started": 3 };
+const BAND_PRIORITY = { "At risk": 0, "Needs attention": 1, "On track": 2, "Not started": 3 };
 const byCriticality = (a, b) => (BAND_PRIORITY[a.healthBand] ?? 4) - (BAND_PRIORITY[b.healthBand] ?? 4);
 const stageOf = (p) => STATUS_TREE[(p.status ?? "planning").toLowerCase().trim()] ?? Seedling;
 const labelOf = (p) => STATUS_LABEL[(p.status ?? "planning").toLowerCase().trim()] ?? p.status ?? "Planning";
@@ -302,7 +303,7 @@ function ProjectCard({ p }) {
 
 export default function OrgGarden({ projects, onTrackPct = 0, totalCount, className = "", showLegend = false, variant = "full", filter = "All" }) {
   const mini = variant === "mini";
-  const list = Array.isArray(projects) ? projects : [];
+  const list = useMemo(() => (Array.isArray(projects) ? projects : []).map((p) => ({ ...p, healthBand: bandOfProject(p) })), [projects]); // one scale (D-QA4-11)
   const shown = mini ? [...list].sort(byCriticality).slice(0, 7) : list;
   const hidden = (totalCount ?? list.length) - shown.length;
   const navigate = useNavigate();
@@ -310,7 +311,7 @@ export default function OrgGarden({ projects, onTrackPct = 0, totalCount, classN
   const [active, setActive] = useState(null);   // tapped (touch) or keyboard-focused tree
   const [hover, setHover] = useState(null);
   const open = hover ?? active;
-  const thirsty = shown.find((p) => p.healthBand === "At risk") ?? shown.find((p) => p.healthBand === "Off track");
+  const thirsty = shown.find((p) => p.healthBand === "At risk") ?? shown.find((p) => p.healthBand === "Needs attention");
 
   // GSAP: the bar fills, trees rise in, Tally waters the thirsty tree. Nothing moves when the person asks for reduced motion.
   useEffect(() => {

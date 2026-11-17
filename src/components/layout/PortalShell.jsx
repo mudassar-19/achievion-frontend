@@ -12,6 +12,7 @@ import useAuthStore from "@/stores/authStore";
 import api from "@/lib/api";
 import { AI_W } from "./AiPanel";
 import { notifRedirectPath } from "@/utils/notifRoutes";
+import { bellText, bellTitle } from "@/lib/notifFormat";
 import { User, Bell, LogOut, ChevronDown, Pin, PinOff, Menu, X, CheckCheck, Shield, Sparkles } from "lucide-react";
 
 export const D_TOPBAR_H  = 60;
@@ -262,7 +263,7 @@ function ShellTopbar({ cfg, notifSignal, railExpanded, onToggleRail, onAiToggle,
           <AnimatePresence>
             {bellOpen && (
               <motion.div
-                className="absolute right-0 top-full mt-2 w-80 z-50 rounded-2xl overflow-hidden"
+                className="absolute right-0 top-full mt-2 w-[min(20rem,calc(100vw-1rem))] z-50 rounded-2xl overflow-hidden"
                 style={{
                   background: "#FFFFFF",
                   border:     `1px solid ${A(0.14)}`,
@@ -315,7 +316,8 @@ function ShellTopbar({ cfg, notifSignal, railExpanded, onToggleRail, onAiToggle,
                   ) : (
                     notifs.slice(0, 20).map((n) => {
                       // X-9 (D-QA3B-11): the portal's own target first, else the one shared destination map (chat, announcements, items in their page).
-                      const target = cfg.notifTarget?.(n) ?? (() => { const to = notifRedirectPath(n, user?.role); return to ? { to, label: "Open →" } : null; })();
+                      const target = cfg.notifTarget?.(n) ?? (() => { const to = notifRedirectPath(n, user?.role); return to ? { to, label: "Open →" } : null; })()
+                        ?? (cfg.notificationsPath ? { to: cfg.notificationsPath, label: "Open notifications →" } : null); // QA4 M-16a: every item opens something
                       async function handleClick() {
                         if (!n.read) {
                           try {
@@ -342,8 +344,8 @@ function ShellTopbar({ cfg, notifSignal, railExpanded, onToggleRail, onAiToggle,
                         >
                           <span className="mt-1.5 h-1.5 w-1.5 rounded-full shrink-0" style={{ background: n.read ? "#CBD5E1" : ACCENT }} />
                           <div className="flex-1 min-w-0">
-                            <p className="text-xs font-semibold text-text-primary">{notifLabel(n)}</p>
-                            <p className="text-xs text-text-secondary mt-0.5 break-words leading-snug">{n.message}</p>
+                            <p className="text-xs font-semibold text-text-primary">{bellTitle(notifLabel(n), n.message)}</p>
+                            <p className="text-xs text-text-secondary mt-0.5 break-words leading-snug">{bellText(n.message)}</p>
                             {target && (
                               <p className="text-[11px] font-semibold mt-0.5" style={{ color: "var(--accent-text)" }}>{target.label}</p>
                             )}

@@ -38,7 +38,7 @@ function QaBox({ qa }) {
 }
 
 // T-5 (D-142): at the resubmission limit only the Manager can allow one more try.
-const LIMIT_TEXT = { waiting: "Waiting for Manager: the task reached its resubmission limit. They decide in their Inbox.", declined: "Your Manager declined another try on this task.", allowed: "Your Manager allowed one more try." };
+const LIMIT_TEXT = { waiting: "Waiting for Manager: the task reached its resubmission limit. They decide in their Action centre.", declined: "Your Manager declined another try on this task.", allowed: "Your Manager allowed one more try." };
 export function LimitNote({ state }) {
   return <p role="status" className="rounded-xl border border-[#F2A60D]/40 bg-[#FFF0D2] px-4 py-3 text-sm font-semibold text-[#7A4B00]">{LIMIT_TEXT[state]}</p>;
 }

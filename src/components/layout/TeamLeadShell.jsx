@@ -7,14 +7,18 @@ import useNotificationStore, { notifRedirectPath } from "@/stores/notificationSt
 import PortalShell, { D_TOPBAR_H } from "./PortalShell";
 import ManagerAiPanel from "./ManagerAiPanel";
 import { ViewAsMenu } from "./ViewAs";
-import { BarChart3, Zap, Megaphone, LayoutDashboard, Layers, ListChecks, ClipboardCheck, Users, Timer, Trophy, MessageSquare, Settings, User, SlidersHorizontal } from "lucide-react";
+import { BarChart3, Zap, Megaphone, LayoutDashboard, Layers, ListChecks, ClipboardCheck, Users, Timer, Trophy, MessageSquare, Settings, User, SlidersHorizontal, BellRing, Bug } from "lucide-react";
 
 const NAV = [
-  { label: "Home", items: [{ icon: LayoutDashboard, label: "Dashboard", to: "/teamlead", end: true }] },
+  { label: "Home", items: [
+    { icon: LayoutDashboard, label: "Dashboard", to: "/teamlead", end: true },
+    { icon: BellRing,        label: "Action centre", to: "/teamlead/requests" }, // QA4 Y-5 + D-QA4-2: was a hidden page
+  ] },
   { label: "Work", items: [
     { icon: Layers,         label: "Modules", to: "/teamlead/modules" },
     { icon: ListChecks,     label: "Tasks",   to: "/teamlead/tasks" },
     { icon: ClipboardCheck, label: "Review",  to: "/teamlead/review-submissions" },
+    { icon: Bug,            label: "Bugs",    to: "/teamlead/bugs" }, // QA4 Y-5: was a hidden page
   ] },
   { label: "Plan",       items: [{ icon: Timer, label: "Sprints", to: "/teamlead/sprints" }] },
   { label: "Team",       items: [

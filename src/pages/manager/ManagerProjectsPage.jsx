@@ -97,7 +97,9 @@ export default function ManagerProjectsPage() {
     { key: "health", label: "Health", render: (r) => <HealthBadge score={r.healthScore} band={r.healthBand} /> },
     { key: "team", label: "Team", className: "tabular-nums", render: (r) => r.teamSize },
     { key: "deadline", label: "Due", sortable: true, className: "whitespace-nowrap tabular-nums", render: (r) => fmt(r.deadline) },
-    { key: "lead", label: "Team Lead", className: "whitespace-nowrap", render: (r) => r.teamLeads.length ? r.teamLeads.join(", ") : <span className="text-xs font-semibold text-[#9A3A06]">None yet</span> },
+    { key: "lead", label: "Team leads", className: "whitespace-nowrap", render: (r) => r.teamLeads.length // M-41: one lead and "+N", never a cut-off name
+      ? <span title={r.teamLeads.join(", ")} className="inline-block max-w-[180px] truncate align-bottom">{r.teamLeads[0]}{r.teamLeads.length > 1 && <span className="text-text-secondary"> +{r.teamLeads.length - 1}</span>}</span>
+      : <span className="text-xs font-semibold text-[#9A3A06]">None yet</span> },
   ];
 
   return (

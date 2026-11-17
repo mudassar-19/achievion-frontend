@@ -6,6 +6,7 @@ import PageHeader from "@/components/ui/PageHeader";
 import api from "@/lib/api";
 import { TabBar, TrendsTab, DepartmentsTab, WellbeingTab } from "./OrgHealthTabs";
 import { fmtDate } from "@/lib/dates";
+import { bandColor, orgBand } from "@/lib/healthBand";
 
 const ACCENT = "#4B2FC4";
 
@@ -14,7 +15,7 @@ function Ring({ score, size = 100, stroke = 9 }) {
   const circ = 2 * Math.PI * r;
   const pct = score ?? 0;
   const dash = circ * Math.min(pct / 100, 1);
-  const color = pct >= 75 ? "#0E6A30" : pct >= 50 ? "#B45309" : "#B01F17";
+  const color = bandColor(pct);
   return (
     <svg width={size} height={size} role="img" aria-label={score == null ? "No health score yet" : `${pct} health score`}>
       <circle cx={size/2} cy={size/2} r={r} fill="none" stroke="rgba(75,47,196,0.08)" strokeWidth={stroke} />
@@ -132,7 +133,7 @@ export default function OrgHealthPage() {
                 </>
               ) : (
                 <>
-                  <p className="text-xs text-slate-500">{live.overall >= 75 ? "Healthy" : live.overall >= 50 ? "Needs attention" : "At risk"}</p>
+                  <p className="text-xs text-slate-500">{orgBand(live.overall)}</p>
                   {live.present < 4 && <p className="text-xs text-amber-700 font-semibold">Score based on {live.present} of 4 factors</p>}
                 </>
               )}
@@ -266,7 +267,7 @@ export default function OrgHealthPage() {
                 <div className="flex flex-col gap-2">
                   {Object.entries(live.subScores ?? {}).map(([key, val]) => {
                     const w = live.weights?.[key] ?? WEIGHTS[key] ?? 0;
-                    const color = val >= 75 ? "#0E6A30" : val >= 50 ? "#B45309" : "#B01F17";
+                    const color = bandColor(val);
                     return (
                       <div key={key} className="rounded-xl p-3 flex items-center justify-between gap-3" style={{ background: "#f0f4f8", border: "1px solid #dde3ec" }}>
                         <div>

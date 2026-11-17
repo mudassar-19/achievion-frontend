@@ -250,11 +250,11 @@ function ScoreRing({ score, label, color, size = 80 }) {
           transform="rotate(-90 40 40)"
           style={{ filter: `drop-shadow(0 0 6px ${color}66)` }}
         />
-        <text x={40} y={44} textAnchor="middle" fill="white" fontSize={14} fontWeight={900} fontFamily="sans-serif">
+        <text x={40} y={45} textAnchor="middle" fill="#14203D" fontSize={18} fontWeight={900} fontFamily="sans-serif">
           {pct}
         </text>
       </svg>
-      <p className="text-[14px] font-semibold text-slate-500 uppercase tracking-wider text-center">{label}</p>
+      <p className="text-center text-[12px] font-bold leading-tight text-slate-600">{label}</p>
     </div>
   );
 }
@@ -499,7 +499,7 @@ export default function ProfilePage() {
 
                 {isManager && effScore !== null && (
                   <div className="shrink-0 hidden sm:flex">
-                    <ScoreRing score={effScore} label="Efficiency" color={theme.accent} size={80} />
+                    <ScoreRing score={effScore} label="Decision speed" color={theme.accent} size={80} />
                   </div>
                 )}
               </div>
@@ -542,7 +542,7 @@ export default function ProfilePage() {
                       />
                       <MetricCard
                         icon={BarChart2}
-                        label="Efficiency Score"
+                        label="Decision speed"
                         value={effScore}
                         suffix="%"
                         sub="Decision + delivery speed"
@@ -630,7 +630,7 @@ export default function ProfilePage() {
 
                       <Section title="Performance Rings" subtitle="Visual score summary" icon={Target} accent="#1948BD" delay={0.19}>
                         <div className="flex items-center justify-around gap-2">
-                          <ScoreRing score={effScore}                     label="Efficiency" color={theme.accent} size={68} />
+                          <ScoreRing score={effScore}                     label="Decision speed" color={theme.accent} size={68} />
                           <ScoreRing score={teamPerf.taskCompletionRatio} label="Completion" color="#0E6A30"      size={68} />
                           <ScoreRing score={teamPerf.onTimePct}           label="On-Time"    color="#7A5200"      size={68} />
                         </div>
@@ -642,7 +642,7 @@ export default function ProfilePage() {
             )}
 
             {/* ── SECTION 3: Gamification Summary ──────────────────────── */}
-            {!mgrLoading && (
+            {!mgrLoading && !isManager && ( // QA4 M-18: a Manager has no badges or XP of their own
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 <Section title="Badges Earned" subtitle={`${badges.length} total`} icon={Award} accent={theme.accent} delay={0.18}>
                   {badges.length === 0 ? (
@@ -792,7 +792,7 @@ export default function ProfilePage() {
                   { icon: Shield,    label: "Role",         value: role },
                   { icon: Building2, label: "Department",   value: department },
                   { icon: Calendar,  label: "Member Since", value: fmtDate(p.createdAt) },
-                  { icon: Star,      label: "HP",           value: isViewAs ? "Hidden in View as" : `${p.hp ?? user?.hp ?? 100} / 100` },
+                  ...(isManager ? [] : [{ icon: Star, label: "Health", value: isViewAs ? "Hidden in View as" : `${p.hp ?? user?.hp ?? 100} / 100` }]),
                 ].map(({ icon: Icon, label, value }) => (
                   <div key={label} className="flex items-center gap-3 py-3 border-b border-ink/[0.04]">
                     <Icon size={13} className="text-slate-600 shrink-0" strokeWidth={1.75} />
@@ -805,7 +805,7 @@ export default function ProfilePage() {
 
             {/* ── SECTION 7: Base stat cards (always shown) ─────────────── */}
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-              {STATS.map((s, i) => (
+              {(isManager ? [] : STATS).map((s, i) => (
                 <MetricCard key={s.label} {...s} delay={i * 0.06} />
               ))}
             </div>

@@ -5,7 +5,7 @@
 // Not here (use the Chat page): new DM, edit / delete / react / pin, group settings.
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
-import { BellOff, ChevronDown, ChevronUp, Loader2, Megaphone, MessageSquare, Minus, Send, X } from "lucide-react";
+import { BellOff, ChevronDown, ChevronUp, Loader2, Megaphone, MessageSquare, Maximize2, Minus, Send, X } from "lucide-react";
 import api from "@/lib/api";
 import socket from "@/utils/socket";
 import useAuthStore from "@/stores/authStore";
@@ -33,7 +33,7 @@ function useWide() {
   return wide;
 }
 
-function ChatWindow({ conv, me, minimized, tick, onMinimize, onClose, onSeen }) {
+function ChatWindow({ conv, me, minimized, tick, chatPath, onMinimize, onClose, onSeen }) {
   const [messages, setMessages] = useState(null); // null = loading
   const [failed, setFailed] = useState(false);
   const [text, setText] = useState("");
@@ -106,6 +106,9 @@ function ChatWindow({ conv, me, minimized, tick, onMinimize, onClose, onSeen }) 
             {conv.sub && <span className="block truncate text-[11px] text-text-tertiary">{conv.sub}</span>}
           </span>
         </button>
+        {chatPath && ( // QA4 M-15: every portal; the Chat page opens this conversation (?open=)
+          <Link to={`${chatPath}?open=${id}`} className={HEAD_BTN} aria-label={`Open ${conv.title} in the full Chat page`} title="Open in full page"><Maximize2 size={14} aria-hidden="true" /></Link>
+        )}
         <button type="button" onClick={() => onMinimize(id)} className={HEAD_BTN} aria-label={minimized ? `Open chat with ${conv.title}` : `Minimize chat with ${conv.title}`}>{minimized ? <ChevronUp size={15} /> : <Minus size={15} />}</button>
         <button type="button" onClick={() => onClose(id)} className={HEAD_BTN} aria-label={`Close chat with ${conv.title}`}><X size={15} /></button>
       </header>
@@ -241,7 +244,7 @@ export default function ChatDock({ chatPath, rightOffset = 0 }) {
         )}
       </section>
       {(wide || !listOpen) && shown.map((w) => (
-        <ChatWindow key={w.id} conv={byId[w.id]} me={me} minimized={w.min} tick={tick} onMinimize={minimize} onClose={close} onSeen={seen} />
+        <ChatWindow key={w.id} conv={byId[w.id]} me={me} minimized={w.min} tick={tick} chatPath={chatPath} onMinimize={minimize} onClose={close} onSeen={seen} />
       ))}
     </div>
   );

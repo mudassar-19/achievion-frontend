@@ -51,7 +51,7 @@ const AMOUNT_MAX = 500;
 
 function AdjustXpDrawer({ employee, open, onClose, onSuccess }) {
   const addToast = useUiStore((s) => s.addToast);
-  const [amount,  setAmount]  = useState(10);
+  const [amount,  setAmount]  = useState(0); // C-19: nothing is pre-chosen, so a slip cannot give +10
   const [reason,  setReason]  = useState("");
   const [loading, setLoading] = useState(false);
   const [apiErr,  setApiErr]  = useState(null);
@@ -60,7 +60,7 @@ function AdjustXpDrawer({ employee, open, onClose, onSuccess }) {
   // Reset form when target changes
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
-    if (open) { setAmount(10); setReason(""); setApiErr(null); }
+    if (open) { setAmount(0); setReason(""); setApiErr(null); }
   }, [open, employee?.id]);
 
   const clampAmount = (v) => {
@@ -75,9 +75,7 @@ function AdjustXpDrawer({ employee, open, onClose, onSuccess }) {
     ? `${REASON_MAX} characters maximum`
     : null;
 
-  const amountErr = amount === 0
-    ? "Amount must not be zero"
-    : Math.abs(amount) > AMOUNT_MAX
+  const amountErr = Math.abs(amount) > AMOUNT_MAX
     ? `Maximum ±${AMOUNT_MAX} XP`
     : null;
 
@@ -239,6 +237,13 @@ function AdjustXpDrawer({ employee, open, onClose, onSuccess }) {
                 </motion.p>
               )}
             </AnimatePresence>
+
+            {/* C-19: what the person will have after this */}
+            {typeof employee.xp === "number" && (
+              <p className="text-sm text-text-secondary" role="status">
+                {amount === 0 ? `Now ${employee.xp.toLocaleString()} XP. Choose an amount.` : `XP ${employee.xp.toLocaleString()} → ${Math.max(0, employee.xp + amount).toLocaleString()}`}
+              </p>
+            )}
 
             {/* Quick-select chips */}
             <div className="flex flex-wrap gap-1.5 mt-0.5">

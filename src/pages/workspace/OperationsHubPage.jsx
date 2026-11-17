@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Activity, AlertTriangle, Clock, CheckCircle2,
@@ -13,6 +13,7 @@ import { avatarUrl } from "@/lib/avatar";
 import useUiStore from "@/stores/uiStore";
 import Page from "@/components/ui/Page";
 import { fmtDateTime } from "@/pages/manager/project/format";
+import { actionLabel, humanizeText } from "@/lib/humanize";
 
 const SENT_LABEL = { pending: "Waiting", approved: "Approved", auto_applied: "Applied", rejected: "Declined", counter_proposed: "Other dates proposed" };
 const SENT_TONE = {
@@ -243,8 +244,22 @@ function RequestCard({ req, onUpdate, onLimit }) {
   );
 }
 
+// QA4 M-30: every alert opens the screen where it is dealt with. "review" = the In Review tab on this page.
+function alertTo(a) {
+  const s = a.subject ?? {};
+  if (s.type === "project") return { to: `/manager/projects/${s.id}`, label: "Open project" };
+  if (s.type === "milestone") return { to: `/manager/projects/${s.projectId}?tab=modules`, label: "Open modules" };
+  if (s.type === "member") return { to: `/manager/resources?member=${s.id}`, label: "Open in Resources" };
+  if (a.type === "review_queue_high") return { tab: "review", label: "Open In Review" };
+  return null;
+}
+const SNOOZE_KEY = "achievion-alert-snooze";
+const readSnooze = () => { try { return JSON.parse(localStorage.getItem(SNOOZE_KEY) ?? "{}"); } catch { return {}; } };
+const isSnoozed = (id, map = readSnooze()) => (map[id] ?? 0) > Date.now();
+
 // ── Alert Card ─────────────────────────────────────────────────────────────────
-function AlertCard({ alert }) {
+function AlertCard({ alert, onTab, onSnooze }) {
+  const dest = alertTo(alert);
   const cfg  = SEV_CFG[alert.severity] ?? SEV_CFG.Low;
   const Icon = ALERT_ICON[alert.type] ?? AlertTriangle;
 
@@ -277,6 +292,11 @@ function AlertCard({ alert }) {
             <span className="text-[14px] text-slate-500">{alert.subject.name} · {alert.subject.role}</span>
           </div>
         )}
+        <div className="mt-2 flex flex-wrap items-center gap-3 text-[13px] font-bold">
+          {dest?.to && <Link to={dest.to} className="inline-flex items-center gap-1 text-accent-text hover:underline">{dest.label} <ArrowRight size={12} aria-hidden="true" /></Link>}
+          {dest?.tab && <button type="button" onClick={() => onTab(dest.tab)} className="inline-flex items-center gap-1 text-accent-text hover:underline">{dest.label} <ArrowRight size={12} aria-hidden="true" /></button>}
+          <button type="button" onClick={() => onSnooze(alert.id)} className="text-text-secondary hover:text-text-primary hover:underline">Snooze 1 day</button>
+        </div>
       </div>
     </motion.div>
   );
@@ -290,9 +310,9 @@ function groupAlerts(alerts) {
   for (const g of by.values()) { g.items.sort((x, y) => (SEV_RANK[x.severity] ?? 9) - (SEV_RANK[y.severity] ?? 9)); g.severity = g.items[0].severity; }
   return [...by.values()].sort((x, y) => (SEV_RANK[x.severity] ?? 9) - (SEV_RANK[y.severity] ?? 9) || y.items.length - x.items.length);
 }
-function AlertGroup({ group }) {
+function AlertGroup({ group, onTab, onSnooze }) {
   const [open, setOpen] = useState(false);
-  if (group.items.length === 1) return <AlertCard alert={group.items[0]} />;
+  if (group.items.length === 1) return <AlertCard alert={group.items[0]} onTab={onTab} onSnooze={onSnooze} />;
   const cfg = SEV_CFG[group.severity] ?? SEV_CFG.Low;
   return (
     <div className="rounded-xl border" style={{ background: cfg.bg, borderColor: cfg.border }}>
@@ -301,7 +321,7 @@ function AlertGroup({ group }) {
         <span className="min-w-0 flex-1 truncate text-[14px] font-bold text-text-primary">{group.items.length} × {group.title}</span>
         <span className="shrink-0 text-[13px] font-semibold text-text-secondary">{open ? "Hide" : "Show all"}</span>
       </button>
-      {open && <div className="flex flex-col gap-2 px-3 pb-3">{group.items.map((a) => <AlertCard key={a.id} alert={a} />)}</div>}
+      {open && <div className="flex flex-col gap-2 px-3 pb-3">{group.items.map((a) => <AlertCard key={a.id} alert={a} onTab={onTab} onSnooze={onSnooze} />)}</div>}
     </div>
   );
 }
@@ -311,7 +331,7 @@ const readableIso = (s) => String(s).replace(/\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(?::\
 
 // ── Activity Item ──────────────────────────────────────────────────────────────
 function ActivityItem({ item, accent }) {
-  const label = ACTION_LABELS[item.action] ?? item.action?.replace(/_/g, " ");
+  const label = ACTION_LABELS[item.action] ?? actionLabel(item.action); // QA4 M-22/M-39: no raw keys
 
   return (
     <div className="flex items-start gap-3 py-2.5 border-b border-ink/[0.04] last:border-0">
@@ -328,7 +348,7 @@ function ActivityItem({ item, accent }) {
             <span className="text-slate-500"> — <span className="font-medium text-slate-400">{item.projectTitle}</span></span>
           )}
           {item.detail && (
-            <span className="text-slate-600 break-words"> · {readableIso(item.detail)}</span>
+            <span className="text-slate-600 break-words"> · {humanizeText(readableIso(item.detail))}</span>
           )}
         </p>
       </div>
@@ -340,7 +360,7 @@ function ActivityItem({ item, accent }) {
 }
 
 // ── OperationsHubPage ──────────────────────────────────────────────────────────
-// Manager Inbox (V2 Phase 3 · M-1, UX §4). Order fixed by the UX doc.
+// Manager Action centre, was "Inbox" (QA4 D-QA4-2). (V2 Phase 3 · M-1, UX §4). Order fixed by the UX doc.
 const TABS = [
   { key: "requests", label: "Requests",  icon: Inbox       },
   { key: "alerts",   label: "Alerts",    icon: Bell        },
@@ -470,7 +490,10 @@ export default function OperationsHubPage() {
 
   const requests = data?.requests ?? [];
   const sent = data?.myExtensions ?? []; // M-2: my project deadline extensions waiting on / decided by the Director
-  const alerts   = data?.alerts   ?? [];
+  const [snooze, setSnooze] = useState(readSnooze);
+  const alerts   = (data?.alerts   ?? []).filter((a) => !isSnoozed(a.id, snooze));
+  const snoozed  = (data?.alerts ?? []).length - alerts.length;
+  function snoozeAlert(id) { const m = { ...snooze, [id]: Date.now() + 86400000 }; setSnooze(m); try { localStorage.setItem(SNOOZE_KEY, JSON.stringify(m)); } catch { /* storage blocked */ } }
   const activity = data?.activity ?? [];
   const review   = data?.tasksInReview ?? [];
 
@@ -483,14 +506,14 @@ export default function OperationsHubPage() {
 
   return (
     <Page>
-      <PageHeader title="Inbox" subtitle="Requests, alerts and work waiting for review."
+      <PageHeader title="Action centre" subtitle="Requests, alerts and work waiting for review."
         secondary={{ label: refreshing ? "Updating…" : "Refresh", onClick: () => loadData(true), disabled: refreshing }} />
 
       {loading ? <InboxSkeleton /> : error ? (
         <ErrorState message={error} onRetry={() => loadData()} />
       ) : (
         <div className="flex flex-col gap-4">
-          <div role="tablist" aria-label="Inbox sections" className="flex gap-1 overflow-x-auto border-b border-border-subtle">
+          <div role="tablist" aria-label="Action centre sections" className="flex gap-1 overflow-x-auto border-b border-border-subtle">
             {TABS.map((t) => (
               <button key={t.key} role="tab" aria-selected={activeTab === t.key} onClick={() => setActiveTab(t.key)}
                 className="flex items-center gap-1.5 whitespace-nowrap border-b-2 px-4 py-2.5 text-sm font-bold transition-colors"
@@ -532,7 +555,8 @@ export default function OperationsHubPage() {
           </>)}
 
           {activeTab === "alerts" && (alerts.length ? (
-            <div className="flex flex-col gap-2">{groupAlerts(alerts).map((g) => <AlertGroup key={g.type} group={g} />)}</div>
+            <div className="flex flex-col gap-2">{groupAlerts(alerts).map((g) => <AlertGroup key={g.type} group={g} onTab={setActiveTab} onSnooze={snoozeAlert} />)}
+              {snoozed > 0 && <p className="text-[13px] text-text-secondary">{snoozed} snoozed until tomorrow.</p>}</div>
           ) : <TabEmpty text="No alerts right now." action={{ label: "Open resources", onClick: () => navigate("/manager/resources") }} />)}
 
           {activeTab === "review" && (review.length ? (

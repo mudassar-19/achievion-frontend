@@ -35,8 +35,6 @@ import OrgStep3              from "@/pages/signup/org/OrgStep3";
 const OrgLoginPage = lazy(() => import("@/pages/org/OrgLoginPage"));
 const TodayPage = lazy(() => import("@/pages/employee/TodayPage")); // E-2: replaces WorkspaceDashboard + SeniorDashboard for employees (files kept)
 const MyTasksPage = lazy(() => import("@/pages/employee/MyTasksPage")); // E-2: replaces TaskBoardPage + TaskDetailPage for employees (Manager still uses them)
-const TaskBoardPage = lazy(() => import("@/pages/workspace/TaskBoardPage"));
-const TaskDetailPage = lazy(() => import("@/pages/workspace/TaskDetailPage"));
 const ProfilePage = lazy(() => import("@/pages/workspace/ProfilePage"));
 const QuestBoardPage = lazy(() => import("@/pages/employee/QuestBoardPage"));
 const EmployeeAiPage = lazy(() => import("@/pages/employee/EmployeeAiPage"));
@@ -59,6 +57,7 @@ const ManagerChallengesPage = lazy(() => import("@/pages/manager/ManagerChalleng
 const ManagerChallengePage  = lazy(() => import("@/pages/manager/ManagerChallengePage"));
 const ManagerAnomaliesPage  = lazy(() => import("@/pages/manager/ManagerAnomaliesPage"));
 const OperationsHubPage = lazy(() => import("@/pages/workspace/OperationsHubPage"));
+const ManagerTasksPage  = lazy(() => import("@/pages/manager/ManagerTasksPage"));
 const ManagerHomePage   = lazy(() => import("@/pages/manager/ManagerHomePage"));
 const ManagerProjectsPage      = lazy(() => import("@/pages/manager/ManagerProjectsPage"));
 const ManagerProjectDetailPage = lazy(() => import("@/pages/manager/ManagerProjectDetailPage"));
@@ -136,6 +135,8 @@ function ToManager({ to }) {
   const params = useParams(); const { search } = useLocation();
   return <Navigate to={to.replace(/:(\w+)/g, (_, k) => params[k] ?? "") + search} replace />;
 }
+// Old /manager/tasks/:id links (bell, chat) open the read-only task drawer on the Tasks list.
+function ToManagerTask() { const { taskId } = useParams(); return <Navigate to={`/manager/tasks?task=${taskId}`} replace />; }
 // Employee landing; a Manager who lands here goes to their own Dashboard.
 function WorkspaceHome() {
   const role = useAuthStore((s) => s.user?.role);
@@ -352,8 +353,8 @@ const router = createBrowserRouter([{
               { path: "sprints/:id",      element: <S><ManagerSprintPage /></S>  },
               // M-6: Insights → Reports. The old workspace ReportsPage file stays (not routed for Managers).
               { path: "reports",          element: <S><ManagerReportsPage /></S> },
-              { path: "tasks",            element: <S><TaskBoardPage /></S>     },
-              { path: "tasks/:taskId",    element: <S><TaskDetailPage /></S>    },
+              { path: "tasks",            element: <S><ManagerTasksPage /></S>   }, // QA4 M-28: read-only list, no Kanban for the Manager
+              { path: "tasks/:taskId",    element: <ToManagerTask /> },
               { path: "profile",          element: <S><ProfilePage /></S>       },
               { path: "notifications",    element: <S><NotificationsPage /></S> },
               { path: "settings",         element: <S><SettingsPage /></S>      },

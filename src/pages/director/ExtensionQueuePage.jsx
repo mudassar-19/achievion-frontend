@@ -164,14 +164,14 @@ export default function ExtensionQueuePage() {
                           <XCircle size={13} /> Reject
                         </button>
                         <button onClick={() => setCounter((c) => ({ ...c, [id]: { open: true, days: "" } }))} disabled={isB}
-                          className="flex-1 flex items-center justify-center gap-1.5 px-4 py-2 rounded-xl bg-violet-500/10 border border-violet-500/20 text-sm font-bold text-violet-700 hover:bg-violet-500/20 disabled:opacity-40 transition-colors">
+                          title="Counter: approve fewer days than asked and send that offer back to the person" className="flex-1 flex items-center justify-center gap-1.5 px-4 py-2 rounded-xl bg-violet-500/10 border border-violet-500/20 text-sm font-bold text-violet-700 hover:bg-violet-500/20 disabled:opacity-40 transition-colors">
                           <ArrowLeftRight size={13} /> Counter
                         </button>
                       </div>
                     )}
                     {ctr.open && (
                       <div className="flex flex-col gap-2 pt-1 border-t border-ink/[0.05]">
-                        <p className="text-xs font-semibold text-slate-500">Counter-propose days:</p>
+                        <p className="text-xs font-semibold text-slate-500">Counter-propose days (fewer than asked, the person is told):</p>
                         <div className="flex gap-2">
                           <input type="number" min={1} max={365} placeholder="Days"
                             value={ctr.days}

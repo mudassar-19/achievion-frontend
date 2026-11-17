@@ -6,6 +6,9 @@ import Drawer from "@/components/ui/Drawer";
 import { BTN } from "@/components/ui/buttons";
 import { AiTag, AiFeedback } from "@/components/ui/AiParts";
 import { fmt } from "../project/format";
+import DateInput from "@/components/ui/DateInput";
+import Select from "@/components/ui/Select";
+const RARITY = ["common", "uncommon", "rare", "epic", "legendary"]; // groups in this order
 
 const ERR = "text-xs font-semibold text-[#B01F17]";
 const today = () => new Date().toISOString().slice(0, 10);
@@ -138,12 +141,12 @@ export default function QuestDrawer({ open, onClose, quest = null, onSaved, draf
         )}
         <div className="grid grid-cols-2 gap-3">
           <label htmlFor="qd-startDate" className={lbl}>Start date
-            <input id="qd-startDate" type="date" value={form.startDate} onChange={(e) => set("startDate", e.target.value)} disabled={locked} aria-invalid={!!errors.startDate} className={field} />
+            <DateInput id="qd-startDate" value={form.startDate} onChange={(e) => set("startDate", e.target.value)} disabled={locked} aria-invalid={!!errors.startDate} className={field} />
             {errors.startDate && <span className={ERR}>{errors.startDate}</span>}
           </label>
           {form.type === "custom" && (
             <label htmlFor="qd-deadline" className={lbl}>Deadline
-              <input id="qd-deadline" type="date" min={form.startDate || undefined} value={form.deadline} onChange={(e) => set("deadline", e.target.value)} disabled={locked} aria-invalid={!!errors.deadline} className={field} />
+              <DateInput id="qd-deadline" min={form.startDate || undefined} value={form.deadline} onChange={(e) => set("deadline", e.target.value)} disabled={locked} aria-invalid={!!errors.deadline} className={field} />
               {errors.deadline && <span className={ERR}>{errors.deadline}</span>}
             </label>
           )}
@@ -190,15 +193,13 @@ export default function QuestDrawer({ open, onClose, quest = null, onSaved, draf
         </div>
         {!locked && opts?.badges?.length > 0 && (
           <label htmlFor="qd-rewardBadgeId" className={lbl}>Badge reward <span className="text-xs font-normal text-text-secondary">(optional)</span>
-            <select id="qd-rewardBadgeId" value={form.rewardBadgeId} onChange={(e) => set("rewardBadgeId", e.target.value)} className={`${field} bg-bg-surface border border-ink/[0.08]`}>
-              <option value="">— None —</option>
-              {opts.badges.map((b) => (
-                <option key={b.id} value={b.id}>{b.name} ({b.rarity})</option>
-              ))}
-            </select>
+            <Select label="Badge reward" value={form.rewardBadgeId} onChange={(v) => set("rewardBadgeId", v)} placeholder="None"
+              options={[{ value: "", label: "None" }, ...[...opts.badges].sort((a, b) => RARITY.indexOf(a.rarity) - RARITY.indexOf(b.rarity) || a.name.localeCompare(b.name))
+                .map((b) => ({ value: b.id, label: b.name, group: `${String(b.rarity).charAt(0).toUpperCase()}${String(b.rarity).slice(1)}` }))]} />
             {errors.rewardBadgeId && <span className={ERR}>{errors.rewardBadgeId}</span>}
           </label>
         )}
+        {!quest && <p className="rounded-xl bg-ink/[0.03] p-3 text-xs text-text-secondary">Saving keeps this as a draft. Nobody is told until you press Publish on the challenge page.</p>}
         <p className="text-xs text-text-secondary">The reward goes through the normal XP system once a person reaches the target. If the challenge expires, nobody loses anything.</p>
       </div>
     </Drawer>

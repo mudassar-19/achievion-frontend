@@ -17,6 +17,7 @@ import StatCard from "@/components/ui/StatCard";
 import Skeleton from "@/components/ui/Skeleton";
 import { BTN } from "@/components/ui/buttons";
 import { InsightCard } from "./ai/AiCards";
+import { bandOfProject } from "@/lib/healthBand";
 
 const fmtDate = (d) => dShort(d);
 
@@ -87,7 +88,7 @@ export default function ManagerHomePage() {
   useEffect(() => { load(); }, [load]); // eslint-disable-line react-hooks/set-state-in-effect
 
   const projects = home?.projects ?? [];
-  const atRisk = projects.filter((p) => p.healthBand === "At risk" || p.healthBand === "Off track").length;
+  const atRisk = projects.filter((p) => ["At risk", "Needs attention"].includes(bandOfProject(p))).length;
   const dl = home?.deadlinesThisWeek;
   const team = home?.teamActivity;
 
@@ -116,18 +117,18 @@ export default function ManagerHomePage() {
             <div className="grid grid-cols-2 lg:grid-cols-4 divide-x divide-ink/[0.05]">
               <StatCard label="Active projects" value={projects.length} icon={FolderKanban} to="/manager/projects"
                 color={tone(atRisk, "#7A5200")} sub={projects.length ? (atRisk ? `${atRisk} need attention` : "All on track") : "None yet"} />
-              <StatCard label="Overdue tasks" value={home.tasks.overdue} icon={AlertTriangle} to="/manager/tasks"
+              <StatCard label="Overdue tasks" value={home.tasks.overdue} icon={AlertTriangle} to="/manager/tasks?filter=overdue"
                 color={tone(home.tasks.overdue, "#B01F17")} sub={`${home.tasks.pending} pending · ${home.tasks.active} active`} />
               <StatCard label="Overloaded members" value={overloaded?.count ?? 0} icon={Users} to="/manager/resources"
                 color={tone(overloaded?.count, "#B01F17")} sub={overloaded?.names?.length ? overloaded.names.join(", ") : "Everyone has room"} />
-              <StatCard label="Due this week" value={dl.tasks + dl.projects.length} icon={CalendarClock} to="/manager/tasks"
-                color={theme.accent} sub={`${dl.tasks} task${dl.tasks === 1 ? "" : "s"} · ${dl.projects.length} project${dl.projects.length === 1 ? "" : "s"}`} />
+              <StatCard label="Due this week" value={dl.tasks} icon={CalendarClock} to="/manager/tasks?filter=due-week"
+                color={theme.accent} sub={dl.projects.length ? `${dl.projects.length} project${dl.projects.length === 1 ? "" : "s"} also due` : "tasks, next 7 days"} />
             </div>
           </Panel>
 
           {!home.isNewOrg && <InsightCard />}
 
-          <div className="grid gap-6 lg:grid-cols-3">
+          <div className="grid items-start gap-6 lg:grid-cols-3">
             <Panel title="Project health" icon={Activity} delay={0.1} className="lg:col-span-2" action={{ to: "/manager/projects", label: "View all" }}>
               {projects.length ? (
                 <ul className="divide-y divide-ink/[0.05] px-5 py-1">
@@ -135,8 +136,8 @@ export default function ManagerHomePage() {
                     <li key={p.id}>
                       <Link to={`/manager/projects/${p.id}`} className="-mx-2 grid grid-cols-[1fr_auto] items-center gap-x-4 gap-y-1.5 rounded-lg px-2 py-3 hover:bg-ink/[0.03]">
                         <span className="truncate text-sm font-semibold text-text-primary">{p.title}</span>
-                        <span className="text-sm font-bold tabular-nums" style={{ color: healthColor(p.healthBand) }}>{p.healthScore == null ? p.healthBand : `${p.healthScore} · ${p.healthBand}`}</span>
-                        <Bar pct={p.progressPct} color={healthColor(p.healthBand)} />
+                        <span className="text-sm font-bold tabular-nums" style={{ color: healthColor(bandOfProject(p)) }}>{p.healthScore == null ? p.healthBand : `${p.healthScore} · ${bandOfProject(p)}`}</span>
+                        <Bar pct={p.progressPct} color={healthColor(bandOfProject(p))} />
                         <span className="text-xs text-text-secondary tabular-nums">
                           {p.progressPct}% done{p.overdueTasks ? ` · ${p.overdueTasks} overdue` : ""}{p.deadline ? ` · due ${fmtDate(p.deadline)}` : ""}
                         </span>
@@ -193,15 +194,17 @@ export default function ManagerHomePage() {
             </div>
           </div>
 
-          <Panel title="Due this week" icon={CalendarClock} delay={0.25} action={{ to: "/manager/tasks", label: "All tasks" }}>
+          <Panel title="Due this week" icon={CalendarClock} delay={0.25} action={{ to: "/manager/tasks?filter=due-week", label: "All tasks" }}>
             {dl.next.length || dl.projects.length ? (
               <ul className="divide-y divide-ink/[0.05] px-5 py-1">
+                {dl.projects.length > 0 && <li aria-hidden="true" className="py-2 text-[11px] font-bold uppercase tracking-wider text-slate-500">Projects</li>}
                 {dl.projects.map((p) => (
                   <li key={`p-${p.id}`} className="flex items-center justify-between gap-3 py-2.5">
-                    <Link to={`/manager/projects/${p.id}`} className="truncate text-sm font-semibold text-text-primary hover:underline">Project: {p.title}</Link>
+                    <Link to={`/manager/projects/${p.id}`} className="truncate text-sm font-semibold text-text-primary hover:underline">{p.title}</Link>
                     <span className="shrink-0 text-xs font-semibold tabular-nums text-text-secondary">{fmtDate(p.deadline)}</span>
                   </li>
                 ))}
+                {dl.projects.length > 0 && dl.next.length > 0 && <li aria-hidden="true" className="py-2 text-[11px] font-bold uppercase tracking-wider text-slate-500">Tasks</li>}
                 {dl.next.map((t) => (
                   <li key={t.id} className="flex items-center justify-between gap-3 py-2.5">
                     <span className="min-w-0 truncate text-sm text-text-primary">{t.title}{t.project && <span className="text-text-secondary"> · {t.project}</span>}</span>

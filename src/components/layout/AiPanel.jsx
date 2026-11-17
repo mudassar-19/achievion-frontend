@@ -6,6 +6,7 @@ import Markdown, { SourceChips } from "@/components/ui/Markdown";
 import api from "@/lib/api";
 import useAuthStore from "@/stores/authStore";
 import { loadChats, saveChats, upsertChat } from "@/lib/aiChats";
+import { aiText } from "@/lib/aiText";
 
 export const AI_W = 420;
 
@@ -39,7 +40,7 @@ function Bubble({ msg, accent = DIRECTOR, renderMeta, onRetry }) {
         style={isUser ? { background: accent } : {}}
       >
         {isUser || msg.error ? msg.text : (
-          <Markdown text={msg.text} accent={accent} />
+          <Markdown text={aiText(msg.text)} accent={accent} />
         )}
         {msg.error && msg.retry && onRetry && (
           <button type="button" onClick={() => onRetry(msg)} className="mt-2 flex min-h-8 items-center gap-1 rounded-lg px-2 text-xs font-bold text-rose-800 underline underline-offset-2 hover:bg-rose-100">
@@ -321,7 +322,7 @@ export default function AiPanel({
               <form
                 onSubmit={onSubmit}
                 className="px-4 py-3 shrink-0"
-                style={{ borderTop: `1px solid ${tint(0.10)}` }}
+                style={{ borderTop: "1px solid rgba(20,32,61,0.08)" }} /* X-5: one border: the pill, not a coloured line above it too */
               >
                 <div
                   className="flex items-center gap-2 rounded-xl px-3 py-2"

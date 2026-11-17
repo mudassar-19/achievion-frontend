@@ -14,6 +14,7 @@ import ErrorState from "@/components/ui/ErrorState";
 import ProjectCelebrationOverlay from "@/components/ui/ProjectCelebrationOverlay";
 import { avatarUrl } from "@/lib/avatar";
 import { fmtDate } from "@/lib/dates";
+import DateInput from "@/components/ui/DateInput";
 
 // ── Config ────────────────────────────────────────────────────────────────────
 const PAGE_SIZE = 10;
@@ -374,12 +375,12 @@ export default function ProjectManagementPage() {
             {/* Deadline range */}
             <div className="flex items-center gap-1.5">
               <span className="text-xs font-semibold text-slate-600" id="pm-active-between">Active between</span>
-              <input type="date" value={deadlineFrom} onChange={e=>{setDeadlineFrom(e.target.value);setPage(1);}}
+              <DateInput value={deadlineFrom} onChange={e=>{setDeadlineFrom(e.target.value);setPage(1);}}
                 aria-label="Active from date"
                 className="h-9 rounded-xl border border-ink/[0.10] bg-ink/[0.05] px-3 text-sm text-text-primary focus:outline-none focus:border-[#4B2FC4]/40 transition-colors w-[9rem]"
               />
               <span className="text-xs text-slate-400">–</span>
-              <input type="date" value={deadlineTo} onChange={e=>{setDeadlineTo(e.target.value);setPage(1);}}
+              <DateInput value={deadlineTo} onChange={e=>{setDeadlineTo(e.target.value);setPage(1);}}
                 aria-label="Active to date"
                 className="h-9 rounded-xl border border-ink/[0.10] bg-ink/[0.05] px-3 text-sm text-text-primary focus:outline-none focus:border-[#4B2FC4]/40 transition-colors w-[9rem]"
               />

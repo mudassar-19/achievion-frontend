@@ -17,6 +17,7 @@ import { BTN } from "@/components/ui/buttons";
 import { OverviewTab, ModulesTab, TeamTab, SprintsTab, TasksTab, HistoryTab, TaskDrawer, ProjectAssetsTab } from "./project/ProjectTabs";
 import ProjectReportTab from "./report/ProjectReportTab";
 import { fmt } from "./project/format";
+import DateInput from "@/components/ui/DateInput";
 
 const TABS = [["overview", "Overview"], ["modules", "Modules"], ["team", "Team"], ["sprints", "Sprints"], ["tasks", "Tasks"], ["assets", "Assets"], ["report", "Report"], ["history", "History"]];
 const addDays = (d, n) => new Date(new Date(d).getTime() + n * 86_400_000).toISOString().slice(0, 10);
@@ -39,7 +40,7 @@ function ExtendDrawer({ project, open, onClose, onDone }) {
     setBusy(true);
     try {
       const r = await api.post(`/api/manager/projects/${project._id}/extension`, { newDeadline: date, reason: reason.trim() });
-      addToast({ type: r.applied ? "success" : "info", message: r.applied ? `Deadline moved to ${fmt(r.deadline)}.` : "Sent to the Director for approval. You can follow it in Inbox → Requests." });
+      addToast({ type: r.applied ? "success" : "info", message: r.applied ? `Deadline moved to ${fmt(r.deadline)}.` : "Sent to the Director for approval. You can follow it in Action centre → Requests." });
       setDate(""); setReason(""); onDone(); onClose();
     } catch (err) {
       if (err?.data?.fields) setErrors(err.data.fields);
@@ -53,7 +54,7 @@ function ExtendDrawer({ project, open, onClose, onDone }) {
       <div className="flex flex-col gap-4 p-5 text-sm">
         <p className="text-text-secondary">Current deadline: <strong className="text-text-primary">{fmt(project.deadline)}</strong>. Small extensions within the Director's limit apply at once; longer ones go to the Director for approval.</p>
         <label htmlFor="ext-date" className="flex flex-col gap-1.5 font-bold text-text-primary">New deadline
-          <input id="ext-date" type="date" min={min} value={date} onChange={(e) => setDate(e.target.value)} aria-invalid={!!errors.newDeadline} className="h-10 rounded-xl px-3 font-normal" />
+          <DateInput id="ext-date" min={min} value={date} onChange={(e) => setDate(e.target.value)} aria-invalid={!!errors.newDeadline} className="h-10 rounded-xl px-3 font-normal" />
           {errors.newDeadline && <span className="text-xs font-semibold text-[#B01F17]">{errors.newDeadline}</span>}
         </label>
         <label htmlFor="ext-reason" className="flex flex-col gap-1.5 font-bold text-text-primary">Reason

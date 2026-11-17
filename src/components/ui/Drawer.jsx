@@ -15,7 +15,8 @@ export default function Drawer({ open, onClose, title, children, footer, width =
       triggerRef.current = document.activeElement;
       // Small delay so the panel has rendered
       const t = setTimeout(() => {
-        const first = panelRef.current?.querySelector(FOCUSABLE);
+        // QA4 M-37e: the first field, not the Close button (no focus box on the X). Falls back to the first control.
+        const first = panelRef.current?.querySelector('[data-autofocus], [data-drawer-body] input:not([disabled]):not([type="hidden"]), [data-drawer-body] textarea:not([disabled]), [data-drawer-body] select:not([disabled])') ?? panelRef.current?.querySelector(FOCUSABLE);
         if (first) first.focus();
       }, 60);
       return () => clearTimeout(t);
@@ -112,7 +113,7 @@ export default function Drawer({ open, onClose, title, children, footer, width =
                 <X size={15} strokeWidth={2} />
               </button>
             </div>
-            <div className="flex-1 overflow-y-auto" tabIndex={0}>{children}</div>
+            <div data-drawer-body className="flex-1 overflow-y-auto" tabIndex={0}>{children}</div>
             {footer && (
               <div
                 className="px-6 py-4 shrink-0 flex items-center justify-end gap-3"

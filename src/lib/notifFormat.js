@@ -35,3 +35,19 @@ export function unreadCounts(list) {
 }
 
 export const filterList = (list, id) => (id === "all" ? list : list.filter((n) => tierOf(n) === id));
+
+// ── Bell wording (QA4 M-16). Screen-only fixes; the server text is not changed. ──────────────────────────────
+// "Bilal Ahmed is at Over capacity x1.1 of daily capacity" → "Bilal Ahmed is at 110% of daily capacity".
+export function bellText(message) {
+  return String(message ?? "").replace(/\b(?:Over capacity |At capacity )?x(\d+(?:\.\d+)?) of daily capacity/g, (m, x) => `${Math.round(Number(x) * 100)}% of daily capacity`);
+}
+const VERBS = "Approved|Rejected|Declined|Requested|Assigned|Updated|Created|Published|Closed|Started|Added|Removed|Completed|Resolved";
+// A generic title gets the person's name from the sentence; "Extension Approved" becomes "Extension approved".
+export function bellTitle(title, message) {
+  const t = String(title ?? "");
+  if (/^someone is over their (limit|capacity)/i.test(t)) {
+    const who = /^(.+?) is at \d/.exec(bellText(message))?.[1];
+    if (who) return `${who} is over capacity`;
+  }
+  return new RegExp(`^[A-Z][a-z]+ (?:[A-Z][a-z]+ )?(?:${VERBS})$`).test(t) ? t.charAt(0) + t.slice(1).toLowerCase() : t;
+}

@@ -14,6 +14,7 @@ import useAuthStore from "@/stores/authStore";
 import ConfirmModal from "@/components/ui/ConfirmModal";
 import { fmtDateShort } from "@/lib/dates";
 import { loadChats, saveChats, upsertChat, renameChat, deleteChat, uniqueTitles } from "@/lib/aiChats";
+import { aiText } from "@/lib/aiText";
 
 const uid = () => Math.random().toString(36).slice(2) + Date.now().toString(36);
 
@@ -47,7 +48,7 @@ function Message({ msg }) {
           <p role="alert" className="rounded-2xl border border-[#D1291F]/30 bg-[#D1291F]/[0.06] px-4 py-3 text-sm text-[#8F1912] [overflow-wrap:anywhere]">{msg.text}</p>
         ) : (
           <>
-            <div className="rounded-2xl rounded-bl-md border border-border-subtle bg-white px-4 py-3 text-sm leading-relaxed text-text-primary [overflow-wrap:anywhere]"><Markdown text={msg.text} accent="#4B2FC4" /></div>
+            <div className="rounded-2xl rounded-bl-md border border-border-subtle bg-white px-4 py-3 text-sm leading-relaxed text-text-primary [overflow-wrap:anywhere]"><Markdown text={aiText(msg.text)} accent="#4B2FC4" /></div>
             {msg.citations?.length > 0 && <SourceChips citations={msg.citations} className="mt-2" />}
           </>
         )}

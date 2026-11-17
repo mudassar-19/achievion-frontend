@@ -6,9 +6,10 @@ import api from "@/lib/api";
 import PageHeader from "@/components/ui/PageHeader";
 import OrgGarden from "@/components/director/OrgGarden";
 import { SkeletonCard } from "@/components/ui/Skeleton";
+import { bandOfProject } from "@/lib/healthBand";
 
-const BANDS = ["All", "Off track", "At risk", "On track", "Not started"];
-const BAND_DOT = { "On track": "#0C5E2A", "At risk": "#6A8A1C", "Off track": "#C85030", "Not started": "#9CA3AF" };
+const BANDS = ["All", "At risk", "Needs attention", "On track", "Not started"];
+const BAND_DOT = { "On track": "#0C5E2A", "Needs attention": "#6A8A1C", "At risk": "#C85030", "Not started": "#9CA3AF" };
 
 export default function ProgressGardenPage() {
   const [loading,    setLoading]    = useState(true);
@@ -22,7 +23,7 @@ export default function ProgressGardenPage() {
       .finally(() => setLoading(false));
   }, []);
 
-  const allProjects = gardenData?.projects ?? [];
+  const allProjects = (gardenData?.projects ?? []).map((p) => ({ ...p, healthBand: bandOfProject(p) })); // D-QA4-11
   const filtered = filter === "All" ? allProjects : allProjects.filter((p) => p.healthBand === filter);
 
   return (

@@ -3,6 +3,7 @@
 // Used by the topbar AI panel and the full Ask page. ponytail: no tables/nested lists/images; add when AI output needs them.
 import { useState } from "react";
 import { BookOpen, ExternalLink } from "lucide-react";
+import { sourceLabel } from "@/lib/aiText";
 
 const INLINE = /(`[^`]+`|\*\*[^*]+\*\*|__[^_]+__|\*[^*\s][^*]*\*|\[[^\]]+\]\([^)\s]+\))/g;
 const SAFE_URL = /^(https?:\/\/|mailto:|\/(?!\/))/i; // QA2: also in-app paths such as /director/projects/1 (not //host)
@@ -92,7 +93,7 @@ export function SourceChips({ citations = [], className = "" }) {
       <ul className="flex min-w-0 flex-wrap gap-1.5">
         {citations.map((c, n) => {
           const url = c.url || c.href || c.link;
-          const label = `[${n + 1}] ${c.source ?? "source"}${c.text ? ` — ${c.text}` : ""}`;
+          const label = sourceLabel(c); // QA3 B-6: the name, no [n] and no fact line
           const cls = "inline-flex max-w-full min-h-7 items-center gap-1 rounded-full border border-ink/[0.12] bg-white px-2.5 py-0.5 text-[11px] text-text-secondary";
           return (
             <li key={n} className="min-w-0 max-w-full">

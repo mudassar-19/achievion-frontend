@@ -11,7 +11,11 @@ import { BTN } from "./buttons";
 const INPUT = "h-10 w-full rounded-xl border border-border-subtle bg-bg-surface px-3 text-sm text-text-primary placeholder:text-text-secondary focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus)] disabled:opacity-60";
 const MAX = 20;
 
+// B-18: the line names who actually sees it (the Director does not see "your Director").
+const WHO = { Director: "Org admins", Manager: "Your Director", "Team Lead": "Your Manager and Director" };
+
 export default function ProfileDetails() {
+  const role = useAuthStore((s) => s.user?.role);
   const readOnly = useAuthStore((s) => !!s.viewAs);
   const { data, error, setData } = useLoad("/api/auth/profile-details");
   const [draft, setDraft] = useState(null); // { skills, phone } while editing
@@ -43,7 +47,7 @@ export default function ProfileDetails() {
     <div data-profile-details className="flex flex-col gap-4">
       <div>
         <h3 className="text-sm font-black text-text-primary">Skills and contact</h3>
-        <p className="mt-0.5 text-sm text-text-secondary">Your Director sees these in the team roster. Other team members do not.</p>
+        <p className="mt-0.5 text-sm text-text-secondary">{WHO[role] ?? "Your Director"} sees these in the team roster. Other team members do not.</p>
       </div>
       <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
         <div className="flex min-w-0 flex-col gap-2">
@@ -63,7 +67,7 @@ export default function ProfileDetails() {
         </div>
         <div className="flex min-w-0 flex-col gap-2">
           <label htmlFor="pd-phone" className="text-xs font-bold text-text-secondary">Phone <span className="font-normal">(optional)</span></label>
-          <input id="pd-phone" type="tel" autoComplete="tel" className={INPUT} value={v.phone ?? ""} maxLength={24} disabled={readOnly} placeholder="+92 300 1234567" onChange={(e) => edit({ phone: e.target.value })} />
+          <input id="pd-phone" type="tel" autoComplete="tel" className={INPUT} value={v.phone ?? ""} maxLength={24} disabled={readOnly} placeholder="Optional, e.g. your mobile number" onChange={(e) => edit({ phone: e.target.value })} />
         </div>
       </div>
       {problem && <p role="alert" className="text-sm text-[#B01F17]">{problem}</p>}

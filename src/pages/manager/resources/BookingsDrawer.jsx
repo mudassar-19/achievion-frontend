@@ -8,6 +8,7 @@ import useUiStore from "@/stores/uiStore";
 import Drawer from "@/components/ui/Drawer";
 import { BTN } from "@/components/ui/buttons";
 import ConfirmModal from "@/components/ui/ConfirmModal";
+import DateInput from "@/components/ui/DateInput";
 
 function fmtDay(d) {
   if (!d) return "—";
@@ -88,12 +89,12 @@ export default function BookingsDrawer({ open, asset, onClose }) {
           <div className="grid grid-cols-2 gap-3">
             <label className="flex flex-col gap-1">
               <span className="text-[11px] font-semibold text-text-secondary">From date</span>
-              <input type="date" required value={form.from} onChange={(e) => setForm((f) => ({ ...f, from: e.target.value }))}
+              <DateInput required value={form.from} onChange={(e) => setForm((f) => ({ ...f, from: e.target.value }))}
                 className="h-9 rounded-xl border border-border-subtle bg-bg-surface px-3 text-sm text-text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus)]" />
             </label>
             <label className="flex flex-col gap-1">
               <span className="text-[11px] font-semibold text-text-secondary">To date</span>
-              <input type="date" required value={form.to} onChange={(e) => setForm((f) => ({ ...f, to: e.target.value }))}
+              <DateInput required value={form.to} onChange={(e) => setForm((f) => ({ ...f, to: e.target.value }))}
                 className="h-9 rounded-xl border border-border-subtle bg-bg-surface px-3 text-sm text-text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus)]" />
             </label>
           </div>

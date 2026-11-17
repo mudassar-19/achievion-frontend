@@ -15,14 +15,18 @@ import EmptyState from "@/components/ui/EmptyState";
 import ErrorState from "@/components/ui/ErrorState";
 import Skeleton from "@/components/ui/Skeleton";
 import Drawer from "@/components/ui/Drawer";
-import ConfirmModal from "@/components/ui/ConfirmModal";
 import StatusChip from "@/components/ui/StatusChip";
 import { healthColor } from "@/components/ui/healthTone";
 import { BTN } from "@/components/ui/buttons";
 import { useRoleTheme } from "@/utils/roleTheme";
+import Select from "@/components/ui/Select";
 import useLoad from "./useLoad";
 import { fmt } from "./format";
 import { AssetName, Expiry } from "../resources/AssetsTab";
+import DateInput from "@/components/ui/DateInput";
+import { bandOfProject } from "@/lib/healthBand";
+import { ChangeLeadDialog, RemoveMemberDialog, RequestReallocationDialog, ReassignDialog } from "@/components/flows/Flows";
+import { ago as agoShort } from "@/lib/ago";
 
 const ago = (d) => new Intl.RelativeTimeFormat(undefined, { numeric: "auto" }).format(Math.round((new Date(d) - Date.now()) / 86_400_000), "day");
 const daysLeft = (d) => (d ? Math.ceil((new Date(d) - Date.now()) / 86_400_000) : null);
@@ -100,7 +104,7 @@ export function OverviewTab({ project, onChanged }) {
       <Panel title="Snapshot" icon={Gauge}>
         <div className="grid grid-cols-2 divide-x divide-ink/[0.05] lg:grid-cols-4">
           <StatCard label="Done" value={`${project.completion ?? 0}%`} icon={CheckCircle2} color={theme.accent} sub={`${tc.done ?? 0} of ${tc.total ?? 0} tasks`} />
-          <StatCard label="Health" value={project.healthScore} noDataLabel="Not started" icon={Activity} color={healthColor(project.healthBand)} sub={project.healthScore == null ? "no tasks yet" : project.healthBand} />
+          <StatCard label="Health" value={project.healthScore} noDataLabel="Not started" icon={Activity} color={healthColor(bandOfProject(project))} sub={project.healthScore == null ? "no tasks yet" : bandOfProject(project)} />
           <StatCard label="Open tasks" value={open} icon={ClipboardList} color={theme.accent} sub={`${tc.todo ?? 0} to do · ${tc.inProgress ?? 0} in progress · ${tc.inReview ?? 0} in review`} />
           <StatCard label="Deadline" value={fmt(project.deadline)} icon={CalendarClock} color={left != null && left < 0 ? "#B01F17" : theme.accent}
             sub={left == null ? "No deadline" : left < 0 ? `${-left} days late` : `${left} days left`} />
@@ -140,7 +144,8 @@ export function OverviewTab({ project, onChanged }) {
 export function ModulesTab({ project, onChanged }) {
   const { data, error, reload } = useLoad(`/api/manager/projects/${project._id}/modules`);
   const addToast = useUiStore((s) => s.addToast);
-  const [assign, setAssign] = useState(null);       // module being assigned
+  const [assign, setAssign] = useState(null);       // module being assigned (first Team Lead)
+  const [leadDlg, setLeadDlg] = useState(null);       // module whose Team Lead is changed (Y-6)
   const [adding, setAdding] = useState(false);
   const leads = useLoad("/api/manager/team-availability");
   const tls = (leads.data?.members ?? []).filter((m) => m.role === "Team Lead");
@@ -182,8 +187,10 @@ export function ModulesTab({ project, onChanged }) {
       <div className="flex justify-end"><button type="button" className={BTN.secondary} onClick={() => { setForm((f) => ({ ...f, title: "", roles: ["Developer"] })); setErr(null); setAdding(true); }}><Plus size={14} aria-hidden="true" /> Add module</button></div>
       <DataTable label="Modules" columns={columns} rows={data?.modules ?? []} loading={!data && !error} error={error} onRetry={reload}
         total={data?.modules?.length ?? 0} pageSize={1000}
-        rowActions={(m) => [{ label: m.teamLead ? "Change Team Lead" : "Assign Team Lead", icon: UserCheck, showLabel: true, onClick: () => { setForm((f) => ({ ...f, teamLeadId: m.teamLead?.id ?? "", dueDate: m.dueDate?.slice(0, 10) ?? "" })); setErr(null); setAssign(m); } }]}
+        rowActions={(m) => [{ label: m.teamLead ? "Change Team Lead" : "Assign Team Lead", icon: UserCheck, showLabel: true, onClick: () => { if (m.teamLead) { setLeadDlg(m); return; } setForm((f) => ({ ...f, teamLeadId: "", dueDate: m.dueDate?.slice(0, 10) ?? "" })); setErr(null); setAssign(m); } }]}
         empty={<EmptyState heading="No modules yet." action={{ label: "Add module", onClick: () => setAdding(true) }} />} />
+
+      <ChangeLeadDialog projectId={project._id} module={leadDlg} candidates={tls} onClose={() => setLeadDlg(null)} onDone={() => { setLeadDlg(null); reload(); onChanged?.(); }} />
 
       <Drawer open={!!assign} onClose={() => setAssign(null)} title={`Team Lead for "${assign?.title ?? ""}"`}
         footer={<div className="flex justify-end gap-2"><button type="button" className={BTN.secondary} onClick={() => setAssign(null)}>Cancel</button><button type="button" className={BTN.primary} disabled={busy} onClick={saveLead}>{busy ? "Saving…" : "Assign"}</button></div>}>
@@ -198,7 +205,7 @@ export function ModulesTab({ project, onChanged }) {
             </Sel>
           )}
           <label htmlFor="mod-due" className="flex flex-col gap-1.5 text-sm font-bold text-text-primary">Module deadline <span className="text-xs font-normal text-text-secondary">Optional, not after the project deadline ({fmt(project.deadline)}).</span>
-            <input id="mod-due" type="date" max={maxDue} value={form.dueDate} onChange={(e) => setForm((f) => ({ ...f, dueDate: e.target.value }))} className="h-10 rounded-xl px-3 text-sm font-normal" />
+            <DateInput id="mod-due" max={maxDue} value={form.dueDate} onChange={(e) => setForm((f) => ({ ...f, dueDate: e.target.value }))} className="h-10 rounded-xl px-3 text-sm font-normal" />
           </label>
           {err && <p role="alert" className="text-sm font-semibold text-[#B01F17]">{err}</p>}
         </div>
@@ -226,12 +233,10 @@ export function ModulesTab({ project, onChanged }) {
 // ── Team ─────────────────────────────────────────────────────────────────────
 export function TeamTab({ project, onChanged }) {
   const { data, error, reload } = useLoad(`/api/manager/projects/${project._id}/team`);
-  const navigate = useNavigate();
   const addToast = useUiStore((s) => s.addToast);
   const people = useLoad("/api/manager/team-availability");
   const [adding, setAdding] = useState(false);
   const [pick, setPick] = useState("");
-  const [blocked, setBlocked] = useState(null);   // { name, openTasks }
   const [busy, setBusy] = useState(false);
   const memberIds = new Set((data?.members ?? []).map((m) => String(m.id)));
   const candidates = (people.data?.members ?? []).filter((p) => !["Director", "Manager"].includes(p.role) && !memberIds.has(String(p.id)));
@@ -241,17 +246,7 @@ export function TeamTab({ project, onChanged }) {
     reload(); onChanged?.();
     if (!quiet) addToast({ type: "success", message: "Added to the project. They got a notification." });
   }
-  async function remove(m) {
-    if (m.openTasks > 0) { setBlocked(m); return; }
-    try {
-      await api.delete(`/api/manager/projects/${project._id}/members/${m.id}`);
-      reload(); onChanged?.();
-      addToast({ type: "info", message: `${m.name} removed from the project.`, undoAction: () => add(m.id, true).catch((e) => addToast({ type: "error", message: e?.message ?? "Could not undo." })) });
-    } catch (e) {
-      if (e?.data?.openTasks) setBlocked({ ...m, openTasks: e.data.openTasks });
-      else addToast({ type: "error", message: e?.message ?? "Could not remove this person." });
-    }
-  }
+  const [removing, setRemoving] = useState(null); // Y-8: the dialog checks first and lists blockers
 
   const columns = [
     { key: "name", label: "Name", render: (m) => <span className="font-bold text-text-primary">{m.name}</span> },
@@ -263,7 +258,7 @@ export function TeamTab({ project, onChanged }) {
     <div className="flex flex-col gap-4">
       <div className="flex justify-end"><button type="button" className={BTN.secondary} onClick={() => { setPick(""); setAdding(true); }}><UserPlus size={14} aria-hidden="true" /> Add person</button></div>
       <DataTable label="Team" columns={columns} rows={data?.members ?? []} loading={!data && !error} error={error} onRetry={reload} total={data?.members?.length ?? 0} pageSize={1000}
-        rowActions={() => [{ label: "Remove from project", icon: UserMinus, onClick: remove }]}
+        rowActions={() => [{ label: "Remove from project", icon: UserMinus, onClick: setRemoving }]}
         empty={<EmptyState heading="Nobody is on this project yet." action={{ label: "Add person", onClick: () => setAdding(true) }} />} />
 
       <Drawer open={adding} onClose={() => setAdding(false)} title="Add a person"
@@ -280,9 +275,15 @@ export function TeamTab({ project, onChanged }) {
         </div>
       </Drawer>
 
-      <ConfirmModal open={!!blocked} onClose={() => setBlocked(null)} onConfirm={() => navigate(`/manager/resources?member=${blocked.id}`)}
-        title={`${blocked?.name ?? "This person"} still has open work`} confirmLabel="Reassign tasks" cancelLabel="Close"
-        body={`${blocked?.openTasks} open task${blocked?.openTasks === 1 ? "" : "s"} on this project. Reassign them first, then remove the person.`} />
+      <RemoveMemberDialog projectId={project._id} member={removing} onClose={() => setRemoving(null)} onDone={() => { setRemoving(null); reload(); onChanged?.(); }} />
+
+      {(project.formerMembers?.length ?? 0) > 0 && (
+        <section aria-label="Former members" className="rounded-2xl border border-ink/[0.07] p-4">
+          <h3 className="text-sm font-bold text-text-primary">Former members ({project.formerMembers.length})</h3>
+          <p className="mt-0.5 text-xs text-text-secondary">Their past work, XP and scores stay with them.</p>
+          <ul className="mt-2 divide-y divide-ink/[0.05] text-sm">{project.formerMembers.map((f) => <li key={f.id} className="flex justify-between gap-3 py-1.5"><span className="min-w-0 truncate font-semibold text-text-primary">{f.name}</span><span className="shrink-0 text-xs text-text-secondary">Left {fmt(f.removedAt)}{f.reason ? ` · ${f.reason}` : ""}</span></li>)}</ul>
+        </section>
+      )}
     </div>
   );
 }
@@ -334,11 +335,10 @@ export function TasksTab({ project, onOpenTask }) {
       <p className="text-sm text-text-secondary">Read-only. The Team Lead creates, assigns and reviews tasks.</p>
       <div className="flex flex-wrap items-center gap-4">
         <FilterChips label="Status" param="tstatus" options={TASK_STATUS} multi />
-        <label htmlFor="assignee" className="flex items-center gap-2 text-xs font-bold text-text-secondary">Assignee
-          <select id="assignee" value={who} onChange={(e) => setQ("assignee", e.target.value)} className="h-8 rounded-lg px-2 text-sm font-normal">
-            <option value="">Everyone</option>{people.map(([id, n]) => <option key={id} value={id}>{n}</option>)}
-          </select>
-        </label>
+        <div className="flex items-center gap-2 text-xs font-bold text-text-secondary">Assignee
+          <Select className="w-48 font-normal" label="Assignee" value={who} onChange={(v) => setQ("assignee", v)}
+            options={[{ value: "", label: "Everyone" }, ...people.map(([id, n]) => ({ value: id, label: n }))]} />
+        </div>
       </div>
       <DataTable label="Tasks" columns={columns} rows={rows.slice((page - 1) * 25, page * 25)} loading={!data && !error} error={error} onRetry={reload}
         page={page} total={rows.length} pageSize={25} onPage={(n) => setQ("tpage", n > 1 ? String(n) : "")}
@@ -367,6 +367,31 @@ export function HistoryTab({ project }) {
   );
 }
 
+// QA4 Y-7: what a Manager (ask / nudge) or a Team Lead (reassign) can do from the task. Everything else here is read-only.
+function TaskActions({ t, base, onChanged }) {
+  const addToast = useUiStore((s) => s.addToast);
+  const [dlg, setDlg] = useState(null);
+  const [nudged, setNudged] = useState(null);
+  const team = useLoad(base === "/api/teamlead" && dlg === "reassign" ? "/api/teamlead/team" : null);
+  const closed = ["Done", "Cancelled"].includes(t.status);
+  if (closed || !["/api/manager", "/api/teamlead"].includes(base)) return null;
+  const task = { id: t.id ?? t._id, title: t.title };
+  async function nudge() {
+    try { const r = await api.post(`/api/manager/tasks/${task.id}/nudge-team-lead`, {}, { silent: true }); setNudged(r.nudgedAt); addToast({ type: "success", message: "The Team Lead was nudged." }); }
+    catch (e) { if (e?.status === 429) setNudged(e.data?.lastNudgedAt ?? new Date().toISOString()); else addToast({ type: "error", message: e?.message ?? "Could not nudge." }); }
+  }
+  return (
+    <div data-testid="task-actions" className="flex flex-wrap items-center gap-2">
+      {base === "/api/manager" ? (<>
+        <button type="button" className={BTN.secondary} onClick={() => setDlg("request")}>Request reallocation</button>
+        <button type="button" className={BTN.secondary} disabled={!!nudged} onClick={nudge}>{nudged ? `Nudged ${agoShort(nudged)}` : "Nudge Team Lead"}</button>
+      </>) : <button type="button" className={BTN.secondary} onClick={() => setDlg("reassign")}>Reassign</button>}
+      <RequestReallocationDialog task={dlg === "request" ? task : null} layer="z-[70]" onClose={() => setDlg(null)} onDone={() => setDlg(null)} />
+      <ReassignDialog task={dlg === "reassign" ? task : null} layer="z-[70]" people={(team.data?.members ?? []).filter((m) => !["Director", "Manager"].includes(m.role))} onClose={() => setDlg(null)} onDone={() => { setDlg(null); onChanged?.(); }} />
+    </div>
+  );
+}
+
 // ── Task drawer (read-only) ──────────────────────────────────────────────────
 // base: API prefix (Team Lead: "/api/teamlead"). full: also time log entries and history (Team Lead drawer, T-1).
 export function TaskDrawer({ taskId, onClose, base = "/api/manager", full = false }) {
@@ -377,6 +402,8 @@ export function TaskDrawer({ taskId, onClose, base = "/api/manager", full = fals
     <Drawer open={!!taskId} onClose={onClose} title={t?.title ?? "Task"}>
       {!taskId ? null : error ? <ErrorState message={error} onRetry={reload} /> : !t ? <div className="p-5"><Skeleton className="h-64 rounded-xl" /></div> : (
         <div className="flex flex-col gap-5 p-5 text-sm">
+          {t.reassignedFrom && <p className="rounded-xl bg-ink/[0.04] px-3 py-2 text-text-secondary">Reassigned from <strong className="text-text-primary">{t.reassignedFrom.name}</strong>: {t.reassignedFrom.reason}. {h(Math.round((t.reassignedFrom.loggedHours ?? 0) * 60))} already logged.</p>}
+          <TaskActions t={t} base={base} onChanged={reload} />
           <dl className="grid grid-cols-[110px_1fr] gap-y-2">
             <dt className="text-text-secondary">Status</dt><dd className="font-semibold">{t.status.replace("-", " ")}{t.isLate ? " · late" : ""}</dd>
             <dt className="text-text-secondary">Assignee</dt><dd className="font-semibold">{t.assignees.map((a) => a.name).join(", ") || "Unassigned"}</dd>

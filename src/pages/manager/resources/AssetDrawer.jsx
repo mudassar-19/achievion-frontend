@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import api from "@/lib/api";
 import Drawer from "@/components/ui/Drawer";
 import { BTN } from "@/components/ui/buttons";
+import DateInput from "@/components/ui/DateInput";
 
 const TYPES = ["Tool", "License", "File link"];
 const ERR = "text-xs font-semibold text-[#B01F17]";
@@ -66,7 +67,7 @@ export default function AssetDrawer({ open, onClose, asset = null, projects = []
           <textarea id="as-notes" rows={3} maxLength={1000} value={form.notes} onChange={(e) => set("notes", e.target.value)} placeholder="Seats, owner, where the login lives…" className="rounded-xl p-3 font-normal" />
         </label>
         <label htmlFor="as-exp" className="flex flex-col gap-1.5 font-bold text-text-primary">Expires on <span className="sr-only">(optional)</span>
-          <input id="as-exp" type="date" value={form.expiresAt} onChange={(e) => set("expiresAt", e.target.value)} className={`${field} w-48`} />
+          <DateInput id="as-exp" value={form.expiresAt} onChange={(e) => set("expiresAt", e.target.value)} className={`${field} w-48`} />
           <span className="text-xs font-normal text-text-secondary">Optional. Licences that end within 30 days are marked.</span>
         </label>
         <fieldset className="flex flex-col gap-1.5">

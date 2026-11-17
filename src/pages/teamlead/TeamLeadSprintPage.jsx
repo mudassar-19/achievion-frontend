@@ -6,6 +6,7 @@ import useTLSocket from "@/hooks/useTLSocket";
 
 import TallyLoader from "@/components/ui/TallyLoader";
 import useUiStore from "@/stores/uiStore";
+import DateInput from "@/components/ui/DateInput";
 const TEAL = "#08695F";
 
 const STATUS_CFG = {
@@ -103,13 +104,13 @@ function SprintModal({ sprint, projects, onClose, onSaved }) {
           <div className="grid grid-cols-2 gap-3">
             <div className="flex flex-col gap-1.5">
               <label className="text-[14px] font-bold uppercase tracking-widest text-slate-500">Start Date</label>
-              <input type="date" value={form.startDate} onChange={(e) => set("startDate", e.target.value)}
+              <DateInput value={form.startDate} onChange={(e) => set("startDate", e.target.value)}
                 className="w-full bg-ink/[0.04] border border-ink/10 rounded-xl px-3 py-2.5 text-sm text-text-primary outline-none"
                 style={{ colorScheme: "dark" }} />
             </div>
             <div className="flex flex-col gap-1.5">
               <label className="text-[14px] font-bold uppercase tracking-widest text-slate-500">End Date</label>
-              <input type="date" value={form.endDate} onChange={(e) => set("endDate", e.target.value)}
+              <DateInput value={form.endDate} onChange={(e) => set("endDate", e.target.value)}
                 className="w-full bg-ink/[0.04] border border-ink/10 rounded-xl px-3 py-2.5 text-sm text-text-primary outline-none"
                 style={{ colorScheme: "dark" }} />
             </div>
