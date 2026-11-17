@@ -64,6 +64,36 @@ function NumberField({ id, value, onChange, error, unit, step = 1, min, max, lab
 }
 
 // ── Working Time (RND-25, 26, 27) ─────────────────────────────────────────────
+// F-001: company holidays. A holiday is a day off like a weekend day: left out of deadlines, capacity and streaks.
+function HolidaysRow({ s, setS }) {
+  const [day, setDay] = useState("");
+  const list = s.holidays ?? [];
+  const add = () => { if (!day || list.includes(day) || list.length >= 60) return; setS("holidays", [...list, day].sort()); setDay(""); };
+  const fmt = (d) => new Date(`${d}T00:00:00`).toLocaleDateString(undefined, { weekday: "short", day: "numeric", month: "short", year: "numeric" });
+  return (
+    <LabelRow label="Company holidays" htmlFor="wt-holiday" hint="Dates the whole company is off (for example Eid, 23 March). They count like weekend days.">
+      <div className="flex flex-wrap items-center gap-2">
+        <input id="wt-holiday" type="date" value={day} onChange={(e) => setDay(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); add(); } }}
+          className="h-10 rounded-lg border border-border-subtle bg-white px-3 text-sm" />
+        <button type="button" onClick={add} disabled={!day || list.includes(day) || list.length >= 60}
+          className="h-10 rounded-lg border border-border-subtle bg-white px-3.5 text-sm font-bold text-text-primary disabled:opacity-50 hover:bg-ink/[0.04]">Add holiday</button>
+      </div>
+      {day && list.includes(day) && <p className="mt-1 text-xs text-text-secondary">That date is already in the list.</p>}
+      {list.length === 0 ? <p className="mt-2 text-xs text-text-secondary">No holidays added.</p> : (
+        <ul className="mt-2 flex flex-wrap gap-2" aria-label="Company holidays">
+          {list.map((d) => (
+            <li key={d} className="inline-flex min-h-8 items-center gap-1.5 rounded-full border border-border-subtle bg-ink/[0.03] pl-3 pr-1 text-xs font-semibold text-text-primary">
+              {fmt(d)}
+              <button type="button" aria-label={`Remove holiday ${fmt(d)}`} onClick={() => setS("holidays", list.filter((x) => x !== d))}
+                className="flex h-7 w-7 items-center justify-center rounded-full text-text-secondary hover:bg-ink/[0.08]">×</button>
+            </li>
+          ))}
+        </ul>
+      )}
+    </LabelRow>
+  );
+}
+
 export function WorkingTimeSection({ s, setS, errors }) {
   const [blocked, setBlocked] = useState(false);
   return (
@@ -97,6 +127,8 @@ export function WorkingTimeSection({ s, setS, errors }) {
         <p className="mt-1.5 text-xs text-text-secondary">{7 - s.weekendDays.length} working day{7 - s.weekendDays.length === 1 ? "" : "s"} a week.</p>
         <ErrorText>{errors.days || (blocked ? "Keep at least one working day." : "")}</ErrorText>
       </LabelRow>
+
+      <HolidaysRow s={s} setS={setS} />
 
       <Note>Saving this does not move dates that are already saved: existing deadlines and task dates stay as they are. Only new estimates use the new numbers (days needed = hours / planning hours per day, counted over working days).</Note>
     </div>

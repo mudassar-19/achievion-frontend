@@ -13,6 +13,7 @@ import FileLink from "@/components/ui/FileLink";
 import { BTN } from "@/components/ui/buttons";
 import { CalendarClock, ExternalLink, Palette, RotateCcw, Sparkles } from "lucide-react";
 import { STATUS_CHIP, statusLabel } from "@/utils/employeePortal";
+import { timerKey, timeLocked } from "@/utils/taskTimer";
 import TaskComments from "../teamlead/task/TaskComments";
 import { BugDetail } from "./quality/BugDetail";
 import { BUG_CHIP, SEVERITY_CHIP, VALIDITY_LABEL } from "@/utils/quality";
@@ -84,7 +85,8 @@ export function Stars({ n }) {
 // Timer kept per task in this browser only; stopping fills the minutes, the person saves.
 function TimeLog({ t, taskId, onSaved }) {
   const addToast = useUiStore((s) => s.addToast);
-  const key = `achievion:timer:${taskId}`;
+  const key = timerKey(taskId);
+  const locked = timeLocked(t.status); // QA2-71: no timer and no time log on a task in review or done
   const [startedAt, setStartedAt] = useState(() => { try { return Number(localStorage.getItem(key)) || null; } catch { return null; } });
   const [now, setNow] = useState(() => Date.now());
   const [form, setForm] = useState({ minutes: "", note: "" });
@@ -116,9 +118,9 @@ function TimeLog({ t, taskId, onSaved }) {
       {t.mine && (
         <form onSubmit={save} className="flex flex-col gap-3 rounded-xl border border-ink/[0.08] p-3">
           <div className="flex flex-wrap items-center gap-2">
-            {startedAt ? <button type="button" className={BTN.secondary} onClick={stop}><Square size={14} aria-hidden="true" />Stop timer</button>
-              : <button type="button" className={BTN.secondary} onClick={start}><Play size={14} aria-hidden="true" />Start timer</button>}
-            {startedAt && <span className="text-sm font-semibold tabular-nums" aria-live="off"><Timer size={14} aria-hidden="true" className="mr-1 inline" />{String(Math.floor(running / 3600)).padStart(2, "0")}:{String(Math.floor((running % 3600) / 60)).padStart(2, "0")}:{String(running % 60).padStart(2, "0")}</span>}
+            {startedAt && !locked ? <button type="button" className={BTN.secondary} onClick={stop}><Square size={14} aria-hidden="true" />Stop timer</button>
+              : <button type="button" className={BTN.secondary} onClick={start} disabled={locked} title={locked ? "No time can be logged while the task is in review or done." : undefined}><Play size={14} aria-hidden="true" />Start timer</button>}
+            {startedAt && !locked && <span className="text-sm font-semibold tabular-nums" aria-live="off"><Timer size={14} aria-hidden="true" className="mr-1 inline" />{String(Math.floor(running / 3600)).padStart(2, "0")}:{String(Math.floor((running % 3600) / 60)).padStart(2, "0")}:{String(running % 60).padStart(2, "0")}</span>}
           </div>
           <div className="flex flex-wrap gap-3">
             <label htmlFor="tl-min" className="flex flex-col gap-1 text-xs font-bold">Minutes
@@ -127,7 +129,8 @@ function TimeLog({ t, taskId, onSaved }) {
               <input id="tl-note" type="text" maxLength={300} value={form.note} onChange={(e) => setForm({ ...form, note: e.target.value })} placeholder="What you worked on…" className="h-10 rounded-xl px-3 font-normal" /></label>
           </div>
           {err && <p role="alert" className="text-xs font-semibold text-[#B01F17]">{err}</p>}
-          <button type="submit" className={`${BTN.primary} self-start`} disabled={busy}>{busy ? "Saving…" : "Log time"}</button>
+          {locked && <p className="text-xs text-text-secondary">This task is {t.status === "Done" ? "done" : "in review"}, so time can no longer be logged on it.</p>}
+          <button type="submit" className={`${BTN.primary} self-start`} disabled={busy || locked}>{busy ? "Saving…" : "Log time"}</button>
         </form>
       )}
       {t.time.logs.length ? <ul className="flex flex-col divide-y divide-ink/[0.05]">{t.time.logs.map((l, i) => (

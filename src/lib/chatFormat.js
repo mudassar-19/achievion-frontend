@@ -4,8 +4,15 @@
 // person: undefined = still being looked up, null = the other account is gone, else { name }.
 export const dmName = (person) => (person === undefined ? "Loading name…" : person?.name?.trim() || "Deactivated user");
 
-export const chatTitle = (ch, person) =>
-  ch?.type === "dm" ? dmName(person) : ch?.type === "announcement" ? "Announcements" : `#${ch?.name ?? ""}`;
+// A group is shown without the project slug its community already names: "habib-grocers-online-store-general" under
+// "Habib Grocers Online Store" reads "general". Nothing left after the slug = keep the full name.
+export function groupName(name, communityName) {
+  const n = String(name ?? ""), slug = String(communityName ?? "").toLowerCase().replace(/[^\p{L}\p{N}]+/gu, "-").replace(/^-|-$/g, "");
+  return slug && n.toLowerCase().startsWith(`${slug}-`) && n.length > slug.length + 1 ? n.slice(slug.length + 1) : n;
+}
+
+export const chatTitle = (ch, person, communityName) =>
+  ch?.type === "dm" ? dmName(person) : ch?.type === "announcement" ? "Announcements" : `#${groupName(ch?.name, communityName)}`;
 
 const dayKey = (d, timeZone) => d.toLocaleDateString("en-CA", { timeZone });
 const DAY = 86_400_000;

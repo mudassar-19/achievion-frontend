@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { FolderKanban, Search, ChevronUp, ChevronDown, X, Zap, Loader2, Check, Bookmark, Trash2, Plus } from "lucide-react";
 import { Link } from "react-router-dom";
 import api from "@/lib/api";
+import { overlapsRange } from "@/utils/dateOverlap";
 import usePerfLog from "@/hooks/usePerfLog";
 import useUiStore from "@/stores/uiStore";
 import PageHeader from "@/components/ui/PageHeader";
@@ -263,8 +264,7 @@ export default function ProjectManagementPage() {
     let list = projects;
     if (statusF) list = list.filter(p => p.status === statusF);
     if (managerF) list = list.filter(p => String(p.managerId) === managerF);
-    if (deadlineFrom) list = list.filter(p => p.deadline && new Date(p.deadline) >= new Date(deadlineFrom));
-    if (deadlineTo)   list = list.filter(p => p.deadline && new Date(p.deadline) <= new Date(deadlineTo + "T23:59:59"));
+    if (deadlineFrom || deadlineTo) list = list.filter(p => overlapsRange(p, deadlineFrom, deadlineTo)); // QA2-65: active in the range
     if (search.trim()) {
       const q = search.trim().toLowerCase();
       list = list.filter(p => p.title.toLowerCase().includes(q) || (p.leadName ?? "").toLowerCase().includes(q));
@@ -372,13 +372,14 @@ export default function ProjectManagementPage() {
 
             {/* Deadline range */}
             <div className="flex items-center gap-1.5">
+              <span className="text-xs font-semibold text-slate-600" id="pm-active-between">Active between</span>
               <input type="date" value={deadlineFrom} onChange={e=>{setDeadlineFrom(e.target.value);setPage(1);}}
-                aria-label="Deadline from"
+                aria-label="Active from date"
                 className="h-9 rounded-xl border border-ink/[0.10] bg-ink/[0.05] px-3 text-sm text-text-primary focus:outline-none focus:border-[#4B2FC4]/40 transition-colors w-[9rem]"
               />
               <span className="text-xs text-slate-400">–</span>
               <input type="date" value={deadlineTo} onChange={e=>{setDeadlineTo(e.target.value);setPage(1);}}
-                aria-label="Deadline to"
+                aria-label="Active to date"
                 className="h-9 rounded-xl border border-ink/[0.10] bg-ink/[0.05] px-3 text-sm text-text-primary focus:outline-none focus:border-[#4B2FC4]/40 transition-colors w-[9rem]"
               />
             </div>
@@ -435,7 +436,7 @@ export default function ProjectManagementPage() {
               search || statusF || managerF || deadlineFrom || deadlineTo ? (
                 <EmptyState
                   heading="No projects match your filters."
-                  body="Try a different search or status filter."
+                  body="Try a different search, status or date range."
                   action={{label:"Clear filters", onClick:clearAll}}
                 />
               ) : (

@@ -12,6 +12,7 @@ import useAuthStore from "@/stores/authStore";
 import useDmPeople from "@/hooks/useDmPeople";
 import { badge, canPostIn, chatTitle, unreadTotal } from "@/lib/chatFormat";
 import { Avatar } from "./ChatSettingsDrawers";
+import useMentions from "@/components/ui/useMentions";
 import { ChatMessages } from "./ChatMessage";
 
 const KEY = "achievion-chatdock:";
@@ -40,6 +41,15 @@ function ChatWindow({ conv, me, minimized, tick, onMinimize, onClose, onSeen }) 
   const [sendError, setSendError] = useState("");
   const endRef = useRef(null), inputRef = useRef(null), seq = useRef(0);
   const id = conv.id;
+  // Items 73-75: "@" opens the group's member list (never yourself). A DM has only two people, so no list there.
+  const [members, setMembers] = useState([]);
+  useEffect(() => {
+    if (conv.kind === "dm" || minimized) return;
+    let live = true;
+    api.get(`/api/chat/channels/${id}/members`, { silent: true }).then((ms) => live && setMembers(ms)).catch(() => {});
+    return () => { live = false; };
+  }, [id, conv.kind, minimized]);
+  const mention = useMentions({ value: text, setValue: setText, inputRef, members, meId: me.id, listId: `dock-${id}-people` });
 
   const load = useCallback(() => {
     api.get(`/api/chat/channels/${id}/messages?limit=30`, { silent: true })
@@ -70,10 +80,11 @@ function ChatWindow({ conv, me, minimized, tick, onMinimize, onClose, onSeen }) 
     const content = text.trim();
     if (!content || sending) return;
     const clientId = `${me.id}-dock-${++seq.current}-${Date.now()}`;
+    const mentions = mention.idsIn(content); mention.reset();
     setText(""); setSendError(""); setSending(true);
     setMessages((cur) => [...(cur ?? []), { _id: `opt-${clientId}`, clientId, channelId: id, sender: { _id: me.id, name: me.name }, content, createdAt: new Date().toISOString() }]);
     try {
-      const saved = await api.post(`/api/chat/channels/${id}/messages`, { content, clientId }, { silent: true });
+      const saved = await api.post(`/api/chat/channels/${id}/messages`, { content, clientId, mentions }, { silent: true });
       setMessages((cur) => (cur ?? []).some((x) => x._id === saved._id) ? cur.filter((x) => x._id !== `opt-${clientId}`) : cur.map((x) => (x.clientId === clientId ? saved : x)));
     } catch (e) {
       setMessages((cur) => (cur ?? []).filter((x) => x.clientId !== clientId));
@@ -89,7 +100,7 @@ function ChatWindow({ conv, me, minimized, tick, onMinimize, onClose, onSeen }) 
       <header className="flex shrink-0 items-center gap-1 border-b border-ink/[0.07] py-1.5 pl-3 pr-1.5">
         <button type="button" onClick={() => onMinimize(id)} aria-expanded={!minimized} title={conv.title}
           className="flex min-w-0 flex-1 items-center gap-2 rounded-lg py-1 text-left">
-          {conv.kind === "dm" ? <Avatar user={{ name: conv.title }} size={24} /> : <span aria-hidden="true" className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-accent-tint text-accent-text">{conv.kind === "announcement" ? <Megaphone size={12} /> : <MessageSquare size={12} />}</span>}
+          {conv.kind === "dm" ? <Avatar user={conv.person ?? { name: conv.title }} size={24} /> : <span aria-hidden="true" className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-accent-tint text-accent-text">{conv.kind === "announcement" ? <Megaphone size={12} /> : <MessageSquare size={12} />}</span>}
           <span className="min-w-0">
             <span className="block truncate text-sm font-bold text-text-primary">{conv.title}</span>
             {conv.sub && <span className="block truncate text-[11px] text-text-tertiary">{conv.sub}</span>}
@@ -110,9 +121,11 @@ function ChatWindow({ conv, me, minimized, tick, onMinimize, onClose, onSeen }) 
           <div className="shrink-0 border-t border-ink/[0.07] p-2">
             {sendError && <p role="alert" className="px-1 pb-1.5 text-xs font-semibold text-[#B01F17]">{sendError}</p>}
             {canPost ? (
-              <div className="field flex items-end gap-2 rounded-xl border border-border-subtle bg-white px-2.5 py-1.5">
-                <textarea ref={inputRef} value={text} onChange={(e) => setText(e.target.value)} rows={1} maxLength={2000}
-                  onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(); } }}
+              <div className="field relative flex items-end gap-2 rounded-xl border border-border-subtle bg-white px-2.5 py-1.5">
+                {mention.dropdown}
+                <textarea ref={inputRef} value={text} onChange={(e) => { setText(e.target.value); mention.track(e.target.value, e.target.selectionStart); }} rows={1} maxLength={2000}
+                  role="combobox" aria-expanded={mention.open} aria-autocomplete="list" aria-controls={`dock-${id}-people`} aria-activedescendant={mention.activeId}
+                  onKeyDown={(e) => { if (mention.onKeyDown(e)) return; if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(); } }}
                   aria-label={`Message ${conv.title}`} placeholder="Write a message"
                   className="max-h-24 min-w-0 flex-1 resize-none bg-transparent py-1 text-sm leading-normal text-text-primary placeholder:text-text-tertiary focus:outline-none" />
                 <button type="button" onClick={send} disabled={sending || !text.trim()} aria-label="Send message"
@@ -164,7 +177,7 @@ export default function ChatDock({ chatPath, rightOffset = 0 }) {
   }, [load]);
 
   const convs = useMemo(() => [
-    ...dms.map((d) => ({ id: String(d._id), kind: "dm", title: chatTitle(d, personOf(d)), sub: personOf(d)?.role ?? "", unread: d.unread ?? 0, muted: (d.mutedBy ?? []).some((m) => String(m) === me.id), raw: d })),
+    ...dms.map((d) => ({ id: String(d._id), kind: "dm", person: personOf(d) ?? null, title: chatTitle(d, personOf(d)), sub: personOf(d)?.role ?? "", unread: d.unread ?? 0, muted: (d.mutedBy ?? []).some((m) => String(m) === me.id), raw: d })),
     ...groups.map((g) => ({ id: String(g._id), kind: g.type === "announcement" ? "announcement" : "group", title: chatTitle(g), sub: g._community, unread: g.unread ?? 0, muted: !!g.muted, raw: g })),
   // Unread first, then people before groups (a Director can have hundreds of groups and the list stops at LIST_MAX).
   ].sort((a, b) => (b.unread > 0 && !b.muted) - (a.unread > 0 && !a.muted) || (b.kind === "dm") - (a.kind === "dm") || a.title.localeCompare(b.title)), [dms, groups, personOf, me.id]);
@@ -209,7 +222,7 @@ export default function ChatDock({ chatPath, rightOffset = 0 }) {
                     <li key={c.id}>
                       <button type="button" onClick={() => open(c.id)} title={c.title}
                         className="flex w-full items-center gap-2.5 px-3.5 py-2 text-left hover:bg-ink/[0.04]">
-                        {c.kind === "dm" ? <Avatar user={{ name: c.title }} size={28} /> : <span aria-hidden="true" className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-accent-tint text-accent-text">{c.kind === "announcement" ? <Megaphone size={13} /> : <MessageSquare size={13} />}</span>}
+                        {c.kind === "dm" ? <Avatar user={c.person ?? { name: c.title }} size={28} /> : <span aria-hidden="true" className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-accent-tint text-accent-text">{c.kind === "announcement" ? <Megaphone size={13} /> : <MessageSquare size={13} />}</span>}
                         <span className="min-w-0 flex-1">
                           <span className={`block truncate text-sm text-text-primary ${c.unread && !c.muted ? "font-bold" : "font-semibold"}`}>{c.title}</span>
                           {c.sub && <span className="block truncate text-[11px] text-text-tertiary">{c.sub}</span>}

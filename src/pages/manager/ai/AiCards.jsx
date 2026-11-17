@@ -16,13 +16,15 @@ import { AiStatus, AiTag, AiFeedback } from "@/components/ui/AiParts";
 import { useAiCall } from "@/components/ui/aiCall";
 
 const when = (d) => (d ? dTime(d) : "");
+// QA2-70: "Updated 5 min ago", computed on screen (the saved text carries no relative time).
+const ago = (d) => { const m = Math.max(0, Math.floor((Date.now() - +new Date(d)) / 60000)); return m < 1 ? "just now" : m < 60 ? `${m} min ago` : m < 1440 ? `${Math.floor(m / 60)} h ago` : when(d); };
 const hours = (n) => `${Math.round((n ?? 0) * 10) / 10} h`;
 
 function Meta({ feature, refId, snippet, cachedAt, children, base }) {
   return (
     <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-text-secondary">
       <AiTag />
-      {cachedAt && <span>Written {when(cachedAt)}</span>}
+      {cachedAt && <span title={when(cachedAt)}>Updated {ago(cachedAt)}</span>}
       {children}
       <AiFeedback feature={feature} refId={refId} snippet={snippet} base={base} />
     </div>

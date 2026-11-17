@@ -5,7 +5,7 @@ import { useState } from "react";
 import { BookOpen, ExternalLink } from "lucide-react";
 
 const INLINE = /(`[^`]+`|\*\*[^*]+\*\*|__[^_]+__|\*[^*\s][^*]*\*|\[[^\]]+\]\([^)\s]+\))/g;
-const SAFE_URL = /^(https?:\/\/|mailto:)/i;
+const SAFE_URL = /^(https?:\/\/|mailto:|\/(?!\/))/i; // QA2: also in-app paths such as /director/projects/1 (not //host)
 
 function Inline({ text }) {
   return text.split(INLINE).map((p, i) => {

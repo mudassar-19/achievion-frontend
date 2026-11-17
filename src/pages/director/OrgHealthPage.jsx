@@ -4,6 +4,7 @@ import { RefreshCw, Info, Sparkles, Building2, X, HelpCircle } from "lucide-reac
 import { Link } from "react-router-dom";
 import PageHeader from "@/components/ui/PageHeader";
 import api from "@/lib/api";
+import { TabBar, TrendsTab, DepartmentsTab, WellbeingTab } from "./OrgHealthTabs";
 
 const ACCENT = "#4B2FC4";
 
@@ -28,6 +29,7 @@ const SUB_LABEL = { delivery: "Delivery", capacity: "Capacity", risk: "Risk", qu
 const WEIGHTS   = { delivery: 35, capacity: 25, risk: 20, quality: 20 };
 
 export default function OrgHealthPage() {
+  const [tab,         setTab]         = useState("overview");
   const [live,        setLive]        = useState(null);
   const [history,     setHistory]     = useState(null);
   const [depts,       setDepts]       = useState([]);
@@ -100,7 +102,14 @@ export default function OrgHealthPage() {
         </div>
       </motion.div>
 
-      {!live ? (
+      <TabBar tab={tab} onChange={setTab} />
+      <div id="oh-panel" role="tabpanel" aria-labelledby={`oh-tab-${tab}`}>
+        {tab === "trends" && <TrendsTab history={history} />}
+        {tab === "departments" && <DepartmentsTab depts={depts} />}
+        {tab === "wellbeing" && <WellbeingTab />}
+      </div>
+
+      {tab !== "overview" ? null : !live ? (
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           {[...Array(3)].map((_, i) => <div key={i} className="h-40 rounded-2xl bg-ink/[0.04] animate-pulse" />)}
         </div>

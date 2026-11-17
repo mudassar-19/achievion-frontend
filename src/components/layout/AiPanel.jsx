@@ -177,8 +177,9 @@ export default function AiPanel({
       const res = await api.post("/api/director/ai/ask", { question: q });
       setLoading(false);
       if (res.notEnoughData) {
-        streamWords("Not enough indexed data to answer. Try reindexing from the Ask ACHIEVION page.");
-        record({ role: "ai", text: "The knowledge index is empty. Refresh it on the Ask ACHIEVION page.", citations: [] });
+        // QA2-66: the server indexes by itself; this only happens for an organisation with nothing in it yet.
+        streamWords(res.answer);
+        record({ role: "ai", text: res.answer, citations: [] });
       } else {
         streamWords(res.answer, { citations: res.citations ?? [] });
         record({ role: "ai", text: res.answer, citations: res.citations ?? [] });

@@ -29,6 +29,7 @@ function defaultState() {
   return {
     workingHoursPerDay: 7,
     weekendDays: [0, 6],
+    holidays: [], // F-001: "YYYY-MM-DD" days off
     extensionMaxDays: 3,
     extensionMaxPct: 20,
     extensionCumCapPct: 20,
@@ -240,6 +241,7 @@ export default function DirectorSettingsPage() {
           orgName:              d.name   ?? "",
           workingHoursPerDay:   wt.hoursPerDay ?? 7,
           weekendDays,
+          holidays:             Array.isArray(wt.holidays) ? wt.holidays : [],
           extensionMaxDays:     ext.extensionMaxDays   ?? 3,
           extensionMaxPct:      ext.extensionMaxPct    ?? 20,
           extensionCumCapPct:   ext.extensionCumCapPct ?? 20,
@@ -324,7 +326,7 @@ export default function DirectorSettingsPage() {
       await api.patch("/api/director/settings", {
         name:           settings.orgName.trim() || undefined,
         // The time zone is sent only when it was changed: the server does not return the stored one yet.
-        workingTime:    { hoursPerDay: settings.workingHoursPerDay, workingDays, ...(settings.timezone !== saved.timezone ? { timezone: settings.timezone } : {}) },
+        workingTime:    { hoursPerDay: settings.workingHoursPerDay, workingDays, holidays: settings.holidays, ...(settings.timezone !== saved.timezone ? { timezone: settings.timezone } : {}) },
         extensionRules: {
           extensionMaxDays:   settings.extensionMaxDays,
           extensionMaxPct:    settings.extensionMaxPct,

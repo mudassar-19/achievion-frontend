@@ -169,6 +169,7 @@ export default function TLReviewPage() {
           </Panel>
           <Panel title="Submission" icon={Paperclip}>
             <Body>
+              {t.submission.aiAssisted && <p className="rounded-lg bg-[#EDE9FC] px-3 py-2 text-[13px] font-semibold text-[#3B2A99]">The assignee says an AI tool helped with this work. Review it as usual; this does not change the score or XP.</p>}
               {t.submission.note ? <p className="whitespace-pre-wrap break-words">{t.submission.note}</p> : <p className="text-text-secondary">No note.</p>}
               {t.submission.links.length > 0 && <ul className="flex flex-col gap-1">{t.submission.links.map((l, i) => <li key={i} className="min-w-0"><a href={l.url} target="_blank" rel="noopener noreferrer" title={l.url} className="inline-flex min-h-6 max-w-full items-center gap-1 font-semibold underline"><ExternalLink size={13} className="shrink-0" aria-hidden="true" /><span className="truncate">{l.label || l.url}</span></a></li>)}</ul>}
               {t.submission.files.length > 0 && <ul className="flex flex-col gap-1">{t.submission.files.map((f, i) => <li key={i} className="min-w-0"><FileLink href={f.url} target="_blank" rel="noopener noreferrer" title={f.filename} className="inline-flex min-h-6 max-w-full items-center gap-1 font-semibold underline"><Paperclip size={13} className="shrink-0" aria-hidden="true" /><span className="truncate">{f.filename}</span></FileLink></li>)}</ul>}

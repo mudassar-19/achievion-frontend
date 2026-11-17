@@ -136,7 +136,7 @@ export default function ManagerProjectsPage() {
             ))}
           </div>
         </div>
-        {!archived && <FilterChips label="Status" param="status" options={STATUS} multi />}
+        {!archived && <FilterChips label="Status" param="status" options={STATUS} allLabel="All" />}
         <FilterChips label="Priority" param="priority" options={PRIORITY} multi />
       </div>
 

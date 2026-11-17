@@ -5,6 +5,7 @@ import { useState } from "react";
 import { Check, FileUp, Link2, Paperclip, X } from "lucide-react";
 import api from "@/lib/api";
 import { BTN } from "@/components/ui/buttons";
+import { stopTimerAndLog } from "@/utils/taskTimer";
 
 const ACCEPT = [".jpg", ".jpeg", ".png", ".pdf", ".zip", ".docx", ".xlsx", ".txt", ".md"];
 const MAX_FILES = 5, MAX_BYTES = 10 * 1024 * 1024;
@@ -26,6 +27,7 @@ export default function SubmitComposer({ t, kind, onCancel, onDone }) {
   const R = ROLE[kind] ?? ROLE.developer;
   const [f, setF] = useState({ link: "", branch: "", summary: "", tests: "", version: "", rationale: "", handoff: "" });
   const [criteria, setCriteria] = useState([]);
+  const [aiHelp, setAiHelp] = useState(false); // F-066: declared AI help, advice only
   const [design, setDesign] = useState([]);
   const [files, setFiles] = useState([]);
   const [errors, setErrors] = useState({});
@@ -63,10 +65,11 @@ export default function SubmitComposer({ t, kind, onCancel, onDone }) {
     setSending(true);
     const fd = new FormData();
     for (const [k, v] of Object.entries(f)) if (v.trim()) fd.append(k, v.trim());
+    fd.append("aiAssisted", String(aiHelp));
     fd.append("criteria", JSON.stringify(criteria));
     fd.append("design", JSON.stringify(design));
     files.forEach((x) => fd.append("files", x));
-    try { await api.upload(`/api/workspace/tasks/${t.id}/submit`, fd); setStep("done"); }
+    try { await stopTimerAndLog(t.id); await api.upload(`/api/workspace/tasks/${t.id}/submit`, fd); setStep("done"); }
     catch (e) {
       const field = e?.data?.field;
       setErrors(field ? { [field]: e.message } : { form: e?.message ?? "It could not be sent. Try again." });
@@ -99,6 +102,7 @@ export default function SubmitComposer({ t, kind, onCancel, onDone }) {
         <dt className="text-text-secondary">{R.textLabel}</dt><dd className="whitespace-pre-wrap [overflow-wrap:anywhere]">{f[R.text].trim() || "—"}</dd>
         {kind === "developer" && f.tests.trim() && <><dt className="text-text-secondary">Tests</dt><dd className="whitespace-pre-wrap [overflow-wrap:anywhere]">{f.tests.trim()}</dd></>}
         {kind === "designer" && f.handoff.trim() && <><dt className="text-text-secondary">Handoff note</dt><dd className="whitespace-pre-wrap [overflow-wrap:anywhere]">{f.handoff.trim()}</dd></>}
+        {aiHelp && <><dt className="text-text-secondary">AI help</dt><dd>Declared</dd></>}
         {n > 0 && <><dt className="text-text-secondary">Self-check</dt><dd className={ticked < n ? "font-semibold text-[#7A4B00]" : ""}>{ticked} of {n} criteria ticked{ticked < n ? ". You can still send it." : ""}</dd></>}
       </dl>
       <p className="text-xs text-text-secondary">{t.triesLeft > 0 ? `${t.triesLeft} ${t.triesLeft === 1 ? "try" : "tries"} left on this task after a send-back.` : ""}</p>
@@ -149,6 +153,11 @@ export default function SubmitComposer({ t, kind, onCancel, onDone }) {
           {DESIGN_CHECKLIST.map(([k, l]) => <label key={k} className="flex min-h-9 cursor-pointer items-center gap-2 rounded-lg px-1 hover:bg-ink/[0.03]"><input type="checkbox" className="h-4 w-4 accent-[var(--accent)]" checked={design.includes(k)} onChange={() => toggle(design, setDesign, k)} />{l}</label>)}
         </fieldset>
       )}
+
+      <label className="flex min-h-9 cursor-pointer items-start gap-2 text-xs text-text-primary">
+        <input type="checkbox" className="mt-0.5 h-4 w-4 shrink-0 accent-[var(--accent)]" checked={aiHelp} onChange={(e) => setAiHelp(e.target.checked)} />
+        <span><strong className="font-semibold">An AI tool helped with this work</strong><span className="block text-text-secondary">Optional. Your Team Lead sees it so the review is fair. It does not change your XP or score.</span></span>
+      </label>
 
       <div className="flex flex-wrap gap-2 border-t border-ink/[0.06] pt-4">
         <button type="submit" className={BTN.primary}>Review before sending</button>

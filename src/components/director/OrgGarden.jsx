@@ -273,12 +273,8 @@ function GardenEmpty() {
       <p className="text-[13px] text-slate-500 text-center max-w-xs">
         Your projects will grow here as your team starts working.
       </p>
-      <a
-        href="/director/projects"
-        className="mt-1 h-9 px-5 rounded-xl border border-ink/10 bg-accent text-white text-sm font-semibold flex items-center justify-center hover:opacity-90 transition-opacity"
-      >
-        Create a project
-      </a>
+      {/* QA2-63: no "Create a project" button. A Manager creates projects (D-109); the Director only watches them. */}
+      <p className="text-[12px] text-slate-400 text-center max-w-xs">Projects are created by your Managers.</p>
     </div>
   );
 }

@@ -111,7 +111,7 @@ export default function AskAchievionPage() {
     try {
       const res = await api.post("/api/director/ai/ask", { question: q, history }, { silent: true });
       reply = res.notEnoughData
-        ? { role: "ai", text: "The knowledge index is empty. Use “Refresh knowledge index” above to index your organization's data.", citations: [] }
+        ? { role: "ai", text: res.answer, citations: [] } // QA2-66: the index builds itself; "Refresh knowledge index" is only a manual extra
         : { role: "ai", text: res.answer, citations: res.citations ?? [] };
     } catch (err) {
       reply = { role: "ai", error: true, text: err?.message ?? "Something went wrong. Try again." };

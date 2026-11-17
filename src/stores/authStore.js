@@ -118,6 +118,8 @@ const useAuthStore = create(
       // ── logout ────────────────────────────────────────────────────────────
       logout: () => {
         socket.disconnect();
+        // Item 14: the chat dock's open windows belong to the person who signed in; they go with the sign-out.
+        try { for (const k of Object.keys(sessionStorage)) if (k.startsWith("achievion-chatdock:")) sessionStorage.removeItem(k); } catch { /* storage blocked */ }
         set({ user: null, token: null, viewAs: null, isAuthenticated: false, error: null, authReady: true });
       },
 

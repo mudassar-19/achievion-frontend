@@ -13,7 +13,7 @@ import api from "@/lib/api";
 import {
   LayoutDashboard, FolderKanban, Users, ClipboardCheck,
   BarChart3, ScrollText, Settings, SlidersHorizontal, User, Bell, Trophy,
-  CalendarRange, Inbox, ShieldAlert, Target, Heart, Cpu, Award, MessageSquare, Leaf,
+  CalendarRange, Inbox, ShieldAlert, Target, Heart, Cpu, Award, MessageSquare, Megaphone, Leaf,
 } from "lucide-react";
 
 function aiContext(pathname) {
@@ -67,6 +67,7 @@ export default function DirectorLayout() {
         { icon: ClipboardCheck, label: "Approvals",  to: "/director/approvals", badge: pendingCount },
         { icon: CalendarRange,  label: "Extensions", to: "/director/extensions" },
         ...(DF.voice ? [{ icon: Inbox, label: "Feedback", to: "/director/voice" }] : []),
+        { icon: Megaphone,      label: "Announcements", to: "/director/announcements" }, // item 80
         { icon: MessageSquare,  label: "Chat",       to: "/director/chat" },
         ...(DF.risks ? [{ icon: ShieldAlert, label: "Risks", to: "/director/risks" }] : []),
         ...(DF.goals ? [{ icon: Target, label: "Goals", to: "/director/goals" }] : []),

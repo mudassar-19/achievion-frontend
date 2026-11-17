@@ -4,6 +4,7 @@ import { useLayoutEffect, useRef, useState } from "react";
 import { Pencil, SmilePlus, Trash2 } from "lucide-react";
 import api from "@/lib/api";
 import useAuthStore from "@/stores/authStore";
+import { mentionCandidates, activeMention } from "@/lib/mentions";
 import ConfirmModal from "@/components/ui/ConfirmModal";
 import { BTN } from "@/components/ui/buttons";
 import { fmtDateTime } from "../../manager/project/format";
@@ -23,11 +24,9 @@ function MentionBox({ id, value, onChange, members, placeholder, rows = 2 }) {
   const caret = useRef(null);
   const [q, setQ] = useState(null); // { start, text } while typing a name
   const [idx, setIdx] = useState(0);
-  const list = q ? members.filter((m) => m.name.toLowerCase().includes(q.text.toLowerCase())).slice(0, 6) : [];
-  function track(v, pos) {
-    const m = /(^|[^\p{L}\p{N}])@([\p{L}\p{N} .'-]{0,30})$/u.exec(v.slice(0, pos));
-    setQ(m ? { start: pos - m[2].length - 1, text: m[2] } : null); setIdx(0);
-  }
+  const meId = useAuthStore((s) => s.user?.id ?? s.user?._id);
+  const list = q ? mentionCandidates(members, meId, q.text) : []; // items 73-75: prefix match, never yourself, whatever the list's id field
+  function track(v, pos) { setQ(activeMention(v, pos)); setIdx(0); }
   function pick(m) {
     const pos = ref.current.selectionStart, next = `${value.slice(0, q.start)}@${m.name} ${value.slice(pos)}`;
     caret.current = q.start + m.name.length + 2;

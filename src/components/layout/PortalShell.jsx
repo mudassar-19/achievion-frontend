@@ -83,6 +83,8 @@ function RailSection({ label, expanded }) {
 function typeLabel(type) {
   if (type === "approval_required") return "Approval request";
   if (type === "approval_result")   return "Approval result";
+  if (type === "dm_message")        return "Direct message";
+  if (type === "mention")           return "Mention";
   return type;
 }
 
@@ -311,7 +313,9 @@ function ShellTopbar({ cfg, notifSignal, railExpanded, onToggleRail, onAiToggle,
                     </div>
                   ) : (
                     notifs.slice(0, 20).map((n) => {
-                      const target = cfg.notifTarget?.(n);
+                      // Item 77: a DM or @mention notice opens that conversation in this portal's chat
+                      const chatTarget = (n.type === "dm_message" || n.type === "announcement" || (n.type === "mention" && n.meta?.channelId)) && n.deepLink?.startsWith("/") ? { to: n.deepLink } : null;
+                      const target = chatTarget ?? cfg.notifTarget?.(n);
                       async function handleClick() {
                         if (!n.read) {
                           try {

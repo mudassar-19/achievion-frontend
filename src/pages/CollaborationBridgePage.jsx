@@ -3,15 +3,20 @@
  * WhatsApp + Discord style professional collaboration for ACHIEVION.
  */
 import { useState, useEffect, useRef, useCallback } from "react";
+import { useSearchParams } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  MessageSquare, Plus, Search, X, Send, Loader2,
-  ChevronRight, ChevronDown, ArrowLeft,
-  RefreshCw, Settings, BellOff, Inbox,
+  Lock, Plus, Search, X, Loader2, PanelRightOpen,
+  RefreshCw, Settings,
 } from "lucide-react";
 import useDmPeople from "@/hooks/useDmPeople";
-import { badge, chatTitle, dmName } from "@/lib/chatFormat";
+import useMentions from "@/components/ui/useMentions";
+import { rankPeople, nextIndex } from "@/lib/mentions";
+import { chatTitle } from "@/lib/chatFormat";
+import { addPicked } from "@/lib/attachPick";
 import { ChatMessages } from "@/components/widgets/ChatMessage";
+import ChatList from "@/components/widgets/ChatList";
+import ChatComposer from "@/components/widgets/ChatComposer";
 import api from "@/lib/api";
 import socket from "@/utils/socket";
 import useAuthStore from "@/stores/authStore";
@@ -95,7 +100,7 @@ function CreateCommunityWizard({ onClose, onCreated }) {
                 <div className="flex flex-wrap gap-2">
                   {COMMUNITY_ICONS.map((em) => (
                     <button key={em} onClick={() => setIcon(em)}
-                      className={`text-xl p-1.5 rounded-lg border-2 transition-colors ${icon === em ? "border-[#4B2FC4]" : "border-transparent hover:border-ink/[0.12]"}`}>
+                      className={`text-xl p-1.5 rounded-lg border-2 transition-colors ${icon === em ? "border-accent" : "border-transparent hover:border-ink/[0.12]"}`}>
                       {em}
                     </button>
                   ))}
@@ -104,13 +109,13 @@ function CreateCommunityWizard({ onClose, onCreated }) {
               <div>
                 <label className="text-xs font-bold text-slate-600 block mb-1">Community Name *</label>
                 <input value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Design Department"
-                  className="w-full px-3 py-2 rounded-xl border border-ink/[0.12] text-sm focus:outline-none focus:ring-2 focus:ring-[#4B2FC4]/20" />
+                  className="w-full px-3 py-2 rounded-xl border border-ink/[0.12] text-sm focus:outline-none focus:ring-2 focus:ring-accent/20" />
               </div>
               <div>
                 <label className="text-xs font-bold text-slate-600 block mb-1">Description</label>
                 <textarea value={desc} onChange={(e) => setDesc(e.target.value)} rows={2}
                   placeholder="What's this community for?"
-                  className="w-full px-3 py-2 rounded-xl border border-ink/[0.12] text-sm focus:outline-none focus:ring-2 focus:ring-[#4B2FC4]/20 resize-none" />
+                  className="w-full px-3 py-2 rounded-xl border border-ink/[0.12] text-sm focus:outline-none focus:ring-2 focus:ring-accent/20 resize-none" />
               </div>
               <div>
                 <label className="text-xs font-bold text-slate-600 block mb-1">Type</label>
@@ -147,7 +152,7 @@ function CreateCommunityWizard({ onClose, onCreated }) {
                   <input value={g.desc} onChange={(e) => updateGroup(i, "desc", e.target.value)}
                     placeholder="Description (optional)" className="px-2 py-1.5 text-xs rounded-lg border border-ink/[0.12] focus:outline-none" />
                   <details>
-                    <summary className="text-[10px] text-[#4B2FC4] cursor-pointer select-none">Specific members (optional)</summary>
+                    <summary className="text-[10px] text-accent-text cursor-pointer select-none">Specific members (optional)</summary>
                     <div className="mt-2">
                       <MemberPicker selected={g.members} onChange={(sel) => updateGroup(i, "members", sel)} label="" />
                     </div>
@@ -155,7 +160,7 @@ function CreateCommunityWizard({ onClose, onCreated }) {
                 </div>
               ))}
               <button onClick={addGroup}
-                className="flex items-center gap-1.5 text-xs font-bold text-[#4B2FC4] hover:underline">
+                className="flex items-center gap-1.5 text-xs font-bold text-accent-text hover:underline">
                 <Plus size={12} /> Add Group
               </button>
             </div>
@@ -268,7 +273,7 @@ function CreateGroupModal({ community, onClose, onCreated }) {
               <label className="text-xs font-bold text-slate-600 block mb-1">Group Name *</label>
               <input value={name} onChange={(e) => setName(e.target.value)} required
                 placeholder="e.g. frontend-devs"
-                className="w-full px-3 py-2 text-sm rounded-xl border border-ink/[0.12] focus:outline-none focus:ring-1 focus:ring-[#4B2FC4]/20" />
+                className="w-full px-3 py-2 text-sm rounded-xl border border-ink/[0.12] focus:outline-none focus:ring-1 focus:ring-accent/20" />
             </div>
           </div>
           <div>
@@ -281,7 +286,7 @@ function CreateGroupModal({ community, onClose, onCreated }) {
             <div className="flex gap-2">
               {["everyone", "admins"].map((v) => (
                 <button key={v} type="button" onClick={() => setPerm(v)}
-                  className={`flex-1 py-2 rounded-xl text-xs font-bold border-2 transition-colors ${perm === v ? "border-[#4B2FC4] text-[#4B2FC4]" : "border-ink/[0.12] text-slate-500"}`}>
+                  className={`flex-1 py-2 rounded-xl text-xs font-bold border-2 transition-colors ${perm === v ? "border-accent text-accent-text" : "border-ink/[0.12] text-slate-500"}`}>
                   {v === "everyone" ? "Everyone" : "Admins Only"}
                 </button>
               ))}
@@ -292,7 +297,7 @@ function CreateGroupModal({ community, onClose, onCreated }) {
               <span className="block text-xs font-bold text-text-primary">Approve new members</span>
               <span className="block text-[11px] text-text-tertiary">Community members ask to join and an admin lets them in.</span>
             </span>
-            <input type="checkbox" role="switch" checked={joinApproval} onChange={(e) => setJoinApproval(e.target.checked)} className="mt-0.5 h-4 w-4 accent-[#4B2FC4]" />
+            <input type="checkbox" role="switch" checked={joinApproval} onChange={(e) => setJoinApproval(e.target.checked)} className="mt-0.5 h-4 w-4 accent-[var(--accent)]" />
           </label>
           <MemberPicker selected={members} onChange={setMembers} label="Add members" />
           <p className="text-[11px] text-text-tertiary">The Director and Managers are added automatically.</p>
@@ -316,6 +321,10 @@ function DmModal({ onClose, onOpen }) {
   const [q, setQ]             = useState("");
   const [results, setResults] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [hi, setHi]           = useState(0); // highlighted result (keyboard)
+  const meId = useAuthStore((s) => s.user?.id ?? s.user?._id);
+  // Item 74: prefix matches first (then names that only contain the text), never yourself.
+  const ranked = rankPeople(results.filter((u) => String(u._id) !== String(meId)), q.trim(), { contains: true });
 
   useEffect(() => {
     const timer = setTimeout(async () => {
@@ -347,14 +356,20 @@ function DmModal({ onClose, onOpen }) {
         <div className="p-4 flex flex-col gap-3">
           <div className="relative">
             <Search size={12} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-            <input value={q} onChange={(e) => setQ(e.target.value)} autoFocus placeholder="Search name or email…"
-              className="w-full pl-8 pr-3 py-2 text-sm rounded-xl border border-ink/[0.12] focus:outline-none focus:ring-1 focus:ring-[#4B2FC4]/20" />
+            <input value={q} onChange={(e) => { setQ(e.target.value); setHi(0); }} autoFocus placeholder="Search name or email…"
+              role="combobox" aria-expanded={ranked.length > 0} aria-controls="dm-results" aria-activedescendant={ranked.length ? `dm-result-${hi}` : undefined}
+              onKeyDown={(e) => {
+                if (e.key === "ArrowDown" || e.key === "ArrowUp") { e.preventDefault(); setHi((i) => nextIndex(i, e.key, ranked.length)); }
+                else if (e.key === "Enter" && ranked[hi]) { e.preventDefault(); open(ranked[hi]); }
+                else if (e.key === "Escape") { e.stopPropagation(); onClose(); }
+              }}
+              className="w-full pl-8 pr-3 py-2 text-sm rounded-xl border border-ink/[0.12] focus:outline-none focus:ring-1 focus:ring-accent/20" />
           </div>
-          <div className="flex flex-col gap-0.5 max-h-56 overflow-y-auto">
+          <div id="dm-results" role="listbox" aria-label="People" className="flex flex-col gap-0.5 max-h-56 overflow-y-auto">
             {loading && <p className="text-xs text-slate-400 text-center py-4">Searching…</p>}
-            {results.map((u) => (
-              <button key={u._id} onClick={() => open(u)}
-                className="flex items-center gap-2.5 px-3 py-2 rounded-xl hover:bg-ink/[0.06] text-left">
+            {ranked.map((u, i) => (
+              <button key={u._id} id={`dm-result-${i}`} role="option" aria-selected={i === hi} onClick={() => open(u)} onMouseEnter={() => setHi(i)}
+                className={`flex items-center gap-2.5 px-3 py-2 rounded-xl text-left ${i === hi ? "bg-ink/[0.07]" : "hover:bg-ink/[0.06]"}`}>
                 <Avatar user={u} size={28} />
                 <div className="min-w-0">
                   <p className="text-xs font-bold text-text-primary truncate" title={u.name}>{u.name}</p>
@@ -362,162 +377,11 @@ function DmModal({ onClose, onOpen }) {
                 </div>
               </button>
             ))}
-            {!loading && !results.length && <p className="text-xs text-slate-400 text-center py-4">No users found.</p>}
+            {!loading && !ranked.length && <p className="text-xs text-slate-400 text-center py-4">No users found.</p>}
           </div>
         </div>
       </motion.div>
     </motion.div>
-  );
-}
-
-// ── Hierarchical Sidebar ──────────────────────────────────────────────────────
-function CommunitySidebar({ communities, dms, personOf, activeGroupId, onSelectGroup, onSelectDm, userRole, onCreateCommunity, onCreateGroup, onRequestGroup, onOpenCommunity, onJoin, search, setSearch }) {
-  const [collapsed, setCollapsed] = useState({});
-
-  function toggle(id) { setCollapsed((s) => ({ ...s, [id]: !s[id] })); }
-
-  const canCreate = CAN_CREATE_COMMUNITY.includes(userRole);
-  const q = search.toLowerCase();
-
-  const filtered = search
-    ? communities.map((c) => ({
-        ...c,
-        groups: c.groups?.filter((g) => g.name.toLowerCase().includes(q)) ?? [],
-        joinable: c.joinable?.filter((g) => g.name.toLowerCase().includes(q)) ?? [],
-      })).filter((c) => c.name.toLowerCase().includes(q) || (c.groups?.length ?? 0) > 0 || (c.joinable?.length ?? 0) > 0)
-    : communities;
-
-  const filteredDms = dms.filter((d) => !search || dmName(personOf(d)).toLowerCase().includes(q));
-
-  return (
-    <div className="flex flex-col h-full">
-      {/* Header */}
-      <div className="px-3 pt-4 pb-3 border-b border-ink/[0.06]">
-        <div className="flex items-center justify-between mb-2.5">
-          <h2 className="text-xs font-bold text-text-primary">Communities</h2>
-          {canCreate && (
-            <button onClick={onCreateCommunity} title="New community" aria-label="New community"
-              className="p-1 rounded-lg hover:bg-[#4B2FC4]/10 text-[#4B2FC4] transition-colors">
-              <Plus size={14} />
-            </button>
-          )}
-        </div>
-        <div className="relative">
-          <Search size={11} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-text-tertiary" aria-hidden="true" />
-          <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search groups" aria-label="Search groups"
-            className="w-full pl-7 pr-3 py-1.5 text-xs rounded-lg border border-border-subtle bg-bg-surface focus:outline-none focus:ring-2 focus:ring-[#4B2FC4]/20" />
-        </div>
-      </div>
-
-      {/* List */}
-      <div className="flex-1 overflow-y-auto py-2">
-        {filtered.map((community) => {
-          const isCollapsed = collapsed[community._id];
-          const comUnread   = community.groups?.reduce((s, g) => s + (g.muted ? 0 : (g.unread ?? 0)), 0) ?? 0;
-          const pending     = community.can?.decideRequests ? (community.groupRequests ?? []).filter((r) => r.status === "pending").length : 0;
-          const addLabel    = community.can?.createGroup ? "New group" : community.can?.requestGroup ? "Request a group" : null;
-          return (
-            <div key={community._id} className="mb-1">
-              <div className="flex items-center gap-1 px-2 py-1 group">
-                <button type="button" onClick={() => toggle(community._id)} aria-expanded={!isCollapsed}
-                  className="flex flex-1 min-w-0 items-center gap-1 rounded-md py-0.5 text-left">
-                  {isCollapsed ? <ChevronRight size={11} className="text-text-tertiary shrink-0" /> : <ChevronDown size={11} className="text-text-tertiary shrink-0" />}
-                  <span className="text-sm shrink-0" aria-hidden="true">{community.icon ?? "💬"}</span>
-                  <span className="min-w-0 flex-1 text-xs font-bold text-text-primary truncate" title={community.name}>{community.name}</span>
-                </button>
-                {comUnread > 0 && isCollapsed && (
-                  <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full text-white shrink-0 tabular-nums" style={{ background: ACCENT }}>
-                    {comUnread > 99 ? "99+" : comUnread}
-                  </span>
-                )}
-                {pending > 0 && (
-                  <button type="button" onClick={() => onOpenCommunity(community, "requests")} title={`${pending} group request${pending === 1 ? "" : "s"}`}
-                    aria-label={`${pending} group requests to decide`}
-                    className="inline-flex items-center gap-0.5 rounded-full px-1.5 py-0.5 text-[10px] font-bold text-[#4B2FC4] bg-[#4B2FC4]/10 tabular-nums">
-                    <Inbox size={10} aria-hidden="true" />{pending}
-                  </button>
-                )}
-                {addLabel && (
-                  <button onClick={() => (community.can.createGroup ? onCreateGroup(community) : onRequestGroup(community))}
-                    className="opacity-60 group-hover:opacity-100 focus-visible:opacity-100 p-1 rounded hover:bg-[#4B2FC4]/10 text-[#4B2FC4] transition-opacity" title={addLabel} aria-label={`${addLabel} in ${community.name}`}>
-                    <Plus size={11} />
-                  </button>
-                )}
-                <button onClick={() => onOpenCommunity(community, "about")}
-                  className="opacity-60 group-hover:opacity-100 focus-visible:opacity-100 p-1 rounded hover:bg-ink/[0.06] text-text-secondary transition-opacity" title="Community settings" aria-label={`${community.name} settings`}>
-                  <Settings size={11} />
-                </button>
-              </div>
-              {!isCollapsed && community.groups?.map((group) => (
-                <button key={group._id} onClick={() => onSelectGroup(group, community)}
-                  className={`flex items-center gap-2 w-full px-4 py-1.5 rounded-lg text-left transition-colors text-xs ${
-                    activeGroupId === group._id ? "font-bold text-white" : "text-text-secondary hover:text-text-primary hover:bg-ink/[0.05]"
-                  }`}
-                  style={activeGroupId === group._id ? { background: ACCENT } : {}}>
-                  <span className="text-sm shrink-0" aria-hidden="true">{group.icon ?? "💬"}</span>
-                  <span className="min-w-0 flex-1 truncate" title={group.name}>{group.type === "announcement" ? "Announcements" : group.name}</span>
-                  {group.muted && <BellOff size={10} className="shrink-0 opacity-70" aria-label="Muted" />}
-                  {!group.muted && (group.unread ?? 0) > 0 && activeGroupId !== group._id && (
-                    <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full text-white shrink-0 tabular-nums" style={{ background: ACCENT }}>
-                      {group.unread > 99 ? "99+" : group.unread}
-                    </span>
-                  )}
-                </button>
-              ))}
-              {!isCollapsed && (community.joinable?.length ?? 0) > 0 && (
-                <div className="mt-1 pl-4 pr-2">
-                  <p className="text-[11px] font-semibold text-text-tertiary py-1">Other groups</p>
-                  {community.joinable.map((g) => (
-                    <div key={g._id} className="flex items-center gap-2 py-1 text-xs text-text-secondary">
-                      <span className="text-sm shrink-0 opacity-70" aria-hidden="true">{g.icon ?? "💬"}</span>
-                      <span className="min-w-0 flex-1 truncate" title={g.name}>{g.name}</span>
-                      {g.requested
-                        ? <span className="text-[11px] text-text-tertiary">Requested</span>
-                        : <button type="button" onClick={() => onJoin(g)} className="text-[11px] font-bold text-[#4B2FC4] hover:underline">{g.joinApproval ? "Ask to join" : "Join"}</button>}
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          );
-        })}
-
-        {filteredDms.length > 0 && (
-          <div className="mt-3">
-            <p className="px-3 text-xs font-bold text-text-primary mb-1">Direct messages</p>
-            {filteredDms.map((dm) => {
-              const person = personOf(dm), name = dmName(person);
-              return (
-                <button key={dm._id} onClick={() => onSelectDm(dm)} aria-current={activeGroupId === dm._id ? "true" : undefined}
-                  className={`flex items-center gap-2 w-full px-3 py-1.5 rounded-lg text-left text-xs transition-colors ${
-                    activeGroupId === dm._id ? "font-bold text-white" : "text-text-secondary hover:text-text-primary hover:bg-ink/[0.05]"
-                  }`}
-                  style={activeGroupId === dm._id ? { background: ACCENT } : {}}>
-                  <Avatar user={{ name }} size={20} />
-                  <span className="min-w-0 flex-1 truncate" title={name}>{name}</span>
-                  {(dm.unread ?? 0) > 0 && activeGroupId !== dm._id && (
-                    <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full text-white shrink-0 tabular-nums" style={{ background: ACCENT }} aria-label={`${dm.unread} unread`}>{badge(dm.unread)}</span>
-                  )}
-                </button>
-              );
-            })}
-          </div>
-        )}
-
-        {filtered.length === 0 && filteredDms.length === 0 && (
-          <p className="text-xs text-text-secondary text-center px-4 py-6">{search ? "No group or person matches this search." : "You are not in a community yet. You can still send a direct message."}</p>
-        )}
-      </div>
-
-      {/* Footer */}
-      <div className="shrink-0 p-2 border-t border-ink/[0.06]">
-        <button onClick={() => document.dispatchEvent(new CustomEvent("collab:openDm"))}
-          className="w-full flex items-center justify-center gap-1.5 py-2 rounded-lg text-xs font-semibold text-[#4B2FC4] hover:bg-[#4B2FC4]/08 border border-[#4B2FC4]/20 transition-colors"
-          style={{ background: "rgba(75,47,196,0.04)" }}>
-          <MessageSquare size={11} /> New direct message
-        </button>
-      </div>
-    </div>
   );
 }
 
@@ -546,12 +410,37 @@ export default function CollaborationBridgePage({ startWith = null }) {
   const [showGroupInfo,   setShowGroupInfo]   = useState(false);
   const [comDrawer,       setComDrawer]       = useState(null); // { id, tab }
   const [requestFor,      setRequestFor]      = useState(null);
+  // The chat list sits on the right: always there from 900 px up (can be hidden, remembered), a slide-over below that.
+  const [listHidden, setListHidden] = useState(() => { try { return localStorage.getItem("chat-list-hidden") === "1"; } catch { return false; } });
+  const [slideOver,  setSlideOver]  = useState(false);
+  // F-018: files to send. The control shows only when the server keeps files (it says so); otherwise one line explains.
+  const [files, setFiles] = useState([]);
+  const [fileErrors, setFileErrors] = useState([]);
+  const [attachStatus, setAttachStatus] = useState(null); // { enabled, maxFiles } once known
+  const fileInputRef = useRef(null);
+  useEffect(() => { api.get("/api/chat/attachments/status", { silent: true }).then(setAttachStatus).catch(() => {}); }, []);
+  const attach = {
+    on: !!attachStatus?.enabled, known: !!attachStatus, max: attachStatus?.maxFiles ?? 3, files, errors: fileErrors,
+    onPick: (e) => { const r = addPicked(files, [...e.target.files], attachStatus?.maxFiles ?? 3); setFiles(r.files); setFileErrors(r.errors); e.target.value = ""; },
+    onRemove: (i) => { setFiles((f) => f.filter((_, j) => j !== i)); setFileErrors([]); },
+  };
+  const hideList = (v) => { setListHidden(v); try { localStorage.setItem("chat-list-hidden", v ? "1" : "0"); } catch { /* not remembered */ } };
 
   const bottomRef   = useRef(null);
   const inputRef    = useRef(null);
   const typingTimer = useRef(null);
   const clientIdRef = useRef(0);
   const personOf    = useDmPeople(dms, currentId);
+
+  // Items 73-75: "@" in a group opens that group's member list (never yourself); a DM has two people, so no list.
+  const [chatMembers, setChatMembers] = useState([]);
+  useEffect(() => {
+    if (!activeGroup || activeGroup.type === "dm") { setChatMembers([]); return; } // eslint-disable-line react-hooks/set-state-in-effect
+    let live = true;
+    api.get(`/api/chat/channels/${activeGroup._id}/members`, { silent: true }).then((ms) => live && setChatMembers(ms)).catch(() => {});
+    return () => { live = false; };
+  }, [activeGroup?._id, activeGroup?.type]); // eslint-disable-line react-hooks/exhaustive-deps
+  const mention = useMentions({ value: input, setValue: setInput, inputRef, members: chatMembers, meId: currentId, listId: "chat-people" });
 
   // Load data
   const loadCommunities = useCallback(async () => {
@@ -566,6 +455,12 @@ export default function CollaborationBridgePage({ startWith = null }) {
   }, []);
 
   useEffect(() => { loadCommunities(); loadDms(); }, [loadCommunities, loadDms]);
+  // The other conversations only get an unread badge from here (their messages do not reach this page live): look again every 30 s
+  // while the tab is open, the same rhythm as the dock, so the page, the dock and the bell agree.
+  useEffect(() => {
+    const t = setInterval(() => { if (document.visibilityState === "visible") { loadCommunities(); loadDms(); } }, 30_000);
+    return () => clearInterval(t);
+  }, [loadCommunities, loadDms]);
 
   // Announcements entry (M-8): pick the first community's Announcements group and put the cursor in the composer.
   function openAnnouncements() {
@@ -581,6 +476,18 @@ export default function CollaborationBridgePage({ startWith = null }) {
     if (startWith !== "announcements" || opened.current || !communities.length) return;
     opened.current = openAnnouncements();
   }, [startWith, communities]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Item 77: a bell notice about a DM or an @mention opens that conversation (?open=<channel id>).
+  const [sp, setSp] = useSearchParams();
+  const openId = sp.get("open");
+  useEffect(() => {
+    if (!openId) return;
+    const group = communities.flatMap((c) => (c.groups ?? []).map((g) => [g, c])).find(([g]) => String(g._id) === openId);
+    const dm = dms.find((d) => String(d._id) === openId);
+    if (!group && !dm) return; // lists still loading: try again when they arrive
+    if (group) selectGroup(group[0], group[1]); else selectDm(dm);
+    const next = new URLSearchParams(sp); next.delete("open"); setSp(next, { replace: true });
+  }, [openId, communities, dms]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     const h = () => setShowDm(true);
@@ -600,6 +507,7 @@ export default function CollaborationBridgePage({ startWith = null }) {
   }, []);
 
   function selectGroup(group, community) {
+    setSlideOver(false);
     if (activeGroup?._id === group._id) return;
     if (activeGroup) socket.emit("chat:leave", { channelId: activeGroup._id });
     setActiveGroup(group);
@@ -616,6 +524,7 @@ export default function CollaborationBridgePage({ startWith = null }) {
   }
 
   function selectDm(dm) {
+    setSlideOver(false);
     if (activeGroup?._id === dm._id) return;
     if (activeGroup) socket.emit("chat:leave", { channelId: activeGroup._id });
     setActiveGroup(dm);
@@ -644,7 +553,14 @@ export default function CollaborationBridgePage({ startWith = null }) {
         if (msg.clientId && p.some((m) => m.clientId === msg.clientId)) return p;
         return [...p, msg];
       });
+      api.post(`/api/chat/channels/${gid}/read`, {}, { silent: true }).catch(() => {}); // you are looking at it: the dock and the bell must not count it
       setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: "smooth" }), 50);
+    }
+    // After a dropped connection the socket has left its rooms: join this conversation again and fetch what was missed.
+    function onConnect() {
+      if (!activeGroup) return;
+      socket.emit("chat:join", { channelId: activeGroup._id });
+      loadMessages(activeGroup._id); loadCommunities(); loadDms();
     }
     function onUpdated(msg) { setMessages((p) => p.map((m) => m._id === msg._id ? { ...m, ...msg } : m)); }
     function onDeleted({ _id }) { setMessages((p) => p.map((m) => m._id === _id ? { ...m, deletedAt: new Date().toISOString(), content: "" } : m)); }
@@ -660,7 +576,9 @@ export default function CollaborationBridgePage({ startWith = null }) {
     socket.on("chat:message_deleted", onDeleted);
     socket.on("chat:typing",          onTyping);
     socket.on("chat:stop_typing",     onStopTyping);
+    socket.on("connect",              onConnect);
     return () => {
+      socket.off("connect",              onConnect);
       socket.off("chat:new_message",     onNew);
       socket.off("chat:message_saved",   onNew);
       socket.off("chat:message_updated", onUpdated);
@@ -675,10 +593,11 @@ export default function CollaborationBridgePage({ startWith = null }) {
   }, [activeGroup?._id]);
 
   async function sendMessage() {
-    const text = input.trim();
-    if (!text || !activeGroup || sending) return;
+    const text = input.trim(), sendFiles = files;
+    if ((!text && !sendFiles.length) || !activeGroup || sending) return;
     const cid = `${currentId}-${++clientIdRef.current}-${Date.now()}`;
-    setInput("");
+    const mentions = mention.idsIn(text); mention.reset();
+    setInput(""); setFiles([]); setFileErrors([]);
     setSending(true);
     const optimistic = {
       _id: `opt-${cid}`, clientId: cid, channelId: activeGroup._id,
@@ -688,15 +607,26 @@ export default function CollaborationBridgePage({ startWith = null }) {
     setMessages((p) => [...p, optimistic]);
     setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: "smooth" }), 50);
     try {
-      await api.post(`/api/chat/channels/${activeGroup._id}/messages`, { content: text, clientId: cid });
+      const path = `/api/chat/channels/${activeGroup._id}/messages`;
+      let saved;
+      if (sendFiles.length) {
+        const fd = new FormData();
+        fd.append("content", text); fd.append("clientId", cid); fd.append("mentions", JSON.stringify(mentions));
+        sendFiles.forEach((f) => fd.append("files", f));
+        saved = await api.upload(path, fd);
+      } else saved = await api.post(path, { content: text, clientId: cid, mentions });
+      // The saved message replaces the placeholder, so it can be edited, deleted and reacted to at once (the live copy is skipped by clientId).
+      if (saved?._id) setMessages((p) => p.map((m) => (m.clientId === cid ? { ...saved, clientId: cid } : m)));
     } catch (err) {
       addToast({ type: "error", message: err?.message ?? "Failed to send." });
       setMessages((p) => p.filter((m) => m.clientId !== cid));
+      setInput(text); setFiles(sendFiles); // nothing is lost: the text and the files are back in the composer
     } finally { setSending(false); inputRef.current?.focus(); }
   }
 
   function onInputChange(e) {
     setInput(e.target.value);
+    mention.track(e.target.value, e.target.selectionStart);
     if (activeGroup) {
       socket.emit("chat:typing", { channelId: activeGroup._id });
       clearTimeout(typingTimer.current);
@@ -756,62 +686,53 @@ export default function CollaborationBridgePage({ startWith = null }) {
   const canSend = !activeGroup || activeGroup.type === "dm" || sendMode !== "admins" || isGroupAdmin
     || (activeGroup.posterIds ?? []).some((p) => String(p) === currentId);
   const drawerCommunity = comDrawer ? communities.find((c) => c._id === comDrawer.id) : null;
-  const activeTitle = activeGroup ? chatTitle(activeGroup, personOf(activeGroup)) : "";
-  const closeConversation = () => { socket.emit("chat:leave", { channelId: activeGroup?._id }); setActiveGroup(null); setMessages([]); };
+  const activeTitle = activeGroup ? chatTitle(activeGroup, personOf(activeGroup), activeCommunity?.name) : "";
+  const fullTitle = activeGroup?.type === "dm" || activeGroup?.type === "announcement" ? activeTitle : `#${activeGroup?.name ?? ""}`; // header: never shortened
+  const mentionNames = chatMembers.map((m) => m.name);
+  const showList = () => (window.matchMedia("(min-width: 900px)").matches ? hideList(false) : setSlideOver(true));
+  const listProps = {
+    communities, dms, personOf, activeGroupId: activeGroup?._id, userRole, canCreate: CAN_CREATE_COMMUNITY.includes(userRole), search, setSearch,
+    on: {
+      selectGroup, selectDm, join: handleJoin,
+      createCommunity: () => setShowCreateCom(true), createGroup: (c) => setCreateGroupFor(c), requestGroup: (c) => setRequestFor(c),
+      openCommunity: (c, tab) => setComDrawer({ id: c._id, tab }), newDm: () => setShowDm(true),
+      groupSettings: (g, c) => { selectGroup(g, c); setShowGroupInfo(true); },
+    },
+  };
 
   return (
-    <div className="flex h-full bg-bg-base overflow-hidden">
-      {/* Sidebar — under 640px the list and the conversation take turns (UI-C) */}
-      <aside className={`${activeGroup ? "hidden sm:flex" : "flex"} w-full sm:w-60 shrink-0 flex-col border-r border-ink/[0.08]`} style={{ background: "#F5F6FA" }}>
-        <CommunitySidebar
-          communities={communities}
-          dms={dms}
-          personOf={personOf}
-          activeGroupId={activeGroup?._id}
-          onSelectGroup={selectGroup}
-          onSelectDm={selectDm}
-          userRole={userRole}
-          onCreateCommunity={() => setShowCreateCom(true)}
-          onCreateGroup={(c) => setCreateGroupFor(c)}
-          onRequestGroup={(c) => setRequestFor(c)}
-          onOpenCommunity={(c, tab) => setComDrawer({ id: c._id, tab })}
-          onJoin={handleJoin}
-          search={search}
-          setSearch={setSearch}
-        />
-      </aside>
-
-      {/* Main */}
-      <div className={`${activeGroup ? "flex" : "hidden sm:flex"} flex-1 flex-col min-w-0`}>
+    <div className="relative flex h-full bg-bg-base overflow-hidden">
+      {/* Conversation (centre) */}
+      <div className="flex flex-1 flex-col min-w-0">
         {activeGroup ? (
           <>
             {/* Header */}
-            <div className="flex items-center gap-3 px-3 sm:px-5 py-3 shrink-0 border-b border-ink/[0.08]"
+            <div className="flex items-center gap-3 px-3 sm:px-5 py-2.5 shrink-0 border-b border-ink/[0.08]"
               style={{ background: "#F5F6FA" }}>
-              <button type="button" onClick={closeConversation} aria-label="Back to conversations"
-                className="sm:hidden flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-text-secondary hover:bg-ink/[0.06]">
-                <ArrowLeft size={16} aria-hidden="true" />
-              </button>
               {activeGroup.type === "dm"
-                ? <Avatar user={{ name: activeTitle }} size={30} />
-                : <span className="text-lg shrink-0" aria-hidden="true">{activeGroup.icon ?? "💬"}</span>}
+                ? <Avatar user={personOf(activeGroup) ?? { name: activeTitle }} size={34} />
+                : <span className="text-xl shrink-0" aria-hidden="true">{activeGroup.type === "announcement" ? "📢" : activeGroup.icon ?? "💬"}</span>}
               <div className="flex-1 min-w-0">
-                <h1 className="text-sm font-bold text-text-primary truncate" title={activeTitle}>{activeTitle}</h1>
+                <h1 tabIndex={0} title={fullTitle} className="max-h-[4.5rem] overflow-y-auto text-base font-bold leading-snug text-text-primary break-words [overflow-wrap:anywhere]">{fullTitle}</h1>
                 {activeCommunity && (
-                  <p className="text-[11px] text-text-tertiary truncate" title={activeCommunity.name}>{activeCommunity.icon} {activeCommunity.name}</p>
+                  <p className="max-h-10 overflow-y-auto text-xs text-text-tertiary break-words [overflow-wrap:anywhere]">{activeCommunity.icon} {activeCommunity.name}</p>
                 )}
-                {activeGroup.type === "dm" && <p className="text-[11px] text-text-tertiary truncate">{personOf(activeGroup)?.role ?? "Direct message"}</p>}
+                {activeGroup.type === "dm" && <p className="text-xs text-text-tertiary truncate">{personOf(activeGroup)?.role ?? "Direct message"}</p>}
               </div>
               {activeGroup.type !== "dm" && (
-                <button onClick={() => setShowGroupInfo(true)} aria-label="Group settings"
-                  className="shrink-0 px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors flex items-center gap-1.5 text-text-secondary hover:bg-ink/[0.06]">
-                  <Settings size={14} aria-hidden="true" /> <span className="hidden sm:inline">Group settings</span>
+                <button type="button" onClick={() => setShowGroupInfo(true)} aria-label="Group settings" title="Group settings"
+                  className="shrink-0 min-h-9 px-3 rounded-lg text-sm font-semibold transition-colors flex items-center gap-1.5 text-text-secondary border border-border-subtle hover:bg-ink/[0.06]">
+                  <Settings size={16} aria-hidden="true" /> <span className="hidden min-[480px]:inline">Group settings</span>
                 </button>
               )}
+              <button type="button" onClick={showList} aria-label="Show chat list" title="Show chat list"
+                className={`${listHidden ? "flex" : "flex min-[900px]:hidden"} shrink-0 min-h-9 px-3 rounded-lg text-sm font-semibold items-center gap-1.5 text-text-secondary border border-border-subtle hover:bg-ink/[0.06]`}>
+                <PanelRightOpen size={16} aria-hidden="true" /> <span className="hidden min-[480px]:inline">Chats</span>
+              </button>
             </div>
 
             {/* Messages */}
-            <div className="flex-1 overflow-y-auto pb-3">
+            <div className="flex-1 overflow-y-auto pb-3" role="log" aria-live="polite" aria-label="Messages">
               {!msgLoading && messages.length === 0 && (
                 <p className="px-6 py-12 text-center text-sm text-text-secondary">
                   {!canSend ? "No announcements here yet." : activeGroup.type === "dm" ? `No messages with ${activeTitle} yet. Write the first one below.` : "No messages in this group yet. Write the first one below."}
@@ -823,14 +744,14 @@ export default function CollaborationBridgePage({ startWith = null }) {
               {hasMore && (
                 <div className="flex justify-center py-2">
                   <button onClick={() => loadMessages(activeGroup._id, messages[0]?.createdAt)} disabled={msgLoading}
-                    className="flex items-center gap-1.5 text-xs text-[#4B2FC4] hover:underline disabled:opacity-40">
+                    className="flex items-center gap-1.5 text-xs text-accent-text hover:underline disabled:opacity-40">
                     {msgLoading ? <Loader2 size={12} className="animate-spin" /> : <RefreshCw size={12} />}
                     Load earlier
                   </button>
                 </div>
               )}
               <ChatMessages messages={messages} currentUserId={currentId} isGroupAdmin={isGroupAdmin}
-                onEdit={handleEdit} onDelete={handleDelete} onPin={handlePin} onReact={handleReact} />
+                names={mentionNames} onEdit={handleEdit} onDelete={handleDelete} onPin={handlePin} onReact={handleReact} />
               {typingUsers.length > 0 && (
                 <p className="px-4 py-1 text-[11px] text-slate-400 italic">
                   {typingUsers.map((u) => u.name).join(", ")} {typingUsers.length === 1 ? "is" : "are"} typing…
@@ -842,28 +763,26 @@ export default function CollaborationBridgePage({ startWith = null }) {
             {/* Composer */}
             <div className="shrink-0 px-4 py-3 border-t border-ink/[0.08]" style={{ background: "#F5F6FA" }}>
               {!canSend ? (
-                <p className="text-xs text-text-tertiary text-center py-1.5">Only admins{activeGroup.type === "announcement" ? ", and people they allow," : ""} can post here.</p>
-              ) : (
-                <div className="flex items-end gap-2 rounded-xl px-3 py-2"
-                  style={{ border: "1px solid rgba(75,47,196,0.18)", background: "white" }}>
-                  <textarea ref={inputRef} value={input} onChange={onInputChange} rows={1}
-                    onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendMessage(); } }}
-                    aria-label={activeGroup.type === "announcement" ? "Write an announcement" : "Message"}
-                    placeholder={activeGroup.type === "announcement" ? "Write an announcement for everyone in this community…" : `Message ${activeTitle}`}
-                    maxLength={2000}
-                    className="min-w-0 flex-1 bg-transparent text-sm text-text-primary placeholder:text-slate-400 focus:outline-none resize-none max-h-32"
-                    style={{ lineHeight: "1.5" }} />
-                  <button onClick={sendMessage} disabled={sending || !input.trim()} aria-label={activeGroup.type === "announcement" ? "Post announcement" : "Send message"}
-                    className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0 disabled:opacity-30"
-                    style={{ background: ACCENT }}>
-                    {sending ? <Loader2 size={14} className="animate-spin text-white" /> : <Send size={14} strokeWidth={2} className="text-white" />}
-                  </button>
+                <div className="flex items-center gap-2 rounded-xl border border-dashed border-border-subtle bg-bg-surface/60 px-3 py-2.5 text-text-tertiary" aria-live="polite">
+                  <Lock size={14} aria-hidden="true" />
+                  <textarea disabled rows={1} aria-label="Composer (read only)" placeholder={activeGroup.type === "announcement" ? "Write an announcement…" : "Write a message…"} className="min-w-0 flex-1 resize-none bg-transparent text-sm placeholder:text-text-tertiary" />
                 </div>
+              ) : (
+                <ChatComposer input={input} onChange={onInputChange} onSend={sendMessage} sending={sending} mention={mention} inputRef={inputRef}
+                  names={mentionNames} canMention={activeGroup.type !== "dm"} attach={attach} fileInputRef={fileInputRef}
+                  label={activeGroup.type === "announcement" ? "Write an announcement" : "Message"}
+                  placeholder={activeGroup.type === "announcement" ? "Write an announcement for everyone in this community…" : `Message ${activeTitle}`}
+                  sendLabel={activeGroup.type === "announcement" ? "Post announcement" : "Send message"} />
               )}
+              {!canSend && <p className="mt-1.5 text-center text-xs text-text-tertiary">Only admins{activeGroup.type === "announcement" ? ", and people they allow," : ""} can post here.</p>}
             </div>
           </>
         ) : (
-          <div className="flex-1 flex items-center justify-center px-8">
+          <div className="flex-1 flex flex-col items-center justify-center gap-4 px-8">
+            <button type="button" onClick={showList}
+              className={`${listHidden ? "flex" : "flex min-[900px]:hidden"} min-h-10 items-center gap-2 rounded-lg border border-border-subtle px-4 text-sm font-semibold text-text-secondary hover:bg-ink/[0.06]`}>
+              <PanelRightOpen size={16} aria-hidden="true" /> Open chat list
+            </button>
             {communities.length === 0 ? (
               <EmptyState pose="thinking" heading="No communities yet"
                 body={CAN_CREATE_COMMUNITY.includes(userRole) ? "Create a community for a project or team. It comes with an Announcements group." : "When a Manager adds you to a community, its groups show up here. You can still send a direct message."}
@@ -876,6 +795,23 @@ export default function CollaborationBridgePage({ startWith = null }) {
           </div>
         )}
       </div>
+
+      {/* Chat list (right): a column from 900 px, a slide-over below */}
+      {!listHidden && (
+        <aside aria-label="Chat list" className="hidden w-[340px] shrink-0 border-l border-ink/[0.08] min-[900px]:block xl:w-[360px]" style={{ background: "#F5F6FA" }}>
+          <ChatList {...listProps} onHide={() => hideList(true)} />
+        </aside>
+      )}
+      {slideOver && (
+        <div className="absolute inset-0 z-40 min-[900px]:hidden" role="dialog" aria-modal="true" aria-label="Chat list"
+          onKeyDown={(e) => { if (e.key === "Escape") setSlideOver(false); }}>
+          <button type="button" aria-label="Close chat list" className="absolute inset-0 bg-ink/40" onClick={() => setSlideOver(false)} tabIndex={-1} />
+          <motion.aside initial={{ x: 40, opacity: 0 }} animate={{ x: 0, opacity: 1 }} transition={{ duration: 0.18 }}
+            className="absolute inset-y-0 right-0 w-[min(360px,92vw)] border-l border-ink/[0.08] shadow-2xl motion-reduce:!transform-none" style={{ background: "#F5F6FA" }}>
+            <ChatList {...listProps} onClose={() => setSlideOver(false)} />
+          </motion.aside>
+        </div>
+      )}
 
       <GroupSettingsDrawer
         groupId={activeGroup && activeGroup.type !== "dm" ? activeGroup._id : null}

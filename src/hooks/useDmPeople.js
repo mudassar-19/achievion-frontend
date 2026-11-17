@@ -11,12 +11,12 @@ export default function useDmPeople(dms, meId) {
   useEffect(() => {
     for (const d of dms) {
       const id = String(d._id);
-      if (d._dmTarget || asked.current.has(id)) continue;
+      if (d._dmTarget || d.dm !== undefined || asked.current.has(id)) continue; // item 76: the channel list already names the other person (d.dm; null = account gone)
       asked.current.add(id);
       api.get(`/api/chat/channels/${id}/members`, { silent: true })
         .then((ms) => setPeople((p) => ({ ...p, [id]: ms.find((m) => String(m._id) !== String(meId)) ?? null })))
         .catch(() => setPeople((p) => ({ ...p, [id]: null })));
     }
   }, [dms, meId]);
-  return useCallback((dm) => dm?._dmTarget ?? people[String(dm?._id)], [people]);
+  return useCallback((dm) => dm?._dmTarget ?? (dm?.dm !== undefined ? dm.dm : people[String(dm?._id)]), [people]);
 }

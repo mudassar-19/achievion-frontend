@@ -8,7 +8,7 @@ import useUiStore from "@/stores/uiStore";
 import Drawer from "@/components/ui/Drawer";
 import ConfirmModal from "@/components/ui/ConfirmModal";
 
-export const ACCENT = "#4B2FC4";
+export const ACCENT = "var(--accent)"; // the role's accent (green Developer, purple Director, ...), D-550
 
 export function Avatar({ user, size = 28 }) {
   const initial = (user?.name ?? "?").charAt(0).toUpperCase();
@@ -45,19 +45,19 @@ export function MemberPicker({ selected, onChange, label = "Add members", exclud
       <div className="relative">
         <Search size={12} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-text-tertiary" aria-hidden="true" />
         <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search by name or role" aria-label="Search people"
-          className="w-full pl-7 pr-3 py-2 text-xs rounded-xl border border-border-subtle bg-bg-surface focus:outline-none focus:ring-2 focus:ring-[#4B2FC4]/25" />
+          className="w-full pl-7 pr-3 py-2 text-xs rounded-xl border border-border-subtle bg-bg-surface focus:outline-none focus:ring-2 focus:ring-accent/25" />
       </div>
       <div className="max-h-48 overflow-y-auto rounded-xl border border-border-subtle p-1 flex flex-col gap-0.5">
         {loading && <p className="text-xs text-text-tertiary text-center py-3">Searching…</p>}
         {!loading && shown.map((u) => (
           <button key={u._id} type="button" onClick={() => toggle(u)} aria-pressed={selectedIds.has(u._id)}
-            className={`flex items-center gap-2 px-2 py-1.5 rounded-lg text-left transition-colors ${selectedIds.has(u._id) ? "bg-[#4B2FC4]/10" : "hover:bg-ink/[0.05]"}`}>
+            className={`flex items-center gap-2 px-2 py-1.5 rounded-lg text-left transition-colors ${selectedIds.has(u._id) ? "bg-accent/10" : "hover:bg-ink/[0.05]"}`}>
             <Avatar user={u} size={22} />
             <span className="flex-1 min-w-0">
               <span className="block text-xs font-semibold text-text-primary truncate">{u.name}</span>
               <span className="block text-[11px] text-text-tertiary truncate">{u.role}{u.department ? ` · ${u.department}` : ""}</span>
             </span>
-            {selectedIds.has(u._id) && <Check size={12} className="text-[#4B2FC4] shrink-0" aria-hidden="true" />}
+            {selectedIds.has(u._id) && <Check size={12} className="text-accent-text shrink-0" aria-hidden="true" />}
           </button>
         ))}
         {!loading && !shown.length && <p className="text-xs text-text-tertiary text-center py-3">No one found.</p>}
@@ -85,7 +85,7 @@ function Choice({ label, value, onChange, options, disabled, note }) {
       <div className="flex gap-2">
         {options.map(([v, text]) => (
           <button key={v} type="button" onClick={() => onChange(v)} aria-pressed={value === v}
-            className={`flex-1 py-2 rounded-xl text-xs font-bold border-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${value === v ? "border-[#4B2FC4] text-[#4B2FC4] bg-[#4B2FC4]/[0.04]" : "border-border-subtle text-text-secondary hover:border-[#4B2FC4]/40"}`}>
+            className={`flex-1 py-2 rounded-xl text-xs font-bold border-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${value === v ? "border-accent text-accent-text bg-accent/[0.04]" : "border-border-subtle text-text-secondary hover:border-accent/40"}`}>
             {text}
           </button>
         ))}
@@ -103,7 +103,7 @@ function Toggle({ label, hint, checked, onChange }) {
         {hint && <span className="block text-[11px] text-text-tertiary leading-relaxed mt-0.5">{hint}</span>}
       </span>
       <input type="checkbox" role="switch" checked={checked} onChange={(e) => onChange(e.target.checked)}
-        className="mt-0.5 h-4 w-4 shrink-0 accent-[#4B2FC4]" />
+        className="mt-0.5 h-4 w-4 shrink-0 accent-[var(--accent)]" />
     </label>
   );
 }
@@ -182,11 +182,11 @@ export function GroupSettingsDrawer({ groupId, open, onClose, onChanged, onLeft 
                 <form className="flex flex-col gap-3" onSubmit={(e) => { e.preventDefault(); act(() => api.patch(`/api/chat/channels/${g._id}/settings`, { name: form.name, description: form.description }), "Group info saved."); }}>
                   <label className="text-xs font-bold text-text-primary">Group name
                     <input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} maxLength={60}
-                      className="mt-1 w-full px-3 py-2 text-sm rounded-xl border border-border-subtle bg-bg-surface font-normal focus:outline-none focus:ring-2 focus:ring-[#4B2FC4]/25" />
+                      className="mt-1 w-full px-3 py-2 text-sm rounded-xl border border-border-subtle bg-bg-surface font-normal focus:outline-none focus:ring-2 focus:ring-accent/25" />
                   </label>
                   <label className="text-xs font-bold text-text-primary">Description
                     <textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} rows={2} maxLength={300}
-                      className="mt-1 w-full px-3 py-2 text-sm rounded-xl border border-border-subtle bg-bg-surface font-normal resize-none focus:outline-none focus:ring-2 focus:ring-[#4B2FC4]/25" />
+                      className="mt-1 w-full px-3 py-2 text-sm rounded-xl border border-border-subtle bg-bg-surface font-normal resize-none focus:outline-none focus:ring-2 focus:ring-accent/25" />
                   </label>
                   <button type="submit" disabled={busy || !form.name?.trim()} className={`${PRIMARY} self-start`} style={{ background: ACCENT }}>Save info</button>
                 </form>
@@ -250,7 +250,7 @@ export function GroupSettingsDrawer({ groupId, open, onClose, onChanged, onLeft 
                         ? <IconBtn label={`Remove admin rights from ${m.name}`} onClick={() => act(() => api.delete(`/api/chat/channels/${g._id}/admins/${m._id}`))}><ShieldOff size={14} /></IconBtn>
                         : <IconBtn label={`Make ${m.name} a group admin`} onClick={() => act(() => api.post(`/api/chat/channels/${g._id}/admins`, { userId: m._id }), `${m.name} is now an admin.`)}><Shield size={14} /></IconBtn>)}
                       {can.manage && adminsOnly && !m.isAdmin && (
-                        <IconBtn label={m.canPost ? `Stop ${m.name} posting` : `Let ${m.name} post`} tone={m.canPost ? "text-[#4B2FC4]" : undefined}
+                        <IconBtn label={m.canPost ? `Stop ${m.name} posting` : `Let ${m.name} post`} tone={m.canPost ? "text-accent-text" : undefined}
                           onClick={() => act(() => m.canPost ? api.delete(`/api/chat/channels/${g._id}/posters/${m._id}`) : api.post(`/api/chat/channels/${g._id}/posters`, { userId: m._id }))}>
                           <Megaphone size={14} />
                         </IconBtn>)}
@@ -335,11 +335,11 @@ export function CommunitySettingsDrawer({ community, open, onClose, onChanged, i
                 <form className="flex flex-col gap-3" onSubmit={(e) => { e.preventDefault(); act(() => api.patch(`/api/communities/${cid}`, form), "Community info saved."); }}>
                   <label className="text-xs font-bold text-text-primary">Community name
                     <input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} maxLength={60}
-                      className="mt-1 w-full px-3 py-2 text-sm rounded-xl border border-border-subtle bg-bg-surface font-normal focus:outline-none focus:ring-2 focus:ring-[#4B2FC4]/25" />
+                      className="mt-1 w-full px-3 py-2 text-sm rounded-xl border border-border-subtle bg-bg-surface font-normal focus:outline-none focus:ring-2 focus:ring-accent/25" />
                   </label>
                   <label className="text-xs font-bold text-text-primary">Description
                     <textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} rows={2} maxLength={300}
-                      className="mt-1 w-full px-3 py-2 text-sm rounded-xl border border-border-subtle bg-bg-surface font-normal resize-none focus:outline-none focus:ring-2 focus:ring-[#4B2FC4]/25" />
+                      className="mt-1 w-full px-3 py-2 text-sm rounded-xl border border-border-subtle bg-bg-surface font-normal resize-none focus:outline-none focus:ring-2 focus:ring-accent/25" />
                   </label>
                   <button type="submit" disabled={busy || !form.name.trim()} className={`${PRIMARY} self-start`} style={{ background: ACCENT }}>Save info</button>
                 </form>
@@ -441,11 +441,11 @@ export function RequestGroupDrawer({ community, open, onClose, onSent }) {
           <p className="text-sm text-text-secondary leading-relaxed">Ask for a new group in <b className="text-text-primary">{community.name}</b>. A Manager or Team Lead approves it, and you are added once it's made.</p>
           <label className="text-xs font-bold text-text-primary">Group name
             <input value={name} onChange={(e) => setName(e.target.value)} maxLength={60} required placeholder="e.g. api-testing"
-              className="mt-1 w-full px-3 py-2 text-sm rounded-xl border border-border-subtle bg-bg-surface font-normal focus:outline-none focus:ring-2 focus:ring-[#4B2FC4]/25" />
+              className="mt-1 w-full px-3 py-2 text-sm rounded-xl border border-border-subtle bg-bg-surface font-normal focus:outline-none focus:ring-2 focus:ring-accent/25" />
           </label>
           <label className="text-xs font-bold text-text-primary">What is it for?
             <textarea value={why} onChange={(e) => setWhy(e.target.value)} rows={3} maxLength={300} placeholder="One or two lines for the approver"
-              className="mt-1 w-full px-3 py-2 text-sm rounded-xl border border-border-subtle bg-bg-surface font-normal resize-none focus:outline-none focus:ring-2 focus:ring-[#4B2FC4]/25" />
+              className="mt-1 w-full px-3 py-2 text-sm rounded-xl border border-border-subtle bg-bg-surface font-normal resize-none focus:outline-none focus:ring-2 focus:ring-accent/25" />
           </label>
           <button type="submit" disabled={busy || !name.trim()} className={`${PRIMARY} self-start`} style={{ background: ACCENT }}>{busy ? "Sending…" : "Send request"}</button>
         </form>

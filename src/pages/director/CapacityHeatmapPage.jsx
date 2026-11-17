@@ -9,9 +9,10 @@ const ACCENT = "#4B2FC4";
 
 function cellColor(pct) {
   if (pct == null) return "#F1F3F9";
+  // One tier set everywhere (RND-03): Free <= 40, Moderate <= 80, Busy <= 100, Critical > 100.
   if (pct > 100) return "#B01F1730";
   if (pct > 80)  return "#D4A01730";
-  if (pct > 50)  return "#0E6A3020";
+  if (pct > 40)  return "#0E6A3020";
   return "#4B2FC415";
 }
 function cellTextColor(pct) {
@@ -47,6 +48,7 @@ export default function CapacityHeatmapPage() {
     setRebalancing(true);
     try {
       const d = await api.post("/api/director/ai/rebalance", { data });
+      if (!d.suggestion) { showToast(d.reason ?? "Nothing to rebalance."); return; } // QA2-20: no AI call when there is nothing to move
       setRebalance({ suggestion: d.suggestion, note: d.suggestion });
       setSendNote(d.suggestion);
     } catch (e) {
@@ -144,10 +146,10 @@ export default function CapacityHeatmapPage() {
           </div>
           <div className="flex gap-4 mt-3 flex-wrap">
             {[
-              { label: "≤ 50%",  bg: "#4B2FC415", color: "#0E6A30" },
-              { label: "51–80%", bg: "#0E6A3020", color: "#0E6A30" },
-              { label: "81–100%",bg: "#D4A01730", color: "#7A5200" },
-              { label: "> 100%", bg: "#B01F1730", color: "#B01F17" },
+              { label: "Free (up to 40%)",        bg: "#4B2FC415", color: "#0E6A30" },
+              { label: "Moderate (41–80%)",       bg: "#0E6A3020", color: "#0E6A30" },
+              { label: "Busy (81–100%)",          bg: "#D4A01730", color: "#7A5200" },
+              { label: "Critical (over 100%)",    bg: "#B01F1730", color: "#B01F17" },
             ].map((s) => (
               <div key={s.label} className="flex items-center gap-1.5 text-[11px] font-semibold" style={{ color: s.color }}>
                 <span className="h-3 w-6 rounded" style={{ background: s.bg }} />

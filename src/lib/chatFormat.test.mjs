@@ -1,7 +1,7 @@
 // Checks for the pure chat helpers (UI-C). Run: node --test client/src/lib/chatFormat.test.mjs
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { dmName, chatTitle, chatTime, dayLabel, sameRun, canPostIn, unreadTotal, badge } from "./chatFormat.js";
+import { dmName, chatTitle, groupName, chatTime, dayLabel, sameRun, canPostIn, unreadTotal, badge } from "./chatFormat.js";
 
 test("a DM is named after the other person, never after an id", () => {
   assert.equal(dmName({ name: "Sara Malik" }), "Sara Malik");
@@ -56,4 +56,13 @@ test("unread: muted conversations do not count; the badge stops at 99+", () => {
   assert.equal(badge(0), "");
   assert.equal(badge(7), "7");
   assert.equal(badge(120), "99+");
+});
+
+test("group names drop the project slug the community already shows", () => {
+  const c = "Habib Grocers Online Store";
+  assert.equal(groupName("habib-grocers-online-store-general", c), "general");
+  assert.equal(groupName("habib-grocers-online-store", c), "habib-grocers-online-store"); // nothing left: keep
+  assert.equal(groupName("frontend-devs", c), "frontend-devs");
+  assert.equal(groupName("general", undefined), "general");
+  assert.equal(chatTitle({ type: "custom", name: "habib-grocers-online-store-random" }, undefined, c), "#random");
 });

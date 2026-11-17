@@ -2,10 +2,12 @@
 // other people's on the left with avatar and name. Message text is printed as text, never as HTML.
 // Actions (react, edit, delete, pin) show only when their handler is passed.
 import { useEffect, useRef, useState } from "react";
-import { Pencil, Pin, SmilePlus, Trash2 } from "lucide-react";
+import { Paperclip, Pencil, Pin, SmilePlus, Trash2 } from "lucide-react";
+import FileLink from "@/components/ui/FileLink";
 import useAuthStore from "@/stores/authStore";
 import { chatTime, dayLabel, sameDay, sameRun } from "@/lib/chatFormat";
 import { Avatar } from "./ChatSettingsDrawers";
+import { MentionText } from "./ChatComposer";
 
 const REACTIONS = ["👍", "❤️", "😂", "🎉", "😮", "🙏"]; // same set as the server
 const ICON_BTN = "flex h-7 w-7 items-center justify-center rounded-lg text-text-secondary hover:bg-ink/[0.07] hover:text-text-primary";
@@ -49,7 +51,7 @@ export function ChatMessages({ messages, ...rest }) {
   });
 }
 
-export default function ChatMessage({ msg, prev, currentUserId, isGroupAdmin, onEdit, onDelete, onPin, onReact }) {
+export default function ChatMessage({ msg, prev, currentUserId, isGroupAdmin, names, onEdit, onDelete, onPin, onReact }) {
   const prefs = useAuthStore((s) => s.user?.settings?.preferences);
   const timeOpts = { timeZone: prefs?.timezone || undefined, hour12: prefs?.timeFormat !== "24h" };
   const [picker, setPicker] = useState(false);
@@ -91,11 +93,24 @@ export default function ChatMessage({ msg, prev, currentUserId, isGroupAdmin, on
             <button type="button" onClick={saveEdit} className="text-xs font-bold text-accent-text">Save</button>
             <button type="button" onClick={() => setEditing(false)} className="text-xs text-text-secondary">Cancel</button>
           </div>
-        ) : (
+        ) : !msg.content && msg.attachments?.length ? null : (
           <p title={grouped ? when : undefined}
             className={`max-w-full whitespace-pre-wrap rounded-2xl px-3 py-2 text-sm leading-relaxed text-text-primary [overflow-wrap:anywhere] ${isMe ? "rounded-tr-md bg-accent-tint" : "rounded-tl-md bg-ink/[0.05]"} ${saved ? "" : "opacity-60"}`}>
-            {msg.content}
+            <MentionText text={msg.content} names={names} />
           </p>
+        )}
+        {!isDeleted && (msg.attachments?.length ?? 0) > 0 && (
+          <ul className={`mt-1 flex max-w-full flex-col gap-1 ${isMe ? "items-end" : "items-start"}`} aria-label="Attachments">
+            {msg.attachments.map((a) => (
+              <li key={a.url} className="max-w-full">
+                <FileLink href={a.url} className="inline-flex max-w-full items-center gap-1.5 rounded-lg border border-border-subtle bg-bg-surface px-2.5 py-1.5 text-xs font-semibold text-accent-text hover:bg-ink/[0.04]" title={a.originalName}>
+                  <Paperclip size={13} className="shrink-0" aria-hidden="true" />
+                  <span className="min-w-0 truncate">{a.originalName}</span>
+                  <span className="shrink-0 font-normal tabular-nums text-text-tertiary">{Math.max(1, Math.round((a.sizeBytes ?? 0) / 1024))} KB</span>
+                </FileLink>
+              </li>
+            ))}
+          </ul>
         )}
         {(msg.editedAt || msg.isPinned) && !isDeleted && (
           <p className="mt-0.5 flex items-center gap-1.5 text-[11px] text-text-tertiary">

@@ -110,7 +110,7 @@ const TLReviewQueuePage = lazy(() => import("@/pages/teamlead/TLReviewQueuePage"
 const TLReviewPage = lazy(() => import("@/pages/teamlead/TLReviewPage")); // T-4: replaces TeamLeadTaskReviewPage (file kept, unrouted)
 const TLPerformancePage = lazy(() => import("@/pages/teamlead/TLPerformancePage"));
 const TLMyStatsPage = lazy(() => import("@/pages/teamlead/TLMyStatsPage"));
-const TLAnnouncementsPage = lazy(() => import("@/pages/teamlead/TLAnnouncementsPage"));
+const AnnouncementsFeed = lazy(() => import("@/components/widgets/AnnouncementsFeed")); // items 79/80: one feed for every portal
 const TeamLeadGamificationHubPage = lazy(() => import("@/pages/teamlead/TeamLeadGamificationHubPage"));
 const TeamLeadBadgesPage = lazy(() => import("@/pages/teamlead/TeamLeadBadgesPage"));
 const TeamLeadAvatarPage = lazy(() => import("@/pages/teamlead/TeamLeadAvatarPage"));
@@ -274,7 +274,7 @@ const router = createBrowserRouter([{
               { path: "shop",          element: <S><ShopPage /></S>            }, // E-7 (D-243)
               { path: "inventory",     element: <S><InventoryPage /></S>       }, // E-7 (D-244)
               { path: "achievements",  element: <S><BadgesPage /></S>         }, // titles join in E-6
-              { path: "announcements", element: <S><CollaborationBridgePage key="announcements" startWith="announcements" /></S> },
+              { path: "announcements", element: <S><AnnouncementsFeed /></S> },
               { path: "badges",        element: <Navigate to="/workspace/achievements" replace /> },
               { path: "avatar",        element: <S><AvatarPage /></S>              },
               { path: "sprint",        element: <Navigate to="/workspace/tasks" replace /> }, // sprint view comes in E-2
@@ -345,7 +345,7 @@ const router = createBrowserRouter([{
               { path: "anomalies",        element: <S><ManagerAnomaliesPage /></S> },
               { path: "leaderboard",      element: <S><LeaderboardPage /></S>   },
               { path: "chat",             element: <S><CollaborationBridgePage /></S> },
-              { path: "announcements",    element: <S><CollaborationBridgePage key="announcements" startWith="announcements" /></S> },
+              { path: "announcements",    element: <S><AnnouncementsFeed /></S> },
               { path: "sprints",          element: <S><ManagerSprintsPage /></S> },
               { path: "sprints/:id",      element: <S><ManagerSprintPage /></S>  },
               // M-6: Insights → Reports. The old workspace ReportsPage file stays (not routed for Managers).
@@ -387,7 +387,7 @@ const router = createBrowserRouter([{
               { path: "sprints/:id",      element: <S><TLSprintPage /></S>             },
               { path: "performance",      element: <S><TLPerformancePage /></S>        }, // T-5 (D-144)
               { path: "my-stats",         element: <S><TLMyStatsPage /></S>            }, // T-5 (D-145)
-              { path: "announcements",    element: <S><TLAnnouncementsPage /></S>      }, // T-5 (D-146)
+              { path: "announcements",    element: <S><AnnouncementsFeed /></S>      }, // T-5 (D-146), now the shared feed
               { path: "analytics",        element: <Navigate to="/teamlead/performance" replace /> }, // old page kept, unrouted
               { path: "activity",         element: <Navigate to="/teamlead/performance?tab=activity" replace /> }, // old page kept, unrouted
               { path: "leaderboard",      element: <S><LeaderboardPage /></S>  }, // U-1 (D-133): one shared leaderboard
@@ -417,6 +417,7 @@ const router = createBrowserRouter([{
               { index: true,              element: <S><DirectorDashboard /></S>           },
               { path: "garden",           element: <S><ProgressGardenPage /></S>          },
               { path: "approvals",        element: <S><ApprovalQueuePage /></S>           },
+              { path: "announcements",    element: <S><AnnouncementsFeed /></S>           }, // item 80: the Director reads and posts here
               { path: "analytics",        element: <S><TeamAnalyticsPage /></S>           },
               { path: "roles",            element: <S><UserRolesPage /></S>               },
               { path: "projects",         element: <S><ProjectManagementPage /></S>       },
