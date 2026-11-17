@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { fmtDate as dateStd } from "@/lib/dates";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Zap, Loader2, ChevronRight, CheckCircle2, Circle, Clock,
@@ -41,7 +42,7 @@ const KANBAN_COLS = ["To-Do", "In-Progress", "In-Review", "Done"];
 
 function fmtDate(d) {
   if (!d) return "—";
-  return new Date(d).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+  return dateStd(d);
 }
 
 function daysLeft(d) {

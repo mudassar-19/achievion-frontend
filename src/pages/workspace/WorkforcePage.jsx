@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { roleLabel } from "@/lib/roleLabel";
 import { hpColor } from "@/utils/hpTier";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -96,7 +97,7 @@ function EmployeeCard({ member, accent }) {
           </div>
           <div className="flex-1 min-w-0">
             <p className="text-sm font-black text-text-primary truncate">{member.name}</p>
-            <p className="text-[14px] text-slate-500 truncate">{member.role}</p>
+            <p className="text-[14px] text-slate-500 truncate">{roleLabel(member)}</p>
             {member.department && (
               <p className="text-[14px] text-slate-600 truncate">{member.department}</p>
             )}

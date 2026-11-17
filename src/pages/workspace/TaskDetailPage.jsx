@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { fmtDate as dateStd } from "@/lib/dates";
 import { useParams, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -90,9 +91,7 @@ export default function TaskDetailPage() {
 
   const priorityColor = PRIORITY_COLOR[task.priority] ?? PRIORITY_COLOR.Low;
   const dueDate = task.deadline
-    ? new Date(task.deadline).toLocaleDateString("en-US", {
-        month: "short", day: "numeric", year: "numeric",
-      })
+    ? dateStd(task.deadline)
     : "No deadline";
   const assigneeNames = (task.assignees ?? [])
     .map((a) => a.name ?? a)
@@ -324,7 +323,7 @@ export default function TaskDetailPage() {
                         {c.author?.name ?? "Unknown"}
                       </span>
                       <span className="text-[14px] text-slate-600">
-                        {c.createdAt ? new Date(c.createdAt).toLocaleDateString() : ""}
+                        {c.createdAt ? dateStd(c.createdAt) : ""}
                       </span>
                     </div>
                     <p className="text-xs text-slate-400 mt-0.5 leading-relaxed">{c.text}</p>

@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
+import { Link } from "react-router-dom";
 import { Leaf } from "lucide-react";
 import api from "@/lib/api";
 import PageHeader from "@/components/ui/PageHeader";
@@ -40,9 +41,8 @@ export default function ProgressGardenPage() {
         initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3, delay: 0.05 }}
         className="rounded-xl border border-ink/[0.07] bg-ink/[0.02] px-4 py-3 text-sm text-slate-500 leading-relaxed"
       >
-        Each tree is one project. Its growth stage shows the project&rsquo;s status (planning → in progress → completed).
-        Each tree&rsquo;s colour shows that project&rsquo;s own health (on track, at risk, off track, not started).
-        The percentage shows how many projects are on track across the whole organization.
+        Each tree is one project. The tree grows with the project (seedling while planning, sapling while running, a tree with a star when completed) and its colour is that project&rsquo;s own health. Under each tree you see the project name and its health. Hover or tap a tree for the details and to open the project.
+        The bar counts a project as on track when its health is On track, whatever its stage (Completed and In Review included); projects that have not started count in the total.
       </motion.div>
 
       {loading ? (
@@ -54,45 +54,7 @@ export default function ProgressGardenPage() {
             initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35, delay: 0.1 }}
             className="glass-panel rounded-2xl border border-ink/[0.07] px-6 py-6 flex flex-col gap-6"
           >
-            <OrgGarden
-              projects={allProjects}
-              onTrackPct={gardenData?.onTrackPct ?? 0}
-              totalCount={gardenData?.totalCount}
-              showLegend
-              className="w-full"
-            />
-          </motion.div>
-
-          {/* On-track summary */}
-          {gardenData && gardenData.totalCount > 0 && (
-            <motion.div
-              initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3, delay: 0.15 }}
-              className="rounded-2xl border px-5 py-4 flex flex-col gap-1"
-              style={{ background: "rgba(14,106,48,0.04)", borderColor: "rgba(14,106,48,0.18)" }}
-            >
-              <p className="text-[11px] font-bold uppercase tracking-widest text-slate-500">Projects on track</p>
-              <div className="flex items-baseline gap-2">
-                <span className="text-4xl font-black tabular-nums" style={{ color: "#0C5E2A" }}>
-                  {gardenData.onTrackPct}%
-                </span>
-                <span className="text-sm font-bold text-slate-500">
-                  {gardenData.onTrackCount} of {gardenData.totalCount} project{gardenData.totalCount !== 1 ? "s" : ""}
-                </span>
-              </div>
-            </motion.div>
-          )}
-
-          {/* All projects grid */}
-          {allProjects.length > 0 && (
-            <motion.div
-              initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3, delay: 0.2 }}
-              className="flex flex-col gap-4"
-            >
-              {/* Header + filter chips */}
-              <div className="flex items-center justify-between flex-wrap gap-3">
-                <p className="text-xs font-black uppercase tracking-[0.14em] text-slate-400">
-                  All projects ({allProjects.length})
-                </p>
+            <div className="-mb-2">
                 <div role="group" aria-label="Filter by health" className="flex flex-wrap gap-1.5">
                   {BANDS.map((b) => {
                     const count = b === "All" ? allProjects.length : allProjects.filter((p) => p.healthBand === b).length;
@@ -123,13 +85,35 @@ export default function ProgressGardenPage() {
                     );
                   })}
                 </div>
+            </div>
+            <OrgGarden
+              projects={allProjects}
+              onTrackPct={gardenData?.onTrackPct ?? 0}
+              totalCount={gardenData?.totalCount}
+              showLegend
+              filter={filter}
+              className="w-full"
+            />
+          </motion.div>
+
+          {/* All projects grid */}
+          {allProjects.length > 0 && (
+            <motion.div
+              initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3, delay: 0.2 }}
+              className="flex flex-col gap-4"
+            >
+              {/* Header + filter chips */}
+              <div className="flex items-center justify-between flex-wrap gap-3">
+                <p className="text-xs font-black uppercase tracking-[0.14em] text-slate-400">
+                  {filter === "All" ? "All projects" : filter} ({filtered.length})
+                </p>
               </div>
 
               {/* Project cards grid */}
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                 {filtered.map((p) => (
-                  <div
-                    key={p.id}
+                  <Link
+                    key={p.id} to={`/director/projects/${p.id}`}
                     className="rounded-xl border border-ink/[0.07] bg-white px-4 py-3 flex items-center gap-3 hover:border-ink/[0.14] transition-colors"
                   >
                     <span
@@ -143,10 +127,10 @@ export default function ProgressGardenPage() {
                     </div>
                     {p.healthScore != null && (
                       <span className="text-[11px] font-bold tabular-nums text-slate-500 shrink-0">
-                        {p.healthScore}%
+                        Health {p.healthScore}%
                       </span>
                     )}
-                  </div>
+                  </Link>
                 ))}
                 {filtered.length === 0 && (
                   <p className="col-span-full text-sm text-slate-400 py-6 text-center">

@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
+import { fmtDate } from "@/lib/dates";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Plus, LayoutList, Grid2X2, Loader2,
@@ -409,7 +410,7 @@ export default function RiskRegisterPage() {
             <div className="flex items-center gap-2">
               {aiUnavailable ? (
                 <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold border border-ink/[0.08] text-slate-400 cursor-not-allowed">
-                  <Sparkles size={11} /> AI abhi connected nahi
+                  <Sparkles size={11} /> AI is not connected right now
                 </span>
               ) : digest ? (
                 <button onClick={() => setDigest(null)} className="px-3 py-1.5 rounded-xl text-xs font-bold border border-violet-200 text-violet-600 hover:bg-violet-100 min-h-[32px]">Dismiss</button>
@@ -562,7 +563,7 @@ export default function RiskRegisterPage() {
                 {/* Owner + dates */}
                 <div className="flex flex-col gap-1 text-xs text-slate-600">
                   {selectedRisk.owner && <span>Owner: {selectedRisk.owner?.name ?? selectedRisk.owner}</span>}
-                  {selectedRisk.createdAt && <span>Registered: {new Date(selectedRisk.createdAt).toLocaleDateString("en-US", { dateStyle: "medium" })}</span>}
+                  {selectedRisk.createdAt && <span>Registered: {fmtDate(selectedRisk.createdAt)}</span>}
                 </div>
               </div>
             </motion.aside>

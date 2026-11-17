@@ -1,4 +1,5 @@
 import { useEffect, useState, useCallback, useRef } from "react";
+import { roleLabel } from "@/lib/roleLabel";
 import { DIRECTOR_FEATURES as DF } from "@/lib/directorFeatures";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -418,7 +419,7 @@ export default function ApprovalQueuePage() {
                         </span>
                         {acc.requestedBy && (
                           <span className="text-[14px] text-slate-500">
-                            by {acc.requestedBy.name} ({acc.requestedBy.role})
+                            by {acc.requestedBy.name} ({roleLabel(acc.requestedBy)})
                           </span>
                         )}
                       </div>

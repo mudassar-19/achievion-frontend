@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { Link } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { ShieldCheck, CheckCircle2, XCircle, Users, FolderKanban, UserCog, Pencil, X, Check, Loader2, Mail, Building2, Calendar, Activity, AlertTriangle, RefreshCw, Lock, LogOut, Monitor, Eye, EyeOff, Clock } from "lucide-react";
 import useAuthStore  from "@/stores/authStore";
@@ -8,11 +9,13 @@ import api           from "@/lib/api";
 import TallyLoader from "@/components/ui/TallyLoader";
 import PageHeader from "@/components/ui/PageHeader";
 import { avatarUrl } from "@/lib/avatar";
+import { fmtDate as dateStd, fmtDateTime as dateTimeStd } from "@/lib/dates";
+import { actionLabel, humanizeText } from "@/lib/humanize";
 const ACCENT = "#4B2FC4";
 
 function fmtDate(d) {
   if (!d) return "—";
-  return new Date(d).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" });
+  return dateStd(d);
 }
 function timeAgo(d) {
   if (!d) return "";
@@ -132,10 +135,10 @@ function eventDetail(log) {
 }
 
 function EventRow({ log }) {
-  const cfg  = EVENT_CFG[log.action] ?? { label: log.action, color: "#4F5B75", icon: Activity };
+  const cfg  = EVENT_CFG[log.action] ?? { label: actionLabel(log.action), color: "#4F5B75", icon: Activity };
   const Icon = cfg.icon;
   return (
-    <div className="flex items-center gap-3 py-3 border-b border-ink/[0.04] last:border-0">
+    <Link to="/director/audit-log" aria-label={`${log.targetName ?? cfg.label}: open in the Audit Log`} className="flex items-center gap-3 py-3 border-b border-ink/[0.04] last:border-0 hover:bg-ink/[0.03] rounded-lg">
       <div
         className="h-8 w-8 rounded-xl flex items-center justify-center shrink-0"
         style={{ background: `${cfg.color}18`, border: `1px solid ${cfg.color}30` }}
@@ -146,10 +149,10 @@ function EventRow({ log }) {
         <p className="text-xs font-bold text-text-primary truncate">
           {log.targetName ? `${log.targetName}` : cfg.label}
         </p>
-        <p className="text-[14px] text-slate-600 truncate">{eventDetail(log) || cfg.label}</p>
+        <p className="text-[14px] text-slate-600 truncate">{humanizeText(eventDetail(log)) || cfg.label}</p>
       </div>
       <span className="text-[14px] text-slate-600 shrink-0">{timeAgo(log.createdAt)}</span>
-    </div>
+    </Link>
   );
 }
 
@@ -411,7 +414,7 @@ function SecurityTab({ user }) {
           <div className="flex items-center gap-2 mt-3 pt-3 border-t border-ink/[0.05]">
             <Clock size={12} className="text-slate-500" />
             <p className="text-[11px] text-slate-500">
-              Last login: {new Date(user.lastLogin).toLocaleString("en-US", { dateStyle: "medium", timeStyle: "short" })}
+              Last login: {dateTimeStd(user.lastLogin)}
             </p>
           </div>
         )}
@@ -462,8 +465,8 @@ export default function DirectorProfilePage({ embedded = false }) {
   const STAT_CARDS = [
     { icon: Users,        label: "Members Managed",  value: stats.memberCount    ?? 0, color: "var(--accent-text)" },
     { icon: FolderKanban, label: "Active Projects",  value: stats.activeProjects ?? 0, color: ACCENT              },
-    { icon: CheckCircle2, label: "HR Approved",      value: stats.hrApproved     ?? 0, color: "#0E6A30"           },
-    { icon: AlertTriangle,label: "Pending HR",       value: stats.hrPending      ?? 0, color: "#9A3A06"           },
+    { icon: CheckCircle2, label: "Requests approved", value: stats.hrApproved     ?? 0, color: "#0E6A30"           },
+    { icon: AlertTriangle,label: "Requests pending",  value: stats.hrPending      ?? 0, color: "#9A3A06"           },
   ];
 
   return (
@@ -583,34 +586,13 @@ export default function DirectorProfilePage({ embedded = false }) {
                 >
                   <ShieldCheck size={11} /> System Authority
                 </span>
-                {org.orgId && (
-                  <span className="flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-full border border-ink/[0.08] text-slate-400">
-                    {org.orgId}
-                  </span>
-                )}
                 <span className="flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-full border border-ink/[0.08] text-slate-500">
                   <Calendar size={10} /> Since {fmtDate(data?.createdAt)}
                 </span>
               </div>
             </div>
 
-            {/* Quick summary on the right */}
-            <div className="shrink-0 grid grid-cols-2 gap-2 sm:gap-3">
-              {[
-                { label: "Projects",  value: stats.activeProjects ?? 0, color: ACCENT },
-                { label: "Members (excl. Director)", value: stats.memberCount ?? 0, color: "var(--accent-text)" },
-                { label: "HR Approved", value: stats.hrApproved ?? 0,   color: "#0E6A30" },
-                { label: "HR Pending",  value: stats.hrPending  ?? 0,   color: "#9A3A06" },
-              ].map(({ label, value, color }) => (
-                <div
-                  key={label}
-                  className="flex flex-col items-center justify-center px-4 py-2.5 rounded-xl border border-ink/[0.06] bg-ink/[0.03]"
-                >
-                  <p className="text-xl font-black tabular-nums" style={{ color }}>{value}</p>
-                  <p className="text-[14px] font-bold uppercase tracking-wider text-slate-600">{label}</p>
-                </div>
-              ))}
-            </div>
+            {/* B-14: the four numbers are shown once, in the row below. */}
           </div>
         </motion.div>
 
@@ -622,7 +604,7 @@ export default function DirectorProfilePage({ embedded = false }) {
         {/* ── Activity panels ────────────────────────────────────────────────── */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
 
-          {/* HR & employee approval activity */}
+          {/* Employee approval activity (B-15: no "HR" wording) */}
           <motion.div
             initial={{ opacity: 0, x: 16 }}
             animate={{ opacity: 1, x: 0 }}
@@ -631,7 +613,7 @@ export default function DirectorProfilePage({ embedded = false }) {
           >
             <div className="flex items-center gap-2">
               <Users size={14} strokeWidth={2} style={{ color: ACCENT }} />
-              <p className="text-[14px] font-bold uppercase tracking-[0.15em] text-slate-500">HR & Employee Approvals</p>
+              <p className="text-[14px] font-bold uppercase tracking-[0.15em] text-slate-500">Employee Approvals</p>
             </div>
             <ActivityBar
               approved={stats.hrApproved ?? 0}
@@ -641,9 +623,9 @@ export default function DirectorProfilePage({ embedded = false }) {
             />
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1">
               {[
-                { label: "HR Approved",  value: stats.hrApproved ?? 0,  color: "#0E6A30" },
-                { label: "HR Rejected",  value: stats.hrRejected ?? 0,  color: "#B01F17" },
-                { label: "Role Changes", value: stats.roleChanges ?? 0, color: ACCENT     },
+                { label: "Approved",              value: stats.hrApproved ?? 0,  color: "#0E6A30" },
+                { label: "Rejected",              value: stats.hrRejected ?? 0,  color: "#B01F17" },
+                { label: "Role changes approved", value: stats.roleChanges ?? 0, color: ACCENT     },
               ].map(({ label, value, color }) => (
                 <div key={label} className="flex flex-col items-center p-3 rounded-xl bg-ink/[0.03] border border-ink/[0.05]">
                   <p className="text-lg font-black tabular-nums" style={{ color }}>{value}</p>
@@ -690,7 +672,7 @@ export default function DirectorProfilePage({ embedded = false }) {
               { icon: ShieldCheck, label: "Role",         value: "Director" },
               { icon: Building2,   label: "Organization", value: org.name },
               { icon: Calendar,    label: "Member Since", value: fmtDate(data?.createdAt) },
-              { icon: FolderKanban,label: "Projects",     value: stats.activeProjects ?? 0 },
+              { icon: FolderKanban,label: "Projects",     value: stats.totalProjects ?? 0 },
             ].map(({ icon: Icon, label, value }) => (
               <div key={label} className="flex items-center gap-3 py-3 border-b border-ink/[0.04]">
                 <Icon size={13} className="text-slate-600 shrink-0" strokeWidth={1.75} />

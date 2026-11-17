@@ -5,6 +5,7 @@ import PageHeader from "@/components/ui/PageHeader";
 import api from "@/lib/api";
 import { useRoleTheme } from "@/utils/roleTheme";
 import RecapCards from "@/components/director/RecapCards";
+import { fmtDate as dateStd } from "@/lib/dates";
 
 // ── Bar colors per category (neutral, accessible) ─────────────────────────────
 const BAR_COLORS = [
@@ -15,7 +16,7 @@ const BAR_COLORS = [
 // ── Helpers ───────────────────────────────────────────────────────────────────
 function fmtDate(d) {
   if (!d) return "—";
-  return new Date(d).toLocaleDateString("en-US", { month: "short", day: "numeric" });
+  return dateStd(d, { year: false });
 }
 
 // ── Skeleton block ────────────────────────────────────────────────────────────
@@ -49,13 +50,13 @@ function XpRoleBars({ rows }) {
   return (
     <figure aria-label="XP distribution by role" className="m-0">
       <ul className="flex flex-col gap-2.5">
-        {rows.map((r, i) => {
+        {rows.map((r) => {
           const xp = r.totalXp ?? 0;
           return (
             <li key={r.role} className="grid grid-cols-[minmax(80px,140px)_minmax(0,1fr)] items-center gap-3">
               <span className="truncate text-[13px] font-semibold text-slate-600" title={r.role}>{r.role}</span>
               <div className="group relative flex h-5 min-w-0 items-center gap-2" tabIndex={0} aria-label={`${r.role}: ${xp.toLocaleString()} XP`}>
-                <div className="relative h-full shrink-0 rounded-r-md transition-[width]" style={{ width: `calc((100% - 4rem) * ${xp / max})`, minWidth: 3, background: BAR_COLORS[i % BAR_COLORS.length] }}>
+                <div className="relative h-full shrink-0 rounded-r-md transition-[width]" style={{ width: `calc((100% - 4rem) * ${xp / max})`, minWidth: 3, background: BAR_COLORS[0] /* G-12: one colour, the bar length says it */ }}>
                   <span role="tooltip" className="pointer-events-none absolute bottom-full left-0 z-10 mb-1 hidden whitespace-nowrap rounded-lg border border-ink/[0.1] bg-white px-2 py-1 text-[11px] font-bold tabular-nums text-text-primary shadow-lg group-hover:block group-focus:block">
                     {r.role}: {xp.toLocaleString()} XP
                   </span>
@@ -163,7 +164,7 @@ function CustomReportsTab() {
                       <td className="px-4 py-2.5 font-semibold text-text-primary" title={p.title}><span className="block truncate">{p.title}</span></td>
                       <td className="truncate px-4 py-2.5 text-slate-500">{p.status}</td>
                       <td className="px-4 py-2.5 text-slate-500">{p.priority ?? "—"}</td>
-                      <td className="px-4 py-2.5 text-slate-400">{p.deadline ? new Date(p.deadline).toLocaleDateString("en-US",{month:"short",day:"numeric",year:"numeric"}) : "—"}</td>
+                      <td className="px-4 py-2.5 text-slate-400">{dateStd(p.deadline)}</td>
                       <td className="px-4 py-2.5 tabular-nums font-bold" style={{ color: ACCENT }}>{p.healthScore ?? "—"}</td>
                     </tr>
                   ))}
@@ -255,8 +256,8 @@ function RecapsTab() {
   async function getWeeklySummary() {
     setSummarizing(true); setSummaryErr("");
     try {
-      const { summary, period } = await api.post("/api/director/ai/weekly-summary");
-      setAiSummary({ text: summary, period });
+      const { summary, period, label, weekSoFar } = await api.post("/api/director/ai/weekly-summary");
+      setAiSummary({ text: summary, period, label, soFar: weekSoFar?.text });
     } catch (e) {
       if (e?.status === 503) setAiUnavailable(true);
       setAiSummary(null);
@@ -275,7 +276,7 @@ function RecapsTab() {
         <div className="flex items-center gap-2">
           {aiUnavailable ? (
             <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold border border-ink/[0.08] text-slate-400 cursor-not-allowed">
-              <Sparkles size={11} /> AI abhi connected nahi
+              <Sparkles size={11} /> AI is not connected right now
             </span>
           ) : aiSummary ? (
             <button onClick={() => setAiSummary(null)} className="px-3 py-1.5 rounded-xl text-xs font-bold border border-violet-200 text-violet-600 hover:bg-violet-100 min-h-[32px]">Dismiss</button>
@@ -286,13 +287,14 @@ function RecapsTab() {
             </button>
           )}
         </div>
-        {summarizing && <p role="status" className="w-full text-xs text-violet-700">Reading this week's numbers and writing the summary. This can take up to 20 seconds.</p>}
+        {summarizing && <p role="status" className="w-full text-xs text-violet-700">Reading last week's numbers and writing the summary. This can take up to 20 seconds.</p>}
         {summaryErr && !summarizing && <p role="alert" className="w-full text-xs font-semibold text-[#B01F17]">{summaryErr}</p>}
         {aiSummary && (
           <p className="w-full text-xs text-violet-700">
             <span className="text-[10px] font-bold text-violet-400 uppercase tracking-wider mr-1">AI-generated, advice only</span>
-            {aiSummary.period && <span className="mr-1 font-semibold">This week ({aiSummary.period}):</span>}
+            {aiSummary.period && <span className="mr-1 font-semibold">{aiSummary.label ?? "Last week"} ({aiSummary.period}):</span>}
             {aiSummary.text}
+            {aiSummary.soFar && <span className="mt-1 block text-violet-800">{aiSummary.soFar}</span>}
           </p>
         )}
       </div>
@@ -335,7 +337,7 @@ function RecapsTab() {
                   <div>
                     <p className="text-sm font-bold text-text-primary">{r.periodLabel}</p>
                     {/* "Covers" is the period of the numbers; "generated on" is only when it was made (item 26) */}
-                    <p className="text-[12px] text-slate-500"><span className="capitalize">{r.type}</span> recap{r.periodRange ? ` · covers ${r.periodRange}` : ""} · generated on {new Date(r.createdAt).toLocaleDateString("en-US",{month:"short",day:"numeric",year:"numeric"})}</p>
+                    <p className="text-[12px] text-slate-500"><span className="capitalize">{r.type}</span> recap{r.periodRange ? ` · covers ${r.periodRange}` : ""} · generated on {dateStd(r.createdAt)}</p>
                   </div>
                   <span className="text-[11px] px-2 py-0.5 rounded-full border border-ink/[0.08] text-slate-500 capitalize">{r.type}</span>
                 </div>
@@ -454,7 +456,7 @@ export default function DirectorReportsPage() {
           <div className="overflow-x-auto rounded-xl border border-ink/[0.06]">
             <table className="w-full min-w-[680px] table-fixed text-xs">
               <colgroup>
-                <col /><col className="w-28" /><col className="w-28" /><col className="w-24" /><col className="w-28" /><col className="w-36" />
+                <col /><col className="w-28" /><col className="w-36" /><col className="w-24" /><col className="w-28" /><col className="w-36" />
               </colgroup>
               <thead>
                 <tr className="border-b border-ink/[0.06] bg-ink/[0.02]">
@@ -475,7 +477,7 @@ export default function DirectorReportsPage() {
                       <td className="px-4 py-3 font-semibold text-text-primary" title={s.name}><span className="block truncate">{s.name}</span></td>
                       <td className="px-4 py-3 text-slate-500">{fmtDate(s.startDate)}</td>
                       <td className="px-4 py-3">
-                        <span className="px-2 py-0.5 rounded-full text-[14px] font-black uppercase tracking-wider"
+                        <span className="whitespace-nowrap px-2 py-0.5 rounded-full text-[14px] font-black uppercase tracking-wider"
                           style={{ color: cfg.color, background: cfg.bg }}>{s.status}</span>
                       </td>
                       <td className="px-4 py-3 text-slate-400 tabular-nums">{s.planned}</td>

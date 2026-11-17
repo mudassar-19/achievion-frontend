@@ -48,8 +48,8 @@ export default function DirectorLayout() {
 
   // Initial pending count for the rail badge
   useEffect(() => {
-    api.get("/api/approvals").then((r) => {
-      setPendingCount((r.approvals ?? []).length);
+    api.get("/api/director/decisions").then((r) => {
+      setPendingCount(r.total ?? 0); // C-5: approvals + extension requests
     }).catch(() => {});
   }, []);
 

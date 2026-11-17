@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { fmtDate as dateStd } from "@/lib/dates";
 import { motion } from "framer-motion";
 import {
   Zap, ClipboardList, CheckSquare, Clock, ArrowRight,
@@ -200,7 +201,7 @@ export default function WorkspaceDashboard() {
                     {t.deadline && (
                       <span className="flex items-center gap-1 text-[14px] text-text-secondary">
                         <Clock size={9} />
-                        Due {new Date(t.deadline).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+                        Due {dateStd(t.deadline, { year: false })}
                       </span>
                     )}
                   </div>

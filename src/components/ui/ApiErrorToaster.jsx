@@ -14,7 +14,7 @@ export default function ApiErrorToaster() {
       seen.set(key, now);
       useUiStore.getState().addToast({
         type: "error",
-        message: code === "view_as_read_only" ? "Read-only in View as. Exit the view to make changes."
+        message: code === "VIEW_ONLY" ? "Read-only in View as. Exit the view to make changes."
           : status === 403 ? "You do not have access to that." : (message ?? "Something went wrong."),
         duration: 5000,
       });

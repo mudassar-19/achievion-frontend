@@ -356,7 +356,7 @@ export default function AiPanel({
                   </button>
                 </div>
                 <p className="mt-1.5 text-center text-[10px] text-slate-400">
-                  {footer ?? "AI sirf suggest karta hai · Check sources before acting"}
+                  {footer ?? "AI only suggests · Check sources before acting"}
                 </p>
               </form>
             </>

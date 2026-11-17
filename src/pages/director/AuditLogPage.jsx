@@ -9,6 +9,7 @@ import {
   CalendarRange,
 } from "lucide-react";
 import api from "@/lib/api";
+import { humanizeText } from "@/lib/humanize";
 import { useRoleTheme } from "@/utils/roleTheme";
 import PageHeader from "@/components/ui/PageHeader";
 import Drawer from "@/components/ui/Drawer";
@@ -16,6 +17,7 @@ import Skeleton, { SkeletonLine } from "@/components/ui/Skeleton";
 import EmptyState from "@/components/ui/EmptyState";
 import ErrorState from "@/components/ui/ErrorState";
 import { avatarUrl } from "@/lib/avatar";
+import { fmtDate as dateStd, fmtDateTime as dateTimeStd, fmtTime as timeStd } from "@/lib/dates";
 
 // ── Event configuration ────────────────────────────────────────────────────────
 // NOTE: 'performedBy' is NOT returned by GET /api/director/audit-log (backend gap).
@@ -100,7 +102,7 @@ function cfgFor(action) {
 // ── Category filters ──────────────────────────────────────────────────────────
 const CATEGORY_FILTERS = [
   { key:"",             label:"All Events",    icon:Activity,     color:null },
-  { key:"employee",     label:"Employee & HR", icon:Users,        color:"#4B2FC4" },
+  { key:"employee",     label:"People", icon:Users,        color:"#4B2FC4" },
   { key:"organization", label:"Organization",  icon:Building2,    color:"#4B2FC4" },
   { key:"project",      label:"Projects",      icon:FolderKanban, color:"#0E6A30" },
   { key:"xp",           label:"XP adjustments", icon:Activity,    color:"#9A3A06" }, // item 8 (D-532)
@@ -109,7 +111,7 @@ const CATEGORY_FILTERS = [
 // ── Helpers ───────────────────────────────────────────────────────────────────
 function fmtDateFull(d) {
   if (!d) return "—";
-  return new Date(d).toLocaleString("en-US",{month:"short",day:"numeric",year:"numeric",hour:"numeric",minute:"2-digit"});
+  return dateTimeStd(d);
 }
 
 // Human-readable key labels for settings diffs
@@ -152,7 +154,7 @@ function humanDiff(before, after) {
 }
 function fmtTimeOnly(d) {
   if (!d) return "—";
-  return new Date(d).toLocaleTimeString("en-US",{hour:"numeric",minute:"2-digit"});
+  return timeStd(d);
 }
 function fmtDay(d) {
   const dt = new Date(d);
@@ -161,7 +163,7 @@ function fmtDay(d) {
   const copy = new Date(dt); copy.setHours(0,0,0,0);
   if (copy.getTime()===today.getTime()) return "Today";
   if (copy.getTime()===yesterday.getTime()) return "Yesterday";
-  return dt.toLocaleDateString("en-US",{weekday:"long",month:"long",day:"numeric"});
+  return dateStd(dt);
 }
 function dayKey(iso) { return iso.slice(0,10); }
 function toISODate(d) { return d ? new Date(d).toISOString().slice(0,10) : ""; }
@@ -184,7 +186,7 @@ function groupByDay(logs) {
 function LogRow({ log, onOpen }) {
   const cfg      = cfgFor(log.action);
   const Icon     = cfg.icon;
-  const sentence = cfg.sentence(log);
+  const sentence = humanizeText(cfg.sentence(log));
 
   return (
     <motion.button
@@ -321,7 +323,7 @@ function LogDrawer({ log, onClose }) {
         {log.detail && (
           <div className="flex flex-col gap-1">
             <p className="text-xs font-bold uppercase tracking-[0.12em] text-slate-500">Detail</p>
-            <p className="text-sm text-text-primary leading-relaxed">{log.detail}</p>
+            <p className="text-sm text-text-primary leading-relaxed">{humanizeText(log.detail)}</p>
           </div>
         )}
 

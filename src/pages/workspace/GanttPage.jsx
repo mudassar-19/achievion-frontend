@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useMemo } from "react";
+import { fmtDate as dateStd } from "@/lib/dates";
 import { motion } from "framer-motion";
 import {
   CalendarRange, ChevronRight,
@@ -50,7 +51,7 @@ function daysBetween(a, b) {
 }
 
 function fmtDay(d) {
-  return new Date(d).toLocaleDateString("en-US", { month: "short", day: "numeric" });
+  return dateStd(d, { year: false });
 }
 
 function fmtMonth(d) {

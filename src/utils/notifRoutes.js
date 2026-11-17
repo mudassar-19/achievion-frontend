@@ -15,22 +15,46 @@ export function toCategory(type) {
 
 // ── Redirect path for a notification ─────────────────────────────────────────
 // Pass role to get role-specific redirect paths (e.g. Team Lead portal).
+// X-9 (D-QA3B-11): ONE map for the bell, the chat dock, the Notifications pages and Profile "Recent events". Read-only notices open
+// their page; action notices open the exact page with the item focused (?task=, ?bug=, ?open=, ?id=). Never a dead or empty link.
+const isDirector = (r) => r === "Director" || r === "director";
+const isOrgAdmin = (r) => r === "org_admin" || r === "Org Admin";
+const portalOf = (r) => (isDirector(r) ? "/director" : r === "Manager" || r === "manager" ? "/manager" : r === "Team Lead" || r === "team_lead" ? "/teamlead" : isOrgAdmin(r) ? "/org" : "/workspace");
+
+// Chat family (all portals but Org Admin, who has no chat): the conversation, or the Announcements page.
+function chatPath(notif, role) {
+  const { type, meta = {}, deepLink } = notif, p = portalOf(role);
+  if (type === "announcement") return isOrgAdmin(role) ? "/org/dashboard" : `${p}/announcements`;
+  const id = meta.channelId ?? (/\/chat\/([0-9a-f]{24})/i.exec(deepLink ?? "") ?? /[?&]open=([0-9a-f]{24})/i.exec(deepLink ?? ""))?.[1];
+  if (!id || !(type === "dm_message" || type === "mention" || type === "system")) return null;
+  return isOrgAdmin(role) ? "/org/dashboard" : `${p}/chat?open=${id}`;
+}
+
+// The Director has no task page: the item opens inside its project.
+function directorPath(notif) {
+  const { type, meta = {}, deepLink } = notif, cat = toCategory(type), proj = meta.projectId;
+  if (type === "approval_required" || type === "approval_pending" || type === "approval_result") return deepLink?.startsWith("/director/approvals") ? deepLink : "/director/approvals";
+  if (type === "needs_action" || type?.startsWith("extension_") || type === "more_tries_requested") return meta.reportId ? "/director/reports" : "/director/extensions";
+  if (type === "workload_over_limit" || type === "overloaded_member" || type === "burnout_alert" || type === "burnout_risk") return "/director/capacity";
+  if (type === "deadline_change_request" && proj) return `/director/projects/${proj}`;
+  if ((type === "project_module_assigned" || type?.startsWith("module_")) && proj && meta.milestoneId) return `/director/projects/${proj}/modules/${meta.milestoneId}`;
+  if (type === "escalation") return "/director/notifications";
+  if (proj) return `/director/projects/${proj}`;
+  if (cat === "project") return "/director/projects";
+  if (cat === "gamification" || type === "xp_adjusted" || type === "streak_freeze") return "/director/profile";
+  if (cat === "team") return "/director/roles";
+  return "/director/notifications";
+}
+
 export function notifRedirectPath(notif, role) {
   const { type, meta = {} } = notif;
   const cat = toCategory(type);
 
-  // ── Director portal ──────────────────────────────────────────────────────
-  if (role === "Director" || role === "director") {
-    if (type === "approval_required" || type === "approval_pending") return "/director/approvals";
-    if (type === "approval_result")                                  return "/director/approvals";
-    if (type === "escalation")                                       return "/director/notifications";
-    if (type === "project_at_risk" && meta.projectId)               return `/director/projects/${meta.projectId}`;
-    if (cat === "project" && meta.projectId)                        return `/director/projects/${meta.projectId}`;
-    if (cat === "project")                                          return "/director/projects";
-    if (cat === "gamification")                                     return "/director/profile";
-    if (cat === "team")                                             return "/director/roles";
-    return "/director/notifications";
-  }
+  const chat = chatPath(notif, role);
+  if (chat) return chat;
+  if (isOrgAdmin(role)) return type === "approval_result" || type === "approval_required" || type === "approval_pending" ? "/org/approvals" : "/org/dashboard";
+
+  if (isDirector(role)) return directorPath(notif);
 
   // ── Team Lead portal ──────────────────────────────────────────────────────
   if (role === "Team Lead" || role === "team_lead") {
@@ -53,7 +77,10 @@ export function notifRedirectPath(notif, role) {
   // ── Manager portal (/manager, V2 Phase 3 · M-1) ─────────────────────────
   if (role === "Manager" || role === "manager") {
     if (type?.startsWith("sprint_") && meta.sprintId) return `/manager/sprints/${meta.sprintId}`;
-    if (type === "more_tries_requested") return "/manager/inbox"; // E-3: the Manager may decide too (D-142)
+    if (type === "more_tries_requested" || type === "extension_requested") return "/manager/inbox"; // E-3: the Manager may decide too (D-142)
+    if (type?.startsWith("bug_") && meta.taskId) return `/manager/tasks/${meta.taskId}`;
+    if ((type === "needs_action" || type === "manager_decision_required") && meta.taskId) return `/manager/tasks/${meta.taskId}`;
+    if (cat === "gamification" || type === "xp_adjusted" || type === "streak_freeze") return "/manager/profile";
     if (type === "extension_requested_fyi" && meta.taskId) return `/manager/tasks/${meta.taskId}`;
     if (type === "workload_over_limit" && meta.memberId) return `/manager/resources?member=${meta.memberId}`;
     if (cat === "project" && meta.projectId) return `/manager/projects/${meta.projectId}`;

@@ -4,10 +4,12 @@ import { useState, useEffect, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Bell, AlertOctagon, CheckSquare, Inbox, CheckCheck, Settings, Clock, ListFilter } from "lucide-react";
 import { Link } from "react-router-dom";
+import { notifRedirectPath } from "@/utils/notifRoutes";
 import PageHeader from "@/components/ui/PageHeader";
 import api from "@/lib/api";
 import useUiStore from "@/stores/uiStore";
 import { FILTERS, tierOf, humanText, unreadCounts, filterList } from "@/lib/notifFormat";
+import { isKey, notifTitle } from "@/lib/humanize";
 
 const TIER = {
   critical:     { label: "Critical",     color: "#B01F17", bg: "#B01F1714", icon: AlertOctagon },
@@ -36,7 +38,7 @@ function timeAgo(d) {
 
 function NotifItem({ notif, onRead }) {
   const tier = TIER[tierOf(notif)], Icon = tier.icon;
-  const title = notif.title?.trim() || TITLE_BY_TYPE[notif.type] || "Notification";
+  const title = isKey(notif.title?.trim()) ? notifTitle(notif) : (notif.title?.trim() || TITLE_BY_TYPE[notif.type] || notifTitle(notif));
   const text = humanText(notif);
   return (
     <motion.li layout initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 10 }} transition={{ duration: 0.2 }}
@@ -51,7 +53,7 @@ function NotifItem({ notif, onRead }) {
           {!notif.read && <span className="text-[11px] font-bold text-accent-text">Unread</span>}
         </p>
         {text && <p title={text} className="mt-0.5 text-sm text-text-secondary [overflow-wrap:anywhere] line-clamp-2">{text}</p>}
-        {notif.deepLink && <Link to={notif.deepLink} className="mt-1 inline-block text-sm font-semibold text-accent-text underline-offset-2 hover:underline">Open</Link>}
+        {<Link to={notifRedirectPath(notif, "Director")} className="mt-1 inline-block text-sm font-semibold text-accent-text underline-offset-2 hover:underline">Open</Link>}
       </div>
       <div className="flex shrink-0 flex-col items-end gap-1">
         <span className="flex items-center gap-1 text-xs text-text-secondary"><Clock size={11} aria-hidden="true" /> {timeAgo(notif.createdAt)}</span>

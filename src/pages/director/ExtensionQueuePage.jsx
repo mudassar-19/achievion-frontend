@@ -8,6 +8,9 @@ import EmptyState from "@/components/ui/EmptyState";
 import ErrorState from "@/components/ui/ErrorState";
 import Skeleton, { SkeletonLine } from "@/components/ui/Skeleton";
 import useUiStore from "@/stores/uiStore";
+import { Link } from "react-router-dom";
+import { fmtDate as dateStd, fmtDateShort } from "@/lib/dates";
+import { roleLabel } from "@/lib/roleLabel";
 
 function timeAgo(iso) {
   if (!iso) return "—";
@@ -20,7 +23,7 @@ function timeAgo(iso) {
 
 function fmt(date) {
   if (!date) return "—";
-  return new Date(date).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" });
+  return dateStd(date);
 }
 
 const STATUS_BADGE = {
@@ -38,8 +41,9 @@ export default function ExtensionQueuePage() {
   const theme    = useRoleTheme();
   const addToast = useUiStore((s) => s.addToast);
   const [tab,     setTab]     = useState("pending");
-  const [items,   setItems]   = useState([]);
-  const [total,   setTotal]   = useState(0);
+  const [lists,   setLists]   = useState({ pending: [], history: [] });
+  const [totals,  setTotals]  = useState({ pending: 0, history: 0 }); // E-15: both counts are always shown
+  const items = lists[tab];
   const [showN,   setShowN]   = useState(PAGE_SIZE);
   const [loading, setLoading] = useState(true);
   const [error,   setError]   = useState(null);
@@ -50,15 +54,15 @@ export default function ExtensionQueuePage() {
   const load = useCallback(async () => {
     setLoading(true); setError(null); setShowN(PAGE_SIZE);
     try {
-      const data = await api.get(`/api/director/extensions?status=${tab}&limit=100`);
-      setItems(data?.items ?? []);
-      setTotal(data?.total ?? 0);
+      const [p, h] = await Promise.all(["pending", "history"].map((st) => api.get(`/api/director/extensions?status=${st}&limit=100`)));
+      setLists({ pending: p?.items ?? [], history: h?.items ?? [] });
+      setTotals({ pending: p?.total ?? 0, history: h?.total ?? 0 });
     } catch (e) {
       setError(e?.message ?? "Failed to load extensions.");
     } finally {
       setLoading(false);
     }
-  }, [tab]);
+  }, []);
 
   useEffect(() => { load(); }, [load]);
 
@@ -85,7 +89,7 @@ export default function ExtensionQueuePage() {
   return (
     <div className="flex flex-col gap-6 px-4 sm:px-8 py-8 max-w-[1280px] mx-auto w-full">
       <motion.div initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }}>
-        <PageHeader title="Extension Requests" subtitle={`${total} request${total !== 1 ? "s" : ""}`} />
+        <PageHeader title="Extension Requests" subtitle={`${totals.pending} waiting for you · ${totals.history} decided`} />
       </motion.div>
 
       {error && <ErrorState message={error} onRetry={load} />}
@@ -97,7 +101,7 @@ export default function ExtensionQueuePage() {
             className={`px-4 py-1.5 rounded-lg text-sm font-semibold capitalize transition-colors ${
               tab === t ? "bg-white dark:bg-white/10 shadow-sm text-text-primary" : "text-slate-500 hover:text-text-primary"
             }`}>
-            {t === "history" ? "History" : "Pending"}
+            {t === "history" ? "History" : "Pending"} <span className="tabular-nums opacity-70">({totals[t]})</span>
           </button>
         ))}
       </div>
@@ -108,13 +112,18 @@ export default function ExtensionQueuePage() {
 
       <div className="flex flex-col gap-3">
         <AnimatePresence initial={false}>
-          {items.slice(0, showN).map((ext) => {
+          {items.slice(0, showN).map((ext, n, shown) => {
+            const monthOf = (x) => fmt(x.decidedAt ?? x.createdAt).split(" ").slice(1).join(" "); // "Nov 2026"
+            const month = tab === "history" ? monthOf(ext) : null;
+            const newMonth = month && (!n || month !== monthOf(shown[n - 1]));
             const st = STATUS_BADGE[ext.status] ?? STATUS_BADGE.pending;
             const isB = !!busy[ext.id ?? ext._id];
             const id  = ext.id ?? ext._id;
             const ctr = counter[id] ?? { open: false, days: "" };
             return (
-              <motion.div key={id} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
+              <div key={id} className="flex flex-col gap-3">
+              {newMonth && <h2 className="pt-2 text-xs font-bold uppercase tracking-wide text-text-secondary">{month}</h2>}
+              <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
                 className="rounded-2xl border border-ink/[0.08] glass-panel p-5 flex flex-col gap-3">
 
                 <div className="flex items-start justify-between gap-3 flex-wrap">
@@ -125,13 +134,13 @@ export default function ExtensionQueuePage() {
                     </span>
                     <p className="text-sm font-bold text-text-primary mt-1">{ext.taskId?.title ?? "Task"}</p>
                     <p className="text-xs text-slate-500">
-                      {ext.requestedBy?.name} · {ext.requestedBy?.role} · requested +{ext.requestedDays}d
+                      Requested by {ext.requestedBy?.name} ({roleLabel(ext.requestedBy)}): +{ext.requestedDays} days
                     </p>
                     {ext.originalDeadline && (
                       <p className="text-xs text-slate-400">Original deadline: {fmt(ext.originalDeadline)}</p>
                     )}
                   </div>
-                  <span className="text-xs text-slate-400 shrink-0">{timeAgo(ext.createdAt)}</span>
+                  <span className="text-xs text-text-secondary shrink-0">{ext.decidedAt ? `Decided${ext.decidedBy?.name ? ` by ${ext.decidedBy.name}` : ""}, ${fmtDateShort(ext.decidedAt)}` : `Requested ${timeAgo(ext.createdAt)}`}</span>
                 </div>
 
                 {ext.reason && (
@@ -221,7 +230,11 @@ export default function ExtensionQueuePage() {
                 {ext.counterDays && (
                   <p className="text-xs font-semibold text-violet-600">Counter-proposed: +{ext.counterDays}d</p>
                 )}
+                {(ext.taskId?.projectId || ext.projectId) && (
+                  <Link to={`/director/projects/${ext.taskId?.projectId ?? ext.projectId}`} className="self-start text-xs font-semibold text-accent-text hover:underline">Open project</Link>
+                )}
               </motion.div>
+              </div>
             );
           })}
         </AnimatePresence>
@@ -231,7 +244,7 @@ export default function ExtensionQueuePage() {
         <button
           onClick={() => setShowN((n) => n + PAGE_SIZE)}
           className="self-center px-5 py-2 rounded-xl border border-ink/[0.12] text-xs font-bold text-slate-600 hover:bg-ink/[0.04] transition-colors min-h-[36px]">
-          Load More ({items.length - showN} remaining)
+          View more ({items.length - showN} more)
         </button>
       )}
     </div>

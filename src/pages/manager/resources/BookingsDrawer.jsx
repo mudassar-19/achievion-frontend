@@ -1,6 +1,7 @@
 // Asset booking drawer (D-295-b, IMPL-5b).
 // Manager: list active bookings, create a booking, cancel with confirm.
 import { useState, useEffect, useCallback } from "react";
+import { fmtDate as dateStd } from "@/lib/dates";
 import { CalendarDays, Plus, X, Loader2, AlertTriangle } from "lucide-react";
 import api from "@/lib/api";
 import useUiStore from "@/stores/uiStore";
@@ -10,7 +11,7 @@ import ConfirmModal from "@/components/ui/ConfirmModal";
 
 function fmtDay(d) {
   if (!d) return "—";
-  return new Date(d).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+  return dateStd(d);
 }
 
 export default function BookingsDrawer({ open, asset, onClose }) {

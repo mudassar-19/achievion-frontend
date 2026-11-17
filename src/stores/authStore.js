@@ -5,6 +5,7 @@ import socket, { joinRooms } from "@/utils/socket";
 import useGamificationStore from "@/stores/gamificationStore";
 import { dashboardPathForRole } from "@/utils/roleTheme";
 import { syncAction, alreadySignedIn, ALREADY_SIGNED_IN } from "@/lib/authSync";
+import { setDatePrefs } from "@/lib/dates";
 
 // ── Role-derived display labels ───────────────────────────────────────────────
 export const ROLE_XP_LABEL = {
@@ -220,5 +221,9 @@ const useAuthStore = create(
     }
   )
 );
+
+// X-1: the shared date helper follows the signed-in person's time zone and clock choice.
+useAuthStore.subscribe((s) => setDatePrefs(s.user?.settings?.preferences));
+setDatePrefs(useAuthStore.getState().user?.settings?.preferences);
 
 export default useAuthStore;

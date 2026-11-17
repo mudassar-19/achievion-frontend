@@ -6,7 +6,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { useSearchParams } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  Lock, Plus, Search, X, Loader2, PanelRightOpen,
+  Lock, Search, X, Loader2, PanelRightOpen,
   RefreshCw, Settings,
 } from "lucide-react";
 import useDmPeople from "@/hooks/useDmPeople";
@@ -16,6 +16,8 @@ import { chatTitle } from "@/lib/chatFormat";
 import { addPicked } from "@/lib/attachPick";
 import { ChatMessages } from "@/components/widgets/ChatMessage";
 import ChatList from "@/components/widgets/ChatList";
+import { GroupGlyph } from "@/components/widgets/ChatIcons";
+import CreateCommunityWizard from "@/components/widgets/CreateCommunityWizard";
 import ChatComposer from "@/components/widgets/ChatComposer";
 import api from "@/lib/api";
 import socket from "@/utils/socket";
@@ -30,202 +32,11 @@ import {
 const CAN_CREATE_COMMUNITY = ["Director", "Manager"];
 // Messages, time stamps and DM names: components/widgets/ChatMessage.jsx, lib/chatFormat.js, hooks/useDmPeople.js (UI-C).
 
-const COMMUNITY_ICONS = ["💬", "🏢", "📁", "🚀", "🎨", "⚙️", "🔬", "📊", "🌐", "💡", "🎯", "🤝"];
-
-// ── Create Community Wizard ───────────────────────────────────────────────────
-function CreateCommunityWizard({ onClose, onCreated }) {
-  const addToast = useUiStore((s) => s.addToast);
-  const [step, setStep]       = useState(1);
-  const [loading, setLoading] = useState(false);
-  const [name, setName]       = useState("");
-  const [desc, setDesc]       = useState("");
-  const [icon, setIcon]       = useState("💬");
-  const [type, setType]       = useState("custom");
-  const [members, setMembers] = useState([]);
-  const [groups, setGroups]   = useState([{ name: "", desc: "", icon: "💬", members: [] }]);
-
-  function addGroup() { setGroups((p) => [...p, { name: "", desc: "", icon: "💬", members: [] }]); }
-  function removeGroup(i) { setGroups((p) => p.filter((_, idx) => idx !== i)); }
-  function updateGroup(i, k, v) { setGroups((p) => p.map((g, idx) => idx === i ? { ...g, [k]: v } : g)); }
-
-  async function submit() {
-    if (!name.trim()) return;
-    setLoading(true);
-    try {
-      const result = await api.post("/api/communities", {
-        name, description: desc, icon, type,
-        memberIds: members.map((u) => u._id),
-        initialGroups: groups.filter((g) => g.name.trim()).map((g) => ({
-          name: g.name, description: g.desc, icon: g.icon,
-          memberIds: g.members.map((u) => u._id),
-        })),
-      });
-      addToast({ type: "success", message: `Community "${name}" created!` });
-      onCreated(result);
-      onClose();
-    } catch (err) {
-      addToast({ type: "error", message: err?.message ?? "Failed to create community." });
-    } finally { setLoading(false); }
-  }
-
-  const steps = ["Info", "Members", "Groups", "Review"];
-
-  return (
-    <motion.div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
-      initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={onClose}>
-      <motion.div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg flex flex-col overflow-hidden"
-        style={{ maxHeight: "90vh" }} initial={{ scale: 0.93, y: 24 }} animate={{ scale: 1, y: 0 }}
-        onClick={(e) => e.stopPropagation()}>
-        {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-ink/[0.08]">
-          <div>
-            <h2 className="font-black text-text-primary text-base">Create Community</h2>
-            <p className="text-[11px] text-slate-400">Step {step} of {steps.length} — {steps[step - 1]}</p>
-          </div>
-          <button onClick={onClose} className="text-slate-400 hover:text-slate-600"><X size={16} /></button>
-        </div>
-        {/* Progress */}
-        <div className="flex px-6 py-2 gap-1">
-          {steps.map((s, i) => (
-            <div key={s} className="flex-1 h-1 rounded-full transition-colors"
-              style={{ background: i + 1 <= step ? ACCENT : "#E5E7EB" }} />
-          ))}
-        </div>
-        {/* Body */}
-        <div className="flex-1 overflow-y-auto px-6 py-4 flex flex-col gap-4">
-          {step === 1 && (
-            <>
-              <div>
-                <label className="text-xs font-bold text-slate-600 block mb-2">Community Icon</label>
-                <div className="flex flex-wrap gap-2">
-                  {COMMUNITY_ICONS.map((em) => (
-                    <button key={em} onClick={() => setIcon(em)}
-                      className={`text-xl p-1.5 rounded-lg border-2 transition-colors ${icon === em ? "border-accent" : "border-transparent hover:border-ink/[0.12]"}`}>
-                      {em}
-                    </button>
-                  ))}
-                </div>
-              </div>
-              <div>
-                <label className="text-xs font-bold text-slate-600 block mb-1">Community Name *</label>
-                <input value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Design Department"
-                  className="w-full px-3 py-2 rounded-xl border border-ink/[0.12] text-sm focus:outline-none focus:ring-2 focus:ring-accent/20" />
-              </div>
-              <div>
-                <label className="text-xs font-bold text-slate-600 block mb-1">Description</label>
-                <textarea value={desc} onChange={(e) => setDesc(e.target.value)} rows={2}
-                  placeholder="What's this community for?"
-                  className="w-full px-3 py-2 rounded-xl border border-ink/[0.12] text-sm focus:outline-none focus:ring-2 focus:ring-accent/20 resize-none" />
-              </div>
-              <div>
-                <label className="text-xs font-bold text-slate-600 block mb-1">Type</label>
-                <select value={type} onChange={(e) => setType(e.target.value)}
-                  className="w-full px-3 py-2 rounded-xl border border-ink/[0.12] text-sm focus:outline-none">
-                  <option value="custom">Custom</option>
-                  <option value="organization">Organization-wide</option>
-                  <option value="department">Department</option>
-                  <option value="team">Team</option>
-                  <option value="project">Project</option>
-                </select>
-              </div>
-            </>
-          )}
-
-          {step === 2 && (
-            <MemberPicker selected={members} onChange={setMembers} label="Select Community Members" />
-          )}
-
-          {step === 3 && (
-            <div className="flex flex-col gap-4">
-              <p className="text-xs text-slate-500">An <b>Announcements</b> group is created automatically. Add more groups below.</p>
-              {groups.map((g, i) => (
-                <div key={i} className="border border-ink/[0.10] rounded-xl p-3 flex flex-col gap-2">
-                  <div className="flex items-center gap-2">
-                    <select value={g.icon} onChange={(e) => updateGroup(i, "icon", e.target.value)}
-                      className="text-base border border-ink/[0.10] rounded-lg p-1 focus:outline-none">
-                      {COMMUNITY_ICONS.map((em) => <option key={em} value={em}>{em}</option>)}
-                    </select>
-                    <input value={g.name} onChange={(e) => updateGroup(i, "name", e.target.value)}
-                      placeholder="Group name" className="flex-1 px-2 py-1.5 text-xs rounded-lg border border-ink/[0.12] focus:outline-none" />
-                    <button onClick={() => removeGroup(i)} className="text-rose-400 hover:text-rose-600"><X size={12} /></button>
-                  </div>
-                  <input value={g.desc} onChange={(e) => updateGroup(i, "desc", e.target.value)}
-                    placeholder="Description (optional)" className="px-2 py-1.5 text-xs rounded-lg border border-ink/[0.12] focus:outline-none" />
-                  <details>
-                    <summary className="text-[10px] text-accent-text cursor-pointer select-none">Specific members (optional)</summary>
-                    <div className="mt-2">
-                      <MemberPicker selected={g.members} onChange={(sel) => updateGroup(i, "members", sel)} label="" />
-                    </div>
-                  </details>
-                </div>
-              ))}
-              <button onClick={addGroup}
-                className="flex items-center gap-1.5 text-xs font-bold text-accent-text hover:underline">
-                <Plus size={12} /> Add Group
-              </button>
-            </div>
-          )}
-
-          {step === 4 && (
-            <div className="flex flex-col gap-3">
-              <div className="flex items-center gap-3 p-3 rounded-xl bg-ink/[0.03] border border-ink/[0.08]">
-                <span className="text-2xl">{icon}</span>
-                <div>
-                  <p className="text-sm font-black text-text-primary">{name || "Unnamed"}</p>
-                  <p className="text-xs text-slate-400">{desc || "No description"}</p>
-                  <p className="text-[10px] text-slate-400 mt-0.5 capitalize">{type} community</p>
-                </div>
-              </div>
-              <div className="p-3 rounded-xl bg-ink/[0.03] border border-ink/[0.08]">
-                <p className="text-xs font-bold text-slate-600 mb-1.5">{members.length} Members</p>
-                <div className="flex flex-wrap gap-1">
-                  {members.map((m) => (
-                    <span key={m._id} className="text-[10px] px-2 py-0.5 rounded-full text-white" style={{ background: ACCENT }}>{m.name}</span>
-                  ))}
-                  {!members.length && <span className="text-[10px] text-slate-400">You only (creator)</span>}
-                </div>
-              </div>
-              <div className="p-3 rounded-xl bg-ink/[0.03] border border-ink/[0.08]">
-                <p className="text-xs font-bold text-slate-600 mb-1.5">{groups.filter((g) => g.name.trim()).length + 1} Groups</p>
-                <p className="text-[10px] text-slate-500">📢 announcements (auto)</p>
-                {groups.filter((g) => g.name.trim()).map((g, i) => (
-                  <p key={i} className="text-[10px] text-slate-500">{g.icon} {g.name}</p>
-                ))}
-              </div>
-            </div>
-          )}
-        </div>
-        {/* Footer */}
-        <div className="flex items-center justify-between px-6 py-4 border-t border-ink/[0.08]">
-          <button onClick={() => step > 1 ? setStep((s) => s - 1) : onClose()}
-            className="text-sm text-slate-500 hover:text-slate-700 font-semibold">
-            {step === 1 ? "Cancel" : "Back"}
-          </button>
-          {step < 4
-            ? <button onClick={() => { if (step === 1 && !name.trim()) return; setStep((s) => s + 1); }}
-                disabled={step === 1 && !name.trim()}
-                className="px-5 py-2 rounded-xl text-sm font-bold text-white disabled:opacity-40"
-                style={{ background: ACCENT }}>
-                Next
-              </button>
-            : <button onClick={submit} disabled={loading || !name.trim()}
-                className="px-5 py-2 rounded-xl text-sm font-bold text-white disabled:opacity-40"
-                style={{ background: ACCENT }}>
-                {loading ? "Creating…" : "Create Community"}
-              </button>
-          }
-        </div>
-      </motion.div>
-    </motion.div>
-  );
-}
-
 // ── Create Group Modal ────────────────────────────────────────────────────────
 function CreateGroupModal({ community, onClose, onCreated }) {
   const addToast = useUiStore((s) => s.addToast);
   const [name, setName]       = useState("");
   const [desc, setDesc]       = useState("");
-  const [icon, setIcon]       = useState("💬");
   const [members, setMembers] = useState([]);
   const [perm, setPerm]       = useState("everyone");
   const [joinApproval, setJoinApproval] = useState(false);
@@ -237,7 +48,7 @@ function CreateGroupModal({ community, onClose, onCreated }) {
     setLoading(true);
     try {
       const group = await api.post(`/api/communities/${community._id}/groups`, {
-        name, description: desc, icon,
+        name, description: desc,
         memberIds: members.map((u) => u._id),
         permissions: { sendMessages: perm, editInfo: "admins" },
         joinApproval,
@@ -259,22 +70,15 @@ function CreateGroupModal({ community, onClose, onCreated }) {
         <div className="flex items-center justify-between px-6 py-4 border-b border-ink/[0.08]">
           <div>
             <h2 className="font-black text-text-primary text-sm">New Group</h2>
-            <p className="text-[10px] text-slate-400">in {community.icon} {community.name}</p>
+            <p className="text-xs text-text-secondary">in {community.name}</p>
           </div>
           <button onClick={onClose} className="text-slate-400 hover:text-slate-600"><X size={15} /></button>
         </div>
         <form onSubmit={submit} className="flex-1 overflow-y-auto px-6 py-4 flex flex-col gap-3">
-          <div className="flex gap-3 items-end">
-            <select value={icon} onChange={(e) => setIcon(e.target.value)}
-              className="text-xl border border-ink/[0.12] rounded-xl p-2 focus:outline-none">
-              {COMMUNITY_ICONS.map((em) => <option key={em} value={em}>{em}</option>)}
-            </select>
-            <div className="flex-1">
-              <label className="text-xs font-bold text-slate-600 block mb-1">Group Name *</label>
-              <input value={name} onChange={(e) => setName(e.target.value)} required
-                placeholder="e.g. frontend-devs"
-                className="w-full px-3 py-2 text-sm rounded-xl border border-ink/[0.12] focus:outline-none focus:ring-1 focus:ring-accent/20" />
-            </div>
+          <div>
+            <label className="text-xs font-bold text-slate-600 block mb-1">Group name (required)</label>
+            <input value={name} onChange={(e) => setName(e.target.value)} required placeholder="e.g. frontend-devs"
+              className="w-full px-3 py-2 text-sm rounded-xl border border-ink/[0.12] focus:outline-none focus:ring-1 focus:ring-accent/20" />
           </div>
           <div>
             <label className="text-xs font-bold text-slate-600 block mb-1">Description</label>
@@ -435,7 +239,8 @@ export default function CollaborationBridgePage({ startWith = null }) {
   // Items 73-75: "@" in a group opens that group's member list (never yourself); a DM has two people, so no list.
   const [chatMembers, setChatMembers] = useState([]);
   useEffect(() => {
-    if (!activeGroup || activeGroup.type === "dm") { setChatMembers([]); return; } // eslint-disable-line react-hooks/set-state-in-effect
+    setChatMembers([]); // eslint-disable-line react-hooks/set-state-in-effect -- E-1: never keep the previous group's list while the new one loads
+    if (!activeGroup || activeGroup.type === "dm") return;
     let live = true;
     api.get(`/api/chat/channels/${activeGroup._id}/members`, { silent: true }).then((ms) => live && setChatMembers(ms)).catch(() => {});
     return () => { live = false; };
@@ -711,11 +516,11 @@ export default function CollaborationBridgePage({ startWith = null }) {
               style={{ background: "#F5F6FA" }}>
               {activeGroup.type === "dm"
                 ? <Avatar user={personOf(activeGroup) ?? { name: activeTitle }} size={34} />
-                : <span className="text-xl shrink-0" aria-hidden="true">{activeGroup.type === "announcement" ? "📢" : activeGroup.icon ?? "💬"}</span>}
+                : <span className="shrink-0 text-text-secondary"><GroupGlyph group={activeGroup} size={20} /></span>}
               <div className="flex-1 min-w-0">
                 <h1 tabIndex={0} title={fullTitle} className="max-h-[4.5rem] overflow-y-auto text-base font-bold leading-snug text-text-primary break-words [overflow-wrap:anywhere]">{fullTitle}</h1>
                 {activeCommunity && (
-                  <p className="max-h-10 overflow-y-auto text-xs text-text-tertiary break-words [overflow-wrap:anywhere]">{activeCommunity.icon} {activeCommunity.name}</p>
+                  <p className="max-h-10 overflow-y-auto text-xs text-text-tertiary break-words [overflow-wrap:anywhere]">{activeCommunity.name}</p>
                 )}
                 {activeGroup.type === "dm" && <p className="text-xs text-text-tertiary truncate">{personOf(activeGroup)?.role ?? "Direct message"}</p>}
               </div>
@@ -785,11 +590,11 @@ export default function CollaborationBridgePage({ startWith = null }) {
             </button>
             {communities.length === 0 ? (
               <EmptyState pose="thinking" heading="No communities yet"
-                body={CAN_CREATE_COMMUNITY.includes(userRole) ? "Create a community for a project or team. It comes with an Announcements group." : "When a Manager adds you to a community, its groups show up here. You can still send a direct message."}
+                body={CAN_CREATE_COMMUNITY.includes(userRole) ? "Create a community for a project or team. It comes with Announcements, General and Leadership groups." : "When a Manager adds you to a community, its groups show up here. You can still send a direct message."}
                 action={CAN_CREATE_COMMUNITY.includes(userRole) ? { label: "New community", onClick: () => setShowCreateCom(true) } : { label: "New direct message", onClick: () => setShowDm(true) }} />
             ) : (
               <EmptyState pose="thinking" heading="Pick a group to start"
-                body={CAN_CREATE_COMMUNITY.includes(userRole) ? "Choose a group on the left, post an announcement, or send someone a direct message." : "Choose a group on the left, or send someone a direct message."}
+                body={CAN_CREATE_COMMUNITY.includes(userRole) ? "Choose a chat from the list, post an announcement, or send someone a direct message." : "Choose a chat from the list, or send someone a direct message."}
                 action={CAN_CREATE_COMMUNITY.includes(userRole) ? { label: "New announcement", onClick: openAnnouncements } : { label: "New direct message", onClick: () => setShowDm(true) }} />
             )}
           </div>

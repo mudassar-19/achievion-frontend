@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
+import { fmtDate as dateStd } from "@/lib/dates";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   CheckSquare, Clock, Flame, Zap, Coins,
@@ -21,7 +22,7 @@ import { frameStyle, badgeEmoji, titleMeta } from "@/utils/shopCosmetics";
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 function fmtDate(d) {
   if (!d) return "—";
-  return new Date(d).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+  return dateStd(d);
 }
 function fmtTimeAgo(d) {
   if (!d) return "";

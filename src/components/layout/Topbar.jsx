@@ -11,6 +11,7 @@ import useGamificationStore   from "@/stores/gamificationStore";
 import "@/stores/uiStore";
 import useNotificationStore, { toCategory, notifRedirectPath } from "@/stores/notificationStore";
 import { useRoleTheme, portalBase } from "@/utils/roleTheme";
+import { notifTitle, humanizeText } from "@/lib/humanize";
 
 const SHOW_SEARCH = false; // flip when global search exists
 
@@ -143,14 +144,14 @@ function NotificationDropdown({ open, onClose }) {
                 <div className="flex-1 min-w-0">
                   <div className="flex items-start justify-between gap-1">
                     <p className={["text-xs font-bold leading-tight truncate", !n.read ? "text-text-primary" : "text-slate-400"].join(" ")}>
-                      {n.title || n.type}
+                      {notifTitle(n)}
                     </p>
                     <div className="flex items-center gap-1 shrink-0">
                       {!n.read && <span className="h-1.5 w-1.5 rounded-full bg-accent shrink-0" />}
                       <span className="text-[14px] text-slate-600 whitespace-nowrap">{timeAgo(n.createdAt)}</span>
                     </div>
                   </div>
-                  <p className="text-[14px] text-slate-500 mt-0.5 leading-snug line-clamp-2">{n.message}</p>
+                  <p className="text-[14px] text-slate-500 mt-0.5 leading-snug line-clamp-2">{humanizeText(n.message)}</p>
                 </div>
               </button>
             );

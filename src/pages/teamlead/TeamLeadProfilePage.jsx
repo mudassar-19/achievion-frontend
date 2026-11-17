@@ -1,4 +1,5 @@
 import { fmtDateTime as dTime } from "@/pages/manager/project/format";
+import { fmtDate as dateStd } from "@/lib/dates";
 import { useEffect, useState, useCallback } from "react";
 import { motion, AnimatePresence }    from "framer-motion";
 import { Crown, Star, Flag, Target, Shield, Activity, Clock, Zap, TrendingUp, Users, AlertTriangle, CheckCircle2, Award, Layers, BarChart2, Circle, Briefcase } from "lucide-react";
@@ -250,7 +251,7 @@ export default function TeamLeadProfilePage() {
                 </div>
               )}
               <p className="text-[14px] text-slate-600 mt-1.5">
-                Joined {user.joinedAt ? new Date(user.joinedAt).toLocaleDateString("en-US", { month:"long", year:"numeric" }) : "—"}
+                Joined {dateStd(user.joinedAt)}
               </p>
             </div>
           </div>
@@ -588,7 +589,7 @@ export default function TeamLeadProfilePage() {
                 { label: "Department", value: user.department ?? "Not assigned" },
                 { label: "Status",     value: user.status ? user.status.charAt(0).toUpperCase() + user.status.slice(1) : "Active" },
                 { label: "Org ID",     value: user.orgId ?? "—" },
-                { label: "Member Since", value: user.joinedAt ? new Date(user.joinedAt).toLocaleDateString("en-US", { month:"long", day:"numeric", year:"numeric" }) : "—" },
+                { label: "Member Since", value: dateStd(user.joinedAt) },
               ].map((f) => (
                 <div key={f.label} className="flex items-start justify-between gap-2 py-1.5 border-b" style={{ borderColor: "rgba(20,32,61,0.04)" }}>
                   <span className="text-[14px] font-bold uppercase tracking-wider text-slate-600 shrink-0">{f.label}</span>

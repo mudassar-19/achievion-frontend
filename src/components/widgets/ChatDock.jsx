@@ -115,7 +115,7 @@ function ChatWindow({ conv, me, minimized, tick, onMinimize, onClose, onSeen }) 
             {messages === null && !failed && <p className="flex items-center justify-center gap-2 py-10 text-sm text-text-secondary"><Loader2 size={14} className="animate-spin motion-reduce:animate-none" aria-hidden="true" /> Loading messages…</p>}
             {failed && messages === null && <p role="alert" className="px-4 py-8 text-center text-sm text-text-secondary">Messages could not be loaded. <button type="button" onClick={load} className="font-bold text-accent-text underline">Try again</button></p>}
             {messages?.length === 0 && <p className="px-6 py-10 text-center text-sm text-text-secondary">No messages yet. Write the first one below.</p>}
-            {messages?.length > 0 && <ChatMessages messages={messages} currentUserId={me.id} />}
+            {messages?.length > 0 && <ChatMessages messages={messages} currentUserId={me.id} names={members.map((m) => m.name)} />}
             <div ref={endRef} />
           </div>
           <div className="shrink-0 border-t border-ink/[0.07] p-2">
@@ -178,7 +178,7 @@ export default function ChatDock({ chatPath, rightOffset = 0 }) {
 
   const convs = useMemo(() => [
     ...dms.map((d) => ({ id: String(d._id), kind: "dm", person: personOf(d) ?? null, title: chatTitle(d, personOf(d)), sub: personOf(d)?.role ?? "", unread: d.unread ?? 0, muted: (d.mutedBy ?? []).some((m) => String(m) === me.id), raw: d })),
-    ...groups.map((g) => ({ id: String(g._id), kind: g.type === "announcement" ? "announcement" : "group", title: chatTitle(g), sub: g._community, unread: g.unread ?? 0, muted: !!g.muted, raw: g })),
+    ...groups.map((g) => ({ id: String(g._id), kind: g.type === "announcement" ? "announcement" : "group", title: chatTitle(g, undefined, g._community), sub: g._community, unread: g.unread ?? 0, muted: !!g.muted, raw: g })),
   // Unread first, then people before groups (a Director can have hundreds of groups and the list stops at LIST_MAX).
   ].sort((a, b) => (b.unread > 0 && !b.muted) - (a.unread > 0 && !a.muted) || (b.kind === "dm") - (a.kind === "dm") || a.title.localeCompare(b.title)), [dms, groups, personOf, me.id]);
 

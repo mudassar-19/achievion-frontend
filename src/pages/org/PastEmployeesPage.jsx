@@ -6,10 +6,11 @@ import { Search, ChevronLeft, ChevronRight, Users, ArrowLeft } from "lucide-reac
 import useOrgAuthStore from "@/stores/orgAuthStore";
 import api from "@/lib/api";
 import TallyLoader from "@/components/ui/TallyLoader";
+import { fmtDate as dateStd } from "@/lib/dates";
 
 function fmt(iso) {
   if (!iso) return "—";
-  return new Date(iso).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" });
+  return dateStd(iso);
 }
 
 const SELECT_CLS = "rounded-xl border border-slate-600 bg-[#FFFFFF] py-2 px-3 text-sm text-text-primary outline-none focus:border-accent focus:shadow-card-hover transition-all";

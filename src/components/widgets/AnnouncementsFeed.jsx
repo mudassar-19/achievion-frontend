@@ -11,8 +11,9 @@ import ErrorState from "@/components/ui/ErrorState";
 import Skeleton from "@/components/ui/Skeleton";
 import ConfirmModal from "@/components/ui/ConfirmModal";
 import { BTN } from "@/components/ui/buttons";
+import { fmtDateTime } from "@/lib/dates";
 
-const fmt = (d) => new Date(d).toLocaleString("en-GB", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" });
+const fmt = (d) => fmtDateTime(d);
 const MAX = 2000;
 
 function Composer({ targets, onPosted }) {
@@ -54,6 +55,7 @@ export default function AnnouncementsFeed() {
   const [data, setData] = useState(null);
   const [error, setError] = useState(null);
   const [open, setOpen] = useState(null);
+  const [only, setOnly] = useState(""); // community filter (E-11)
   const load = useCallback(() => { api.get("/api/announcements", { silent: true }).then((d) => { setData(d); setError(null); }).catch((e) => setError(e?.message ?? "Announcements could not be loaded.")); }, []);
   useEffect(load, [load]); // eslint-disable-line react-hooks/set-state-in-effect
 
@@ -63,17 +65,23 @@ export default function AnnouncementsFeed() {
   };
   const toggle = (a) => { setOpen((x) => (x === a.id ? null : a.id)); if (a.unread) mark([a.id]); };
 
+  const communities = [...new Set((data?.items ?? []).map((i) => i.community).filter(Boolean))].sort();
+  const items = (data?.items ?? []).filter((i) => !only || i.community === only);
   if (error) return <Page><ErrorState message={error} onRetry={load} /></Page>;
   return (
     <Page>
       <PageHeader title="Announcements" subtitle={data?.unread ? `${data.unread} unread` : "News from your Director, Manager and projects. Read only."}
         secondary={data?.unread ? { label: "Mark all as read", onClick: () => mark(null) } : undefined} />
       {data?.canPost && <Composer targets={data.targets} onPosted={load} />}
+      {communities.length > 1 && (
+        <div className="flex items-center gap-2"><label htmlFor="ann-filter" className="text-xs font-bold text-text-primary">Community</label>
+          <select id="ann-filter" value={only} onChange={(e) => setOnly(e.target.value)} className="h-9 rounded-xl px-3 text-sm"><option value="">All communities</option>{communities.map((c) => <option key={c} value={c}>{c}</option>)}</select></div>
+      )}
       {!data ? <div aria-busy="true" aria-label="Loading announcements" className="flex flex-col gap-3">{[0, 1, 2].map((i) => <Skeleton key={i} className="h-20 rounded-2xl" />)}</div>
-        : !data.items.length ? <EmptyState heading="No announcements yet" body={data.canPost ? "Post the first one above." : "When your Director or Manager posts one, it shows here."} />
+        : !items.length ? <EmptyState heading="No announcements yet" body={data.canPost ? "Post the first one above." : "When your Director or Manager posts one, it shows here."} />
         : (
           <ul className="flex flex-col gap-2">
-            {data.items.map((a) => (
+            {items.map((a) => (
               <li key={a.id}>
                 <button type="button" aria-expanded={open === a.id} onClick={() => toggle(a)} className="glass-panel flex w-full min-w-0 items-start gap-3 rounded-2xl border border-ink/[0.07] px-5 py-4 text-left">
                   <Megaphone size={15} aria-hidden="true" className="mt-0.5 shrink-0 text-text-secondary" />
@@ -84,6 +92,7 @@ export default function AnnouncementsFeed() {
                       {a.role && <span>{a.role}</span>}
                       {a.community && <span title={a.community} className="max-w-[30ch] truncate rounded-md bg-ink/[0.05] px-1.5 py-0.5 font-semibold">{a.community}</span>}
                       <time dateTime={a.at} className="whitespace-nowrap tabular-nums">{fmt(a.at)}</time>
+                      {a.audience > 0 && <span className="whitespace-nowrap">Seen by {a.seen} of {a.audience}</span>}
                     </span>
                     <span className={`mt-1 block whitespace-pre-wrap text-sm text-text-primary [overflow-wrap:anywhere] ${open === a.id ? "" : "line-clamp-2"} ${a.unread ? "font-semibold" : ""}`}>{a.text}</span>
                   </span>

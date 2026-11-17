@@ -438,7 +438,7 @@ export default function DirectorSettingsPage() {
 
             {/* ── Sticky save bar ───────────────────────────────────── */}
             <AnimatePresence>
-              {dirty && (
+              {(
                 <motion.div
                   initial={{ opacity: 0, y: 8 }}
                   animate={{ opacity: 1, y: 0 }}
@@ -447,18 +447,18 @@ export default function DirectorSettingsPage() {
                   className="flex items-center justify-between gap-4 px-6 py-4 border-t border-ink/[0.07] bg-[#FFFFFF]/90 backdrop-blur-sm rounded-b-2xl"
                 >
                   <p role="status" className={`min-w-0 text-xs ${blockedBy ? "font-semibold text-[#B01F17]" : "text-slate-500"}`}>
-                    {blockedBy ? `Correct the marked value in ${blockedBy} to save.` : "Unsaved changes"}
+                    {blockedBy ? `Correct the marked value in ${blockedBy} to save.` : dirty ? "Unsaved changes" : "All changes are saved."}
                   </p>
                   <div className="flex gap-2">
-                    <button
+                    {dirty && <button
                       onClick={() => setSettingsState({ ...saved })}
                       className="px-4 py-2 rounded-xl text-xs text-slate-500 hover:text-slate-700 transition-colors"
                     >
                       Discard
-                    </button>
+                    </button>}
                     <button
                       onClick={handleSave}
-                      disabled={saving || !!blockedBy}
+                      disabled={saving || !!blockedBy || !dirty}
                       className="flex items-center gap-2 px-5 py-2 rounded-xl text-xs font-bold text-white transition-colors disabled:opacity-40"
                       style={{ background: ACCENT }}
                     >

@@ -29,7 +29,7 @@ const ROLE_CATEGORIES = [
 
 // Item 60: the header and every row use ONE column template with a fixed last column (an `auto` column was sized
 // separately in each row, so the headers drifted away from their cells). minmax(0, …) lets long names and e-mails truncate.
-const GRID = "grid grid-cols-[minmax(0,2fr)_minmax(0,2fr)_minmax(0,1.6fr)_minmax(0,1.5fr)_96px] gap-3";
+const GRID = "grid grid-cols-[minmax(0,1.8fr)_minmax(0,1.8fr)_minmax(0,1.2fr)_minmax(0,1.6fr)_minmax(0,1.4fr)_96px] gap-3";
 
 function StatusBadge({ status }) {
   const cls = {
@@ -276,7 +276,7 @@ export default function EmployeeList() {
       <div className="rounded-2xl border border-ink/8 bg-gradient-to-b from-[#EAEDF4] to-[#FFFFFF] overflow-hidden">
         {/* Table header */}
         <div className={`${GRID} px-5 py-3 border-b border-ink/[0.05] bg-ink/[0.02]`}>
-          {["Name", "Email", "Role", "Status", "Actions"].map((h) => (
+          {["Name", "Email", "Department", "Role", "Status", "Actions"].map((h) => (
             <span key={h} className="text-[14px] font-bold uppercase tracking-widest text-text-disabled">{h}</span>
           ))}
         </div>
@@ -319,6 +319,9 @@ export default function EmployeeList() {
                   {/* Email */}
                   <span className="text-xs text-slate-400 truncate">{emp.email}</span>
 
+                  {/* Department (A-8) */}
+                  <span className="truncate text-xs text-text-secondary" title={emp.department ?? ""}>{emp.department || "Not set"}</span>
+
                   {/* Role */}
                   <div>
                     {emp.status === "pending_approval" ? (
@@ -350,8 +353,9 @@ export default function EmployeeList() {
                           setPendingRoleChange({ emp, newRole });
                         }}
                         className="rounded-lg border border-slate-700 bg-transparent text-[14px] font-bold py-1 px-2 text-text-primary outline-none focus:border-accent cursor-pointer"
-                        title="Change role"
+                        title="Change role (needs Director approval)" aria-label={`Change role of ${emp.name} (needs Director approval)`}
                       >
+                        {!ROLE_CATEGORIES.some((r) => r.value === emp.role) && <option value={emp.role} disabled>{emp.role}</option>}
                         {ROLE_CATEGORIES.filter((r) => r.value && r.value !== "Director").map((r) => (
                           <option key={r.value} value={r.value} className="bg-[#FFFFFF]">{r.label}</option>
                         ))}
@@ -398,6 +402,7 @@ export default function EmployeeList() {
                         <button
                           onClick={() => emp.status === "active" ? setSuspendTarget(emp) : setReactivateTarget(emp)}
                           disabled={!!busy || !!emp.pendingSuspension || !!emp.pendingReactivation || !!emp.pendingDeletion}
+                          aria-label={`${emp.status === "active" ? "Request suspension" : "Request reactivation"}: ${emp.name}`}
                           title={
                             emp.pendingDeletion      ? "Deletion pending Director approval" :
                             emp.pendingSuspension    ? "Suspension pending Director approval" :
@@ -424,7 +429,8 @@ export default function EmployeeList() {
                         <button
                           onClick={() => setDeleteTarget(emp)}
                           disabled={!!busy || !!emp.pendingDeletion}
-                          title={emp.pendingDeletion ? "Deletion pending Director approval" : "Delete employee"}
+                          aria-label={`Delete ${emp.name} (needs Director approval)`}
+                          title={emp.pendingDeletion ? "Deletion pending Director approval" : "Delete employee (needs Director approval)"}
                           className="p-1.5 rounded-lg border border-[#D1291F]/20 text-[#B01F17] hover:bg-[#D1291F]/10 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
                         >
                           {busy === "delete"

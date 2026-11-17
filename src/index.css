@@ -273,3 +273,6 @@
 .mascot[data-pose=encouraging] .bob { animation: tl-sway 3.6s ease-in-out infinite; }
 .mascot[data-pose=alert] .bang { animation: tl-pulse 1.4s ease-in-out infinite; }
 .mascot .twinkle { animation: tl-blink 2s infinite; }
+
+/* View as is read-only (F-1): write controls are removed, not just disabled. */
+html[data-view-only] [data-write-action] { display: none !important; }

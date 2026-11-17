@@ -1,4 +1,6 @@
 import { useEffect, useState } from "react";
+import { fmtDate as dateStd } from "@/lib/dates";
+import { roleLabel } from "@/lib/roleLabel";
 import { PRIORITY_BASE_XP, XP_VALUE_MIN, XP_VALUE_MAX, xpValueError } from "@/utils/xpRules";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -48,7 +50,7 @@ function TaskCard({ task, saving }) {
   const [now] = useState(() => Date.now()); // fixed at mount
   const priColor = PRIORITY_COLOR[task.priority] ?? "#4F5B75";
   const deadline = task.deadline
-    ? new Date(task.deadline).toLocaleDateString("en-US", { month: "short", day: "numeric" })
+    ? dateStd(task.deadline, { year: false })
     : null;
   const daysLeft = task.deadline ? Math.ceil((new Date(task.deadline) - now) / 86400000) : null;
   const overdue  = Boolean(task.deadline) && new Date(task.deadline).getTime() < now && task.status !== "Done";
@@ -404,7 +406,7 @@ function NewTaskModal({ roleCategory, onClose, onCreated }) {
                       className="accent-[var(--accent-text)]"
                     />
                     <span className="text-xs text-slate-300">{m.name}</span>
-                    <span className="ml-auto text-[14px] text-slate-600">{m.role}</span>
+                    <span className="ml-auto text-[14px] text-slate-600">{roleLabel(m)}</span>
                   </label>
                 ))}
               </div>

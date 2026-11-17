@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { roleLabel } from "@/lib/roleLabel";
 import { motion } from "framer-motion";
 import { TrendingUp, Award, AlertTriangle, Zap } from "lucide-react";
 import PageHeader from "@/components/ui/PageHeader";
@@ -233,7 +234,7 @@ export default function TeamAnalyticsPage() {
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="text-xs font-bold text-text-primary truncate">{u.name}</p>
-                    <p className="text-[14px] text-slate-600 truncate">{u.role}</p>
+                    <p className="text-[14px] text-slate-600 truncate">{roleLabel(u)}</p>
                   </div>
                   <div className="flex flex-col items-end shrink-0">
                     <span className="flex items-center gap-1 text-[14px] font-black text-accent-text">

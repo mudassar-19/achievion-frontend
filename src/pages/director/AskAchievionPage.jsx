@@ -12,6 +12,7 @@ import {
 import api from "@/lib/api";
 import useAuthStore from "@/stores/authStore";
 import ConfirmModal from "@/components/ui/ConfirmModal";
+import { fmtDateShort } from "@/lib/dates";
 import { loadChats, saveChats, upsertChat, renameChat, deleteChat, uniqueTitles } from "@/lib/aiChats";
 
 const uid = () => Math.random().toString(36).slice(2) + Date.now().toString(36);
@@ -22,7 +23,7 @@ function whenText(iso) {
   if (diff < 60) return "Just now";
   if (diff < 3600) return `${Math.floor(diff / 60)} min ago`;
   if (diff < 86400) return `${Math.floor(diff / 3600)} h ago`;
-  return d.toLocaleDateString(undefined, { month: "short", day: "numeric", year: d.getFullYear() === new Date().getFullYear() ? undefined : "numeric" });
+  return fmtDateShort(d);
 }
 
 const SUGGESTIONS = [

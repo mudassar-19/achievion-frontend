@@ -3,11 +3,12 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { Building2 } from "lucide-react";
 import api from "@/lib/api";
+import { fmtDate } from "@/lib/dates";
 
 const CARD = "rounded-2xl bg-gradient-to-b from-[#EAEDF4] to-[#FFFFFF] border border-ink/[0.07] p-5";
 const H3 = "text-xs font-bold text-slate-600 uppercase tracking-wider mb-4";
 const SERIES = [["overall", "Overall", "#4B2FC4"], ["delivery", "Delivery", "#0E6A30"], ["capacity", "Capacity", "#B45309"], ["risk", "Risk", "#B01F17"], ["quality", "Quality", "#0B63C5"]];
-const shortDate = (d) => new Date(d).toLocaleDateString("en-US", { month: "short", day: "numeric" });
+const shortDate = (d) => fmtDate(d, { year: false });
 
 const TABS =[["overview", "Overview"], ["trends", "Trends"], ["departments", "Departments"], ["wellbeing", "Well-being"]];
 
@@ -79,7 +80,7 @@ export function DepartmentsTab({ depts }) {
   const pct = (v) => (v == null ? "Not enough data" : `${v}%`);
   return (
     <div className="flex flex-col gap-3">
-      <p className="text-xs text-slate-600">Departments are listed A to Z. They are not ranked or compared (a department is not a contest).</p>
+      <p className="text-xs text-slate-600">Each department is shown on its own numbers; they are not ranked against each other.</p>
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
         {rows.map((r) => (
           <Link key={r.name} to={`/director/dept/${encodeURIComponent(r.name)}`} className={`${CARD} block min-w-0 hover:border-[#4B2FC4]/40`}>
@@ -127,9 +128,12 @@ export function WellbeingTab() {
       </div>
       {trend.length >= 2 && (
         <div className={CARD}>
-          <h3 className={H3}>Average energy, last {trend.length} days</h3>
-          <svg viewBox="0 0 640 140" className="w-full h-auto" role="img" aria-label="Average team energy over time">
-            <polyline fill="none" stroke="#4B2FC4" strokeWidth="2" points={trend.map((s, i) => `${20 + (i * 600) / (trend.length - 1)},${130 - (s.avgHp / 100) * 120}`).join(" ")} />
+          <h3 className={H3}>Average energy, {trend.length >= 25 ? "last 4 weeks" : `last ${trend.length} days`}</h3>
+          <svg viewBox="0 0 640 160" className="w-full h-auto" role="img" aria-label="Average team energy over time, from 0 to 100">
+            {[0, 50, 100].map((v) => (<g key={v}><line x1="36" x2="630" y1={140 - (v / 100) * 120} y2={140 - (v / 100) * 120} stroke="#14203D" strokeOpacity="0.08" /><text x="30" y={144 - (v / 100) * 120} textAnchor="end" fontSize="11" fill="#4F5B75">{v}</text></g>))}
+            <polyline fill="none" stroke="#4B2FC4" strokeWidth="2" points={trend.map((s, i) => `${40 + (i * 586) / (trend.length - 1)},${140 - (s.avgHp / 100) * 120}`).join(" ")} />
+            {trend.map((s, i) => (<circle key={s.day} cx={40 + (i * 586) / (trend.length - 1)} cy={140 - (s.avgHp / 100) * 120} r={i === trend.length - 1 ? 5 : 3} fill="#4B2FC4"><title>{shortDate(s.day)}: {Math.round(s.avgHp)}</title></circle>))}
+            <text x="626" y="12" textAnchor="end" fontSize="11" fontWeight="700" fill="#4B2FC4">Today {Math.round(trend.at(-1).avgHp)}</text>
           </svg>
           <p className="mt-1 flex justify-between text-[11px] text-slate-600"><span>{shortDate(trend[0].day)}</span><span>{shortDate(trend.at(-1).day)}</span></p>
         </div>

@@ -9,10 +9,11 @@ import { useRoleTheme } from "@/utils/roleTheme";
 
 import TallyLoader from "@/components/ui/TallyLoader";
 import PageHeader from "@/components/ui/PageHeader";
+import { fmtDate as dateStd } from "@/lib/dates";
 // ── Helpers ───────────────────────────────────────────────────────────────────
 function fmtDate(d) {
   if (!d) return "—";
-  return new Date(d).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" });
+  return dateStd(d);
 }
 
 // ── Section wrapper ───────────────────────────────────────────────────────────

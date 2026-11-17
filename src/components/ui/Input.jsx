@@ -75,7 +75,7 @@ const Input = forwardRef(function Input(
           onBlur={() => setFocused(false)}
           className={[
             "flex-1 bg-transparent py-2.5 px-3 text-sm text-text-primary",
-            "placeholder:text-slate-600",
+            "placeholder:text-slate-500 placeholder:font-normal",
             "outline-none",
             "disabled:cursor-not-allowed",
             // keep text white during browser autofill / paste

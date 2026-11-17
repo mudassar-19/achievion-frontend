@@ -1,13 +1,15 @@
+import { useEffect, useRef, useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
+import gsap from "gsap";
+import { fmtDateShort } from "@/lib/dates";
 /**
- * ProgressGarden (formerly OrgGarden) — D-208 (UI-A1b)
+ * ProgressGarden (formerly OrgGarden) — D-208 (UI-A1b); rebuilt in QA3 round 4 (C-21, C-4, C-22; D-QA3B-12).
+ * One component for the Garden page (variant "full") and the dashboard (variant "mini").
  * Each tree = one project. Stage = project status. Color = project's own health band (D-077/D-134).
  * No org-level burnout here (that lives in Team Well-being / Org Health).
  * Mascot: Tally the gardener — original inline SVG (D-219).
  */
 
-const REDUCED =
-  typeof window !== "undefined" &&
-  window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
 // ─── Health band → tree colors ────────────────────────────────────────────────
 
@@ -119,15 +121,11 @@ const STATUS_LABEL = {
 
 // ─── Tally mascot — watering pose (D-219: original inline SVG restored) ───────
 
-function TallyWatering() {
+function TallyWatering({ size = 72 }) {
   return (
-    <div
-      className="relative select-none flex-shrink-0"
-      style={REDUCED ? {} : { animation: "tally-float 2.8s ease-in-out infinite" }}
-      aria-hidden="true"
-    >
+    <div className="tally-body relative select-none flex-shrink-0" aria-hidden="true">
       {/* Original Tally SVG — do not modify */}
-      <svg viewBox="0 0 110 98" width="72" height="72">
+      <svg viewBox="0 0 110 98" width={size} height={size}>
         <ellipse cx="62" cy="95" rx="22" ry="4.5" fill="rgba(14,106,48,0.22)" />
         <path d="M50 54 Q36 60 30 72" stroke="#4B2FC4" strokeWidth="7" strokeLinecap="round" fill="none" />
         <rect x="12" y="66" width="22" height="16" rx="5" fill="#FFC21A" />
@@ -166,7 +164,7 @@ function TallyWatering() {
           right: "-2px",
           transformOrigin: "50% 100%",
         }}
-        className={REDUCED ? "" : "tally-bottle"}
+        className="tally-bottle"
       >
         {/* cap */}
         <rect x="6" y="0" width="6" height="4" rx="1.5" fill="#2A62EC" />
@@ -280,140 +278,109 @@ function GardenEmpty() {
 }
 
 // ─── Main component ───────────────────────────────────────────────────────────
-// projects: [{ id, title, status, healthScore: number|null, healthBand: string }]
-// onTrackPct: number 0-100 (computed by caller from garden API)
-
+// projects: [{ id, title, status, healthScore, healthBand, progressPct, deadline, manager }] in the order the page lists them.
+// filter: a health band or "All": trees outside it fade, the rest get a ring (the scene follows the filter chips).
 const BAND_PRIORITY = { "Off track": 0, "At risk": 1, "On track": 2, "Not started": 3 };
-function sortByCriticality(arr) {
-  return [...arr].sort((a, b) => (BAND_PRIORITY[a.healthBand] ?? 4) - (BAND_PRIORITY[b.healthBand] ?? 4));
+const byCriticality = (a, b) => (BAND_PRIORITY[a.healthBand] ?? 4) - (BAND_PRIORITY[b.healthBand] ?? 4);
+const stageOf = (p) => STATUS_TREE[(p.status ?? "planning").toLowerCase().trim()] ?? Seedling;
+const labelOf = (p) => STATUS_LABEL[(p.status ?? "planning").toLowerCase().trim()] ?? p.status ?? "Planning";
+const healthText = (p) => (p.healthBand === "Not started" || p.healthScore == null ? "Not started" : `Health ${p.healthScore}%`);
+
+function ProjectCard({ p }) {
+  const rows = [["Health", `${p.healthBand ?? "Not started"}${p.healthScore != null ? ` (${p.healthScore}%)` : ""}`], ["Completed", p.progressPct != null ? `${p.progressPct}% of tasks` : "—"],
+    ["Stage", labelOf(p)], ["Deadline", p.deadline ? fmtDateShort(p.deadline) : "Not set"], ["Manager", p.manager ?? "Not assigned"]];
+  return (
+    <div role="tooltip" className="absolute bottom-full left-1/2 z-40 mb-2 w-52 -translate-x-1/2 rounded-xl bg-[#14203D] p-3 text-left text-white shadow-xl">
+      <p className="text-xs font-bold leading-snug [overflow-wrap:anywhere]">{p.title}</p>
+      <dl className="mt-1.5 grid grid-cols-[auto_1fr] gap-x-2 gap-y-0.5 text-[11px]">
+        {rows.map(([k, v]) => (<div key={k} className="contents"><dt className="text-white/70">{k}</dt><dd className="font-semibold">{v}</dd></div>))}
+      </dl>
+      <Link to={`/director/projects/${p.id}`} className="mt-2 inline-block text-[11px] font-bold text-[#FFC21A] underline-offset-2 hover:underline">Open project</Link>
+    </div>
+  );
 }
 
-export default function OrgGarden({ projects, onTrackPct = 0, totalCount, className = "", showLegend = false }) {
-  const sorted = Array.isArray(projects) ? sortByCriticality(projects) : [];
-  const displayProjects = sorted.slice(0, 7);
-  const hiddenCount = (totalCount ?? sorted.length) - displayProjects.length;
-  const isEmpty = displayProjects.length === 0;
+export default function OrgGarden({ projects, onTrackPct = 0, totalCount, className = "", showLegend = false, variant = "full", filter = "All" }) {
+  const mini = variant === "mini";
+  const list = Array.isArray(projects) ? projects : [];
+  const shown = mini ? [...list].sort(byCriticality).slice(0, 7) : list;
+  const hidden = (totalCount ?? list.length) - shown.length;
+  const navigate = useNavigate();
+  const root = useRef(null);
+  const [active, setActive] = useState(null);   // tapped (touch) or keyboard-focused tree
+  const [hover, setHover] = useState(null);
+  const open = hover ?? active;
+  const thirsty = shown.find((p) => p.healthBand === "At risk") ?? shown.find((p) => p.healthBand === "Off track");
 
-  const pctLabel = isEmpty ? "" : `${onTrackPct}% on track`;
+  // GSAP: the bar fills, trees rise in, Tally waters the thirsty tree. Nothing moves when the person asks for reduced motion.
+  useEffect(() => {
+    if (!root.current || !shown.length) return undefined;
+    const mm = gsap.matchMedia();
+    mm.add("(prefers-reduced-motion: no-preference)", () => {
+      gsap.from(".garden-fill", { width: 0, duration: 0.9, ease: "power2.out" });
+      gsap.from(".garden-tree", { y: 14, opacity: 0, duration: 0.5, stagger: 0.05, ease: "power2.out", clearProps: "opacity,transform" });
+      gsap.to(".tally-bottle", { rotation: -28, transformOrigin: "50% 100%", duration: 0.9, yoyo: true, repeat: -1, ease: "sine.inOut" });
+      gsap.to(".garden-drop", { y: 26, opacity: 0, duration: 0.9, stagger: 0.25, repeat: -1, ease: "power1.in" });
+      gsap.to(".tally-body", { y: -4, duration: 1.4, yoyo: true, repeat: -1, ease: "sine.inOut" });
+    }, root);
+    return () => mm.revert();
+  }, [shown.length, thirsty?.id]);
+
+  if (!list.length) return <div className={className}><GardenEmpty /></div>;
+
+  const pick = (p) => {
+    if (window.matchMedia?.("(hover: hover)").matches) navigate(`/director/projects/${p.id}`);
+    else setActive((a) => (a === p.id ? null : p.id));
+  };
+  const dim = (p) => filter !== "All" && p.healthBand !== filter;
+  const cols = mini ? "grid-cols-4 sm:grid-cols-7" : "grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6";
 
   return (
-    <div
-      className={`flex flex-col gap-3 ${className}`}
-      role="img"
-      aria-label={`Progress Garden — ${isEmpty ? "no projects" : pctLabel}`}
-    >
-      {isEmpty ? (
-        <GardenEmpty />
-      ) : (
-        <>
-          {/* ── Scene ── */}
-          <div
-            className="relative flex items-end justify-start gap-2 sm:gap-4 min-h-[120px] pt-16 overflow-x-auto pb-1 px-2 sm:px-3"
-          >
-            {/* Tally mascot */}
-            <div className="flex-shrink-0 self-end">
-              <TallyWatering />
-            </div>
-
-            {/* Trees */}
-            {displayProjects.map((p, i) => {
-              const key     = (p.status ?? "planning").toLowerCase().trim();
-              const Tree    = STATUS_TREE[key] ?? Seedling;
-              const lbl     = STATUS_LABEL[key] ?? p.status ?? "Planning";
-              const c       = bandColors(p.healthBand ?? "Not started");
-              const swayStyle = REDUCED ? {} : {
-                animation: `tree-sway ${2.5 + i * 0.3}s ease-in-out infinite`,
-                animationDelay: `${i * 0.2}s`,
-                transformOrigin: "bottom center",
-                display: "block",
-              };
-
-              return (
-                <div
-                  key={p.id ?? i}
-                  className="relative flex-shrink-0 flex flex-col items-center group"
-                  tabIndex={0}
-                  aria-label={`${p.title}: ${lbl}, ${p.healthBand ?? "Not started"}`}
-                  style={{ isolation: "isolate" }}
-                >
-                  <Tree c={c} swayStyle={swayStyle} />
-
-                  {/* Tooltip — above tree; pt-16 on scene gives 64px clearance within
-                      the overflow-x-auto scroll container so it isn't clipped */}
-                  <div
-                    role="tooltip"
-                    className="
-                      pointer-events-none absolute left-1/2 -translate-x-1/2 z-50
-                      bottom-full mb-1
-                      bg-[#14203D] text-white rounded-xl px-3 py-2
-                      w-[140px] whitespace-normal text-center shadow-xl
-                      opacity-0 group-hover:opacity-100 group-focus:opacity-100
-                      transition-opacity duration-150
-                    "
-                  >
-                    <p className="text-[12px] font-semibold leading-snug">{p.title}</p>
-                    <p className="text-[11px] text-white/65 leading-snug mt-0.5 capitalize">{lbl}</p>
-                    <p className="text-[11px] font-bold leading-snug mt-0.5" style={{ color: "#FFC21A" }}>
-                      {p.healthBand ?? "Not started"}
-                      {p.healthScore != null ? ` · ${p.healthScore}%` : ""}
-                    </p>
-                    <span className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-[#14203D]" />
-                  </div>
+    <div ref={root} className={`flex flex-col gap-3 ${className}`} onKeyDown={(e) => { if (e.key === "Escape") { setActive(null); setHover(null); } }}>
+      {/* Scene: sky, hills, grass and path behind the trees */}
+      <div className="relative overflow-hidden rounded-2xl border border-ink/[0.07]" style={{ background: "linear-gradient(#DCE9FB 0, #EEF4FC 100px, #D6EBD0 100px, #BFE0B5 100%)" }}>
+        <div aria-hidden="true" className="absolute right-[8%] top-4 h-10 w-10 rounded-full bg-[#FFE08A]" />
+        <div aria-hidden="true" className="absolute -left-[8%] top-[62px] h-16 w-[55%] rounded-[50%] bg-[#DCEFD6]" />
+        <div aria-hidden="true" className="absolute -right-[8%] top-[48px] h-20 w-[65%] rounded-[50%] bg-[#CBE6C4]" />
+        <ul className={`relative grid ${cols} gap-x-2 gap-y-4 px-3 pb-6 pt-14 sm:px-5`} aria-label="Projects, one tree each">
+          {shown.map((p, i) => {
+            const Tree = stageOf(p), c = bandColors(p.healthBand ?? "Not started"), isOpen = open === p.id, water = thirsty?.id === p.id;
+            return (
+              <li key={p.id ?? i} className="garden-tree relative flex min-w-0 flex-col items-center"
+                style={{ opacity: dim(p) ? 0.28 : 1, filter: dim(p) ? "grayscale(0.6)" : undefined, transition: "opacity .2s" }}
+                onMouseEnter={() => setHover(p.id)} onMouseLeave={() => setHover(null)}>
+                {isOpen && <ProjectCard p={p} />}
+                <div className="relative flex items-end">
+                  {water && !mini && (
+                    <span className="pointer-events-none absolute -left-[60px] bottom-0 hidden sm:block"><TallyWatering size={56} />
+                      <span aria-hidden="true" className="absolute -right-1 top-9 flex gap-1.5"><i className="garden-drop h-1.5 w-1.5 rounded-full bg-[#2A62EC]" /><i className="garden-drop h-1.5 w-1.5 rounded-full bg-[#2A62EC]" /><i className="garden-drop h-1.5 w-1.5 rounded-full bg-[#2A62EC]" /></span>
+                    </span>
+                  )}
+                  <button type="button" onClick={() => pick(p)} onFocus={() => setActive(p.id)} aria-label={`${p.title}: ${labelOf(p)}, ${p.healthBand ?? "Not started"}. Open project`}
+                    className={`rounded-xl p-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent ${filter !== "All" && !dim(p) ? "ring-2 ring-[#14203D]/30" : ""}`}>
+                    <Tree c={c} />
+                  </button>
                 </div>
-              );
-            })}
-          </div>
+                <p title={p.title} className={`mt-1 w-full text-center font-bold leading-tight text-[#14203D] ${mini ? "truncate text-[10px]" : "line-clamp-2 text-xs"}`}>{p.title}</p>
+                <p className={`text-center font-semibold tabular-nums text-[#2F3B57] ${mini ? "text-[10px]" : "text-[11px]"}`}>{healthText(p)}</p>
+              </li>
+            );
+          })}
+        </ul>
+        {mini && thirsty && <span className="absolute bottom-1 left-2 hidden sm:block"><TallyWatering size={40} /></span>}
+      </div>
 
-          {/* ── "+N more" indicator ── */}
-          {hiddenCount > 0 && (
-            <div className="flex-shrink-0 self-end mb-1 flex flex-col items-center gap-1">
-              <span className="text-[11px] font-bold text-slate-400 tabular-nums">+{hiddenCount}</span>
-              <a
-                href="/director/garden"
-                className="text-[10px] font-semibold text-accent-text hover:underline whitespace-nowrap"
-                aria-label={`View ${hiddenCount} more projects in full garden`}
-              >
-                more
-              </a>
-            </div>
-          )}
+      {hidden > 0 && <Link to="/director/garden" className="self-end text-[11px] font-bold text-accent-text hover:underline">+{hidden} more in the full garden</Link>}
 
-          {/* ── Ground strip ── */}
-          <div
-            className="rounded-full h-2 w-full"
-            style={{ background: "linear-gradient(90deg,#EAEDF4 0%,#D5DCEA 45%,#EAEDF4 100%)" }}
-          />
+      {/* Progress: the bar really fills to the percentage */}
+      <div>
+        <div className="mb-1 flex items-baseline justify-between text-xs font-bold text-[#14203D]"><span>Projects on track</span><span className="tabular-nums">{onTrackPct}%</span></div>
+        <div role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={onTrackPct} aria-label="Projects on track" className="h-2.5 w-full overflow-hidden rounded-full bg-ink/[0.08]">
+          <div className="garden-fill h-full rounded-full" style={{ width: `${onTrackPct}%`, background: "linear-gradient(90deg,#0C5E2A,#1DA64D)" }} />
+        </div>
+      </div>
 
-          {/* ── Label ── */}
-          <p className="text-center text-[11px] font-black uppercase tracking-[0.13em] text-[#4F5B75]">
-            {pctLabel}
-          </p>
-        </>
-      )}
-
-      {/* ── Legend (optional) ── */}
-      {showLegend && !isEmpty && <GardenLegend />}
-
-      <style>{`
-        @keyframes tree-sway {
-          0%,100% { transform: rotate(-2.5deg); }
-          50%     { transform: rotate(2.5deg);  }
-        }
-        @keyframes tally-float {
-          0%,100% { transform: translateY(0px);  }
-          50%     { transform: translateY(-7px); }
-        }
-        @keyframes bottle-tilt {
-          0%,100% { transform: rotate(-8deg); }
-          50%     { transform: rotate(4deg);  }
-        }
-        .tally-bottle { animation: bottle-tilt 2.8s ease-in-out infinite; }
-        @media (prefers-reduced-motion: reduce) {
-          [style*="tree-sway"],
-          [style*="tally-float"],
-          .tally-bottle { animation: none !important; }
-        }
-      `}</style>
+      {showLegend && <GardenLegend />}
     </div>
   );
 }

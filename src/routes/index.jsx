@@ -1,6 +1,7 @@
 /* eslint-disable react-refresh/only-export-components -- route table: lazy pages and small route helpers live here */
 import { lazy, Suspense } from "react";
-import { createBrowserRouter, Navigate, Link, useRouteError, isRouteErrorResponse, useParams, useLocation } from "react-router-dom";
+import { createBrowserRouter, Navigate, Link, Outlet, useRouteError, isRouteErrorResponse, useParams, useLocation } from "react-router-dom";
+import ViewOnlyGuard from "@/components/layout/ViewOnlyGuard";
 import TallyLoader from "@/components/ui/TallyLoader";
 import Tally from "@/components/ui/Tally";
 import useAuthStore from "@/stores/authStore";
@@ -209,6 +210,7 @@ function RouteError() {
 
 // ── Router definition ─────────────────────────────────────────────────────────
 const router = createBrowserRouter([{
+  element: <><ViewOnlyGuard /><Outlet /></>, // View as: hide write controls everywhere (F-3)
   errorElement: <RouteError />,
   children: [
 

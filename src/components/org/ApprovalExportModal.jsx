@@ -3,8 +3,7 @@ import { createPortal } from "react-dom";
 import {
   X, ChevronLeft, ChevronRight, FileDown, Loader2, CalendarDays,
 } from "lucide-react";
-import jsPDF from "jspdf";
-import autoTable from "jspdf-autotable";
+import { generateApprovalPdf, fmtDay } from "@/lib/approvalPdf";
 
 // ── Pure date utilities (no external library) ─────────────────────────────────
 
@@ -46,151 +45,6 @@ const MONTH_NAMES = [
   "July","August","September","October","November","December",
 ];
 const DAY_LABELS = ["Mo","Tu","We","Th","Fr","Sa","Su"];
-
-// ── PDF helpers ───────────────────────────────────────────────────────────────
-
-function fmtDate(d) {
-  if (!d) return "—";
-  return new Date(d).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" });
-}
-
-function fmtFilename(d) {
-  return d.toISOString().slice(0, 10);
-}
-
-function describeApproval(a) {
-  const { actionType, payload, targetEmployeeId } = a;
-  const target = targetEmployeeId?.name ?? payload?.name ?? "—";
-  switch (actionType) {
-    case "CREATE_EMPLOYEE":     return `Create account for ${payload?.name ?? "—"} as ${payload?.role ?? ""}`;
-    case "DELETE_EMPLOYEE":     return `Delete ${target}${payload?.reason ? ` — "${payload.reason}"` : ""}`;
-    case "SUSPEND_EMPLOYEE":    return `Suspend ${target}`;
-    case "REACTIVATE_EMPLOYEE": return `Reactivate ${target}'s account`;
-    case "ROLE_CHANGE":         return `${target}: ${payload?.oldRole} → ${payload?.newRole}`;
-    default:                    return actionType;
-  }
-}
-
-function generatePDF(approvals, orgName, start, end) {
-  const doc = new jsPDF({ orientation: "landscape", unit: "mm", format: "a4" });
-  const pw   = doc.internal.pageSize.getWidth();
-  const ph   = doc.internal.pageSize.getHeight();
-
-  // ── Header band ──────────────────────────────────────────────────────────────
-  doc.setFillColor(10, 14, 40);
-  doc.rect(0, 0, pw, 22, "F");
-
-  doc.setFontSize(15);
-  doc.setTextColor(255, 255, 255);
-  doc.setFont("helvetica", "bold");
-  doc.text("Achievion", 14, 10);
-
-  doc.setFontSize(9);
-  doc.setTextColor(120, 130, 180);
-  doc.setFont("helvetica", "normal");
-  doc.text("Approval History Report", 14, 16);
-
-  doc.setFontSize(9);
-  doc.setTextColor(80, 90, 140);
-  doc.text(`Generated: ${new Date().toLocaleString()}`, pw - 14, 16, { align: "right" });
-
-  // ── Meta block ───────────────────────────────────────────────────────────────
-  doc.setFontSize(10);
-  doc.setTextColor(40, 45, 70);
-  doc.setFont("helvetica", "bold");
-  doc.text("Organization:", 14, 30);
-  doc.setFont("helvetica", "normal");
-  doc.text(orgName, 45, 30);
-
-  doc.setFont("helvetica", "bold");
-  doc.text("Period:", 14, 36);
-  doc.setFont("helvetica", "normal");
-  doc.text(`${fmtDate(start)} – ${fmtDate(end)}`, 45, 36);
-
-  // ── Summary chips ─────────────────────────────────────────────────────────
-  const approved = approvals.filter((a) => a.status === "APPROVED").length;
-  const rejected = approvals.filter((a) => a.status === "REJECTED").length;
-  const pending  = approvals.filter((a) => a.status === "PENDING").length;
-
-  const summaries = [
-    { label: "Total",    count: approvals.length, color: [60, 65, 100] },
-    { label: "Approved", count: approved,          color: [16, 120, 80] },
-    { label: "Rejected", count: rejected,           color: [140, 30, 50] },
-    { label: "Pending",  count: pending,            color: [130, 90, 10] },
-  ];
-  let sx = 14;
-  summaries.forEach(({ label, count, color }) => {
-    doc.setFillColor(...color);
-    doc.roundedRect(sx, 40, 36, 9, 2, 2, "F");
-    doc.setFontSize(8);
-    doc.setTextColor(255, 255, 255);
-    doc.setFont("helvetica", "bold");
-    doc.text(`${count}`, sx + 18, 45.5, { align: "center" });
-    doc.setFontSize(6.5);
-    doc.setFont("helvetica", "normal");
-    doc.text(label.toUpperCase(), sx + 18, 48, { align: "center" });
-    sx += 40;
-  });
-
-  // ── Table ─────────────────────────────────────────────────────────────────
-  const rows = approvals.map((a, i) => [
-    i + 1,
-    a.actionType.replace(/_/g, " "),
-    describeApproval(a),
-    a.status,
-    fmtDate(a.createdAt),
-    fmtDate(a.resolvedAt),
-    a.rejectionReason ?? "—",
-  ]);
-
-  autoTable(doc, {
-    startY: 54,
-    head: [["#", "Action Type", "Description", "Status", "Requested", "Resolved", "Rejection Reason"]],
-    body: rows.length > 0 ? rows : [["", "", "No records found in the selected date range.", "", "", "", ""]],
-    styles: { fontSize: 14, cellPadding: 2.5, lineColor: [220, 225, 240], lineWidth: 0.1 },
-    headStyles: {
-      fillColor: [10, 14, 40],
-      textColor: [180, 185, 220],
-      fontStyle: "bold",
-      fontSize: 7.5,
-    },
-    alternateRowStyles: { fillColor: [246, 247, 252] },
-    columnStyles: {
-      0: { halign: "center", cellWidth: 10 },
-      1: { cellWidth: 36 },
-      2: { cellWidth: "auto" },
-      3: { halign: "center", cellWidth: 24 },
-      4: { halign: "center", cellWidth: 28 },
-      5: { halign: "center", cellWidth: 28 },
-      6: { cellWidth: 38 },
-    },
-    didParseCell(data) {
-      if (data.column.index === 3 && data.section === "body") {
-        const v = data.cell.raw;
-        if (v === "APPROVED") { data.cell.styles.textColor = [16, 160, 90];  data.cell.styles.fontStyle = "bold"; }
-        if (v === "REJECTED") { data.cell.styles.textColor = [200, 40, 70];  data.cell.styles.fontStyle = "bold"; }
-        if (v === "PENDING")  { data.cell.styles.textColor = [180, 120, 10]; data.cell.styles.fontStyle = "bold"; }
-      }
-    },
-    margin: { left: 14, right: 14 },
-  });
-
-  // ── Page footer ───────────────────────────────────────────────────────────
-  const pageCount = doc.getNumberOfPages();
-  for (let i = 1; i <= pageCount; i++) {
-    doc.setPage(i);
-    doc.setDrawColor(200, 205, 230);
-    doc.setLineWidth(0.2);
-    doc.line(14, ph - 12, pw - 14, ph - 12);
-    doc.setFontSize(7.5);
-    doc.setTextColor(160, 165, 190);
-    doc.setFont("helvetica", "normal");
-    doc.text("Achievion — Confidential", 14, ph - 8);
-    doc.text(`Page ${i} of ${pageCount}`, pw - 14, ph - 8, { align: "right" });
-  }
-
-  doc.save(`approvals-${fmtFilename(start)}-to-${fmtFilename(end)}.pdf`);
-}
 
 // ── Month calendar ────────────────────────────────────────────────────────────
 
@@ -281,7 +135,7 @@ function MonthCalendar({ year, month, startDate, endDate, hoverDate, minDate, on
 
 // ── Main modal ────────────────────────────────────────────────────────────────
 
-export default function ApprovalExportModal({ allData, orgName, orgCreatedAt, onClose }) {
+export default function ApprovalExportModal({ allData, orgName, orgCreatedAt, timeZone, onClose }) {
   const today   = new Date();
   const minDate = orgCreatedAt ? new Date(orgCreatedAt) : null;
 
@@ -409,7 +263,7 @@ export default function ApprovalExportModal({ allData, orgName, orgCreatedAt, on
     // Yield to the browser so the spinner renders before the sync PDF work
     setTimeout(() => {
       try {
-        generatePDF(filteredApprovals, orgName, startDate, endDate);
+        generateApprovalPdf(filteredApprovals, { orgName, start: startDate, end: endDate, timeZone });
         onClose();
       } catch (err) {
         console.error("PDF export error:", err);
@@ -423,7 +277,7 @@ export default function ApprovalExportModal({ allData, orgName, orgCreatedAt, on
   // ── Date display ───────────────────────────────────────────────────────────
   function displayDate(d) {
     if (!d) return null;
-    return d.toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" });
+    return fmtDay(d, timeZone);
   }
 
   // ── Render ─────────────────────────────────────────────────────────────────

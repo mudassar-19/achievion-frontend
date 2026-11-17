@@ -1,6 +1,8 @@
 // Director Settings: Working Time, Extension Rules and Gamification (UI-E1). Values live in the page state
 // (`s`, `setS`); `errors` come from settings/rules.js (and from a server 400, see the page). Components only.
 import { useEffect, useId, useState } from "react";
+import { roleLabel } from "@/lib/roleLabel";
+import { fmtDate } from "@/lib/dates";
 import { Link } from "react-router-dom";
 import { Info, RotateCcw, TriangleAlert } from "lucide-react";
 import api from "@/lib/api";
@@ -69,12 +71,13 @@ function HolidaysRow({ s, setS }) {
   const [day, setDay] = useState("");
   const list = s.holidays ?? [];
   const add = () => { if (!day || list.includes(day) || list.length >= 60) return; setS("holidays", [...list, day].sort()); setDay(""); };
-  const fmt = (d) => new Date(`${d}T00:00:00`).toLocaleDateString(undefined, { weekday: "short", day: "numeric", month: "short", year: "numeric" });
+  const fmt = (d) => fmtDate(d);
   return (
     <LabelRow label="Company holidays" htmlFor="wt-holiday" hint="Dates the whole company is off (for example Eid, 23 March). They count like weekend days.">
       <div className="flex flex-wrap items-center gap-2">
         <input id="wt-holiday" type="date" value={day} onChange={(e) => setDay(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); add(); } }}
           className="h-10 rounded-lg border border-border-subtle bg-white px-3 text-sm" />
+        {day && <span className="text-xs text-text-secondary">{fmtDate(day)}</span>}
         <button type="button" onClick={add} disabled={!day || list.includes(day) || list.length >= 60}
           className="h-10 rounded-lg border border-border-subtle bg-white px-3.5 text-sm font-bold text-text-primary disabled:opacity-50 hover:bg-ink/[0.04]">Add holiday</button>
       </div>
@@ -138,8 +141,8 @@ export function WorkingTimeSection({ s, setS, errors }) {
 // ── Extension Rules (D-026) ───────────────────────────────────────────────────
 function DefaultMark({ value, standard, unit }) {
   return Number(value) === standard
-    ? <span className="ml-2 inline-flex whitespace-nowrap rounded-full border border-border-subtle bg-ink/[0.04] px-2 py-0.5 text-[11px] font-semibold text-text-secondary">Default (D-026)</span>
-    : <span className="ml-2 whitespace-nowrap text-xs text-text-secondary">Default (D-026) is {standard}{unit}</span>;
+    ? <span className="ml-2 inline-flex whitespace-nowrap rounded-full border border-border-subtle bg-ink/[0.04] px-2 py-0.5 text-[11px] font-semibold text-text-secondary">Recommended</span>
+    : <span className="ml-2 whitespace-nowrap text-xs text-text-secondary">Recommended: {standard}{unit}</span>;
 }
 
 export function ExtensionSection({ s, setS, errors }) {
@@ -201,7 +204,7 @@ export function OrganizationSection({ s, setS, errors, people }) {
         <select id="org-escalation" name="escalationContactId" value={s.escalationContactId ?? ""} onChange={(e) => setS("escalationContactId", e.target.value || null)}
           aria-invalid={!!errors.escalation} aria-describedby={errors.escalation ? "org-escalation-err" : undefined} className={`${SELECT} ${errors.escalation ? "border-[#D1291F]" : "border-border-subtle"}`}>
           {!s.escalationContactId && <option value="">Choose a person…</option>}
-          {people.map((m) => <option key={m.id} value={m.id}>{m.name} ({m.role}){m.isMe ? ", you (default)" : ""}</option>)}
+          {people.map((m) => <option key={m.id} value={m.id}>{m.isMe ? `${m.name} (you, default)` : `${m.name} (${roleLabel(m)})`}</option>)}
         </select>
         <ErrorText id="org-escalation-err">{errors.escalation}</ErrorText>
       </LabelRow>

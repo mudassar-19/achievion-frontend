@@ -1,4 +1,5 @@
 import { useState } from "react";
+import useViewOnly from "@/hooks/useViewOnly";
 import {
   DndContext, DragOverlay, PointerSensor, KeyboardSensor, useSensor, useSensors, useDraggable, useDroppable,
 } from "@dnd-kit/core";
@@ -44,6 +45,7 @@ function Card({ id, children, disabled }) {
 }
 
 export default function KanbanBoard({ columns, tasks, getId = (t) => String(t._id ?? t.id), renderCard, decide, onMove, onRefuse, canDrag = () => true }) {
+  const viewOnly = useViewOnly(); // View as: cards cannot be dragged (F-3)
   const [pending, setPending] = useState({}); // id → status while the server call runs (optimistic)
   const [activeId, setActiveId] = useState(null);
   const sensors = useSensors(
@@ -90,7 +92,7 @@ export default function KanbanBoard({ columns, tasks, getId = (t) => String(t._i
             <Column key={col.key} col={col} count={items.length}>
               {items.length === 0 && <p className="px-2 py-6 text-center text-xs text-text-secondary">Nothing here</p>}
               {items.map((t) => (
-                <Card key={getId(t)} id={getId(t)} disabled={!canDrag(t) || Boolean(pending[getId(t)])}>
+                <Card key={getId(t)} id={getId(t)} disabled={viewOnly || !canDrag(t) || Boolean(pending[getId(t)])}>
                   {renderCard({ ...t, status: statusOf(t) }, { saving: Boolean(pending[getId(t)]) })}
                 </Card>
               ))}

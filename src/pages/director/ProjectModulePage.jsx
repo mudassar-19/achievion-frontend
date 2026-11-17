@@ -2,6 +2,7 @@
 // D-027: People shows task and hour counts only; quality is one module-level average, never per person.
 // Data: GET /api/director/projects/:id/modules/:moduleId.
 import { useParams, useSearchParams } from "react-router-dom";
+import { roleLabel } from "@/lib/roleLabel";
 import { ClipboardList, Gauge, ListChecks, Users, CheckCircle2, CircleDashed } from "lucide-react";
 import Page from "@/components/ui/Page";
 import PageHeader from "@/components/ui/PageHeader";
@@ -156,7 +157,7 @@ export default function ProjectModulePage() {
                     <li key={p.id} className="grid grid-cols-1 items-center gap-x-6 gap-y-2.5 px-5 py-3.5 md:grid-cols-[minmax(0,1fr)_minmax(0,1.6fr)]">
                       <span className="min-w-0">
                         <span title={p.name} className="block truncate text-sm font-bold text-text-primary">{p.name}</span>
-                        <span className="block truncate text-xs text-text-secondary">{p.role}</span>
+                        <span className="block truncate text-xs text-text-secondary">{roleLabel(p)}</span>
                       </span>
                       <dl className="grid grid-cols-3 gap-x-4 gap-y-2 sm:grid-cols-6">
                         <Count label="Tasks" value={p.tasks.total} />

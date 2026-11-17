@@ -20,6 +20,10 @@ const ROLE_BADGE = {
   tester:    { bg: "bg-amber-500/15",  text: "text-amber-400",   border: "border-amber-500/25"  },
 };
 
+// A-7: "By role" shows readable names with their own colour dot (the text stays dark for contrast).
+const ROLE_NAME = { director: "Director", manager: "Manager", team_lead: "Team Lead", developer: "Developer", designer: "Designer", tester: "Tester" };
+const ROLE_DOT = { director: "bg-violet-500", manager: "bg-blue-500", team_lead: "bg-indigo-500", developer: "bg-cyan-500", designer: "bg-pink-500", tester: "bg-amber-500" };
+
 function RoleBadge({ roleCategory, role }) {
   const s = ROLE_BADGE[roleCategory] ?? ROLE_BADGE.developer;
   return (
@@ -304,10 +308,9 @@ export default function OrgDashboard() {
             <div className="mt-1 flex flex-col gap-2">
               <p className="text-[14px] font-bold uppercase tracking-widest text-text-disabled">By Role</p>
               {Object.entries(data.membersByRole).map(([cat, count]) => {
-                const s = ROLE_BADGE[cat] ?? ROLE_BADGE.developer;
                 return (
                   <div key={cat} className="flex items-center justify-between">
-                    <span className={`text-xs font-semibold ${s.text}`}>{cat.replace("_", " ")}</span>
+                    <span className="flex items-center gap-2 text-xs font-semibold text-text-primary"><span aria-hidden="true" className={`h-2.5 w-2.5 rounded-full ${ROLE_DOT[cat] ?? "bg-slate-400"}`} />{ROLE_NAME[cat] ?? cat.replace("_", " ")}</span>
                     <span className="text-xs font-bold text-text-primary">{count}</span>
                   </div>
                 );

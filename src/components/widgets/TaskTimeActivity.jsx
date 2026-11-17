@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { fmtDateTime } from "@/lib/dates";
 import { Clock, Plus } from "lucide-react";
 import api from "@/lib/api";
 import useUiStore from "@/stores/uiStore";
@@ -8,7 +9,7 @@ const PANEL = "rounded-2xl p-5 bg-bg-surface border border-ink/[0.08]";
 const HEAD  = "text-[14px] font-bold uppercase tracking-widest text-slate-600 mb-3";
 
 const fmtMin = (m) => (m >= 60 ? `${Math.floor(m / 60)}h${m % 60 ? ` ${m % 60}m` : ""}` : `${m}m`);
-const when   = (d) => (d ? new Date(d).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" }) : "");
+const when   = (d) => (d ? fmtDateTime(d) : "");
 
 export function TimeLogPanel({ task, canLog, onLogged }) {
   const addToast = useUiStore((s) => s.addToast);

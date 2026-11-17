@@ -147,6 +147,7 @@ const EMPTY_FORM = { name: "", email: "", role: "Junior Developer" };
 export default function CreateEmployee() {
   const navigate = useNavigate();
   const orgToken = useOrgAuthStore((s) => s.orgToken);
+  const org = useOrgAuthStore((s) => s.org);
 
   const [form,        setForm]        = useState(EMPTY_FORM);
   const [errors,      setErrors]      = useState({});
@@ -263,7 +264,7 @@ export default function CreateEmployee() {
               label="Email Address"
               id="emp-email"
               type="email"
-              placeholder="alex@yourcompany.com"
+              placeholder={`alex@${(org?.name ?? "yourcompany").toLowerCase().replace(/[^a-z0-9]+/g, "")}.example`}
               value={form.email}
               onChange={update("email")}
               error={errors.email}

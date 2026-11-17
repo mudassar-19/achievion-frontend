@@ -1,6 +1,6 @@
 import { Outlet, NavLink, useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
-import { LayoutDashboard, Users, LogOut, PlusCircle, ClipboardList } from "lucide-react";
+import { LayoutDashboard, Users, LogOut, PlusCircle, ClipboardList, ChevronDown } from "lucide-react";
 import useOrgAuthStore from "@/stores/orgAuthStore";
 import useUiStore from "@/stores/uiStore";
 import ToastContainer from "@/components/ui/ToastContainer";
@@ -112,16 +112,19 @@ export default function OrgLayout() {
           </div>
         </div>
 
-        {/* Sign out */}
-        <div className="flex items-center gap-4">
-          <button
-            onClick={handleSignOut}
-            className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-500 hover:text-[#B01F17] hover:bg-[#D1291F]/08 border border-transparent hover:border-[#D1291F]/20 transition-all"
-          >
-            <LogOut size={13} strokeWidth={2} />
-            Sign Out
-          </button>
-        </div>
+        {/* Account menu (A-3): who is signed in, the org code, sign out */}
+        <details className="group relative">
+          <summary aria-label="Account menu" className="flex min-h-9 cursor-pointer list-none items-center gap-2 rounded-lg border border-ink/[0.08] px-2.5 text-xs font-semibold text-text-primary hover:bg-ink/[0.04] [&::-webkit-details-marker]:hidden">
+            <span aria-hidden="true" className="flex h-6 w-6 items-center justify-center rounded-full bg-accent text-[11px] font-bold text-white">{(org?.name ?? "A").charAt(0).toUpperCase()}</span>
+            <span className="hidden max-w-[140px] truncate sm:inline">{org?.name ?? "Admin"}</span>
+            <ChevronDown size={13} aria-hidden="true" />
+          </summary>
+          <div role="menu" className="absolute right-0 top-full z-50 mt-1 w-60 rounded-xl border border-border-subtle bg-bg-surface p-1 shadow-lg">
+            <p className="px-3 py-2 text-xs text-text-secondary">Signed in as the organisation admin of <strong className="text-text-primary">{org?.name ?? "your organisation"}</strong>{org?.orgCode ? <> ({org.orgCode})</> : null}</p>
+            {org?.orgCode && <button type="button" role="menuitem" onClick={() => { navigator.clipboard?.writeText(org.orgCode); addToast({ type: "success", message: "Organisation code copied." }); }} className="flex min-h-9 w-full items-center px-3 text-left text-sm hover:bg-ink/[0.06]">Copy organisation code</button>}
+            <button type="button" role="menuitem" onClick={handleSignOut} className="flex min-h-9 w-full items-center gap-2 px-3 text-left text-sm font-semibold text-[#B01F17] hover:bg-[#D1291F]/10"><LogOut size={13} aria-hidden="true" /> Sign out</button>
+          </div>
+        </details>
       </header>
 
       {/* ── Sidebar ── */}

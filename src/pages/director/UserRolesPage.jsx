@@ -36,10 +36,10 @@ function RoleBadge({ role, roleLabel }) {
   const rcfg = ROLE_CATEGORY_COLOR[cat] ?? ROLE_CATEGORY_COLOR.developer;
   return (
     <span className={[
-      "text-[14px] font-bold px-2.5 py-1 rounded-full border w-fit whitespace-nowrap",
+      "block max-w-full truncate text-[14px] font-bold px-2.5 py-1 rounded-full border w-fit",
       rcfg.text, rcfg.bg, rcfg.border,
     ].join(" ")}>
-      {roleLabel || role}
+      <span title={roleLabel || role}>{roleLabel || role}</span>
     </span>
   );
 }
@@ -394,7 +394,7 @@ export default function UserRolesPage() {
         transition={{ duration: 0.38, delay: 0.08 }}
         className="glass-panel rounded-2xl border border-ink/[0.07] overflow-hidden"
       >
-        <div className="hidden md:grid md:grid-cols-[minmax(0,1fr)_160px_160px_auto] gap-4 px-6 py-3.5 border-b border-ink/[0.06] bg-ink/[0.025]">
+        <div className="hidden md:grid md:grid-cols-[minmax(0,1fr)_minmax(0,190px)_minmax(0,220px)_auto] gap-4 px-6 py-3.5 border-b border-ink/[0.06] bg-ink/[0.025]">
           {["Employee", "Role", "Project", ""].map((h, i) => (
             <p key={i} className={`text-[14px] font-black uppercase tracking-[0.18em] text-slate-600 ${i === 1 || i === 2 ? "hidden md:block" : ""}`}>{h}</p>
           ))}
@@ -414,7 +414,7 @@ export default function UserRolesPage() {
                 initial={{ opacity: 0, x: -10 }}
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ duration: 0.28, delay: 0.08 + i * 0.04 }}
-                className="flex flex-col gap-3 md:grid md:grid-cols-[minmax(0,1fr)_160px_160px_auto] md:gap-4 md:items-center px-6 py-4 hover:bg-ink/[0.03] transition-colors duration-100"
+                className="flex flex-col gap-3 md:grid md:grid-cols-[minmax(0,1fr)_minmax(0,190px)_minmax(0,220px)_auto] md:gap-4 md:items-center px-6 py-4 hover:bg-ink/[0.03] transition-colors duration-100"
               >
                 <div className="flex items-center gap-3 min-w-0">
                   <div className="h-9 w-9 rounded-full overflow-hidden border border-ink/[0.10] bg-bg-base shrink-0">
@@ -436,13 +436,15 @@ export default function UserRolesPage() {
                   </div>
                 </div>
 
-                <div className="hidden md:block"><RoleBadge role={member.role} roleLabel={member.roleLabel} /></div>
+                <div className="hidden min-w-0 md:block"><RoleBadge role={member.role} roleLabel={member.roleLabel} /></div>
 
-                <p className="hidden md:block text-[13px] text-slate-500 truncate" title={Array.isArray(member.projects) && member.projects.length > 0 ? member.projects.map(p => p.name).join(", ") : undefined}>
-                  {Array.isArray(member.projects) && member.projects.length > 0
-                    ? member.projects.map((p) => p.name).join(", ")
-                    : "—"}
-                </p>
+                {/* Projects as chips, two at most and "+N" (C-17) */}
+                <div className="hidden min-w-0 flex-wrap gap-1 md:flex" title={member.projects?.length ? member.projects.map((p) => p.name).join(", ") : undefined}>
+                  {Array.isArray(member.projects) && member.projects.length > 0 ? (<>
+                    {member.projects.slice(0, 2).map((p) => <span key={p.name} className="max-w-full truncate rounded-md bg-ink/[0.05] px-1.5 py-0.5 text-xs font-semibold text-text-primary">{p.name}</span>)}
+                    {member.projects.length > 2 && <span className="rounded-md bg-ink/[0.05] px-1.5 py-0.5 text-xs font-bold text-text-secondary">+{member.projects.length - 2}</span>}
+                  </>) : <span className="text-[13px] text-slate-500">—</span>}
+                </div>
 
                 {/* Adjust XP — only for XP-eligible roles */}
                 <div className="flex items-center justify-start gap-1.5 md:justify-end">
@@ -458,10 +460,10 @@ export default function UserRolesPage() {
                       aria-label={`Adjust XP for ${member.name}`}
                     >
                       <Zap size={12} strokeWidth={2.5} className="transition-transform group-hover:scale-110" />
-                      <span className="hidden sm:inline">XP</span>
+                      <span className="hidden sm:inline">Adjust XP</span>
                     </button>
                   ) : (
-                    <span className="w-[52px]" aria-hidden />
+                    <span className="w-[92px]" aria-hidden />
                   )}
                 </div>
               </motion.div>

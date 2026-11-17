@@ -2,6 +2,7 @@
 // snapshot of the Manager's org; context chip (auto from the page, can be changed), suggested prompts, proactive
 // cards from numbers, "AI-generated" tag + thumbs on every answer, Sources chips, New chat + History.
 import { useCallback, useEffect, useState } from "react";
+import { fmtDate, fmtTime } from "@/lib/dates";
 import { Link, useLocation } from "react-router-dom";
 import { History, Plus, ArrowRight } from "lucide-react";
 import api from "@/lib/api";
@@ -10,8 +11,8 @@ import { AiTag, AiFeedback } from "@/components/ui/AiParts";
 import { aiError } from "@/components/ui/aiCall";
 
 const ACCENT = "var(--accent)";
-const time = (d) => new Date(d).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
-const day = (d) => new Date(d).toLocaleDateString([], { month: "short", day: "numeric" });
+const time = (d) => fmtTime(d);
+const day = (d) => fmtDate(d, { year: false });
 
 function Card({ children, to, action }) {
   return (

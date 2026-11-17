@@ -5,6 +5,7 @@ import { motion } from "framer-motion";
 import { BarChart2, Zap, Clock, Server } from "lucide-react";
 import PageHeader from "@/components/ui/PageHeader";
 import api from "@/lib/api";
+import { fmtDate } from "@/lib/dates";
 
 const ACCENT = "#4B2FC4";
 const STATUS = {
@@ -65,7 +66,7 @@ export default function SuccessCriteriaPage() {
   if (!data) return <div className="mx-auto grid max-w-[1280px] grid-cols-1 gap-4 px-4 py-8 sm:grid-cols-2 sm:px-8">{[...Array(4)].map((_, i) => <div key={i} className="h-44 animate-pulse rounded-2xl bg-ink/[0.04]" />)}</div>;
 
   const { satisfaction: s, ai, speed, uptime: u, targets: T } = data;
-  const when = (d) => new Date(d).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+  const when = (d) => fmtDate(d);
 
   return (
     <div className="mx-auto flex max-w-[1280px] flex-col gap-6 px-4 py-8 sm:px-8">
@@ -73,6 +74,7 @@ export default function SuccessCriteriaPage() {
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <Card icon={BarChart2} title="User satisfaction" status={s.status} delay={0.05}>
           <Progress text={s.progress} have={s.n} need={s.needed} />
+          <p className="text-xs text-text-secondary"><strong className="text-text-primary">How to fill this: </strong>send the survey link (/survey) to 20 to 30 testers after they finish the task script.</p>
           <Target text={`${T.survey.bothPct}% of users rate both "enjoyable" and "easy" 4 or 5, and the usability score (SUS) averages ${T.survey.susAvg} or more.`} />
           {s.status === "NO DATA" && <p className="text-xs text-text-secondary">No survey answers yet. Ask your test users to fill in the survey after the task script. Aim for {s.aim}.</p>}
           {s.status === "IN PROGRESS" && <p className="text-xs text-text-secondary">Too few answers to say anything: {s.needed - s.n} more needed before a percentage is shown.</p>}
@@ -87,6 +89,7 @@ export default function SuccessCriteriaPage() {
 
         <Card icon={Zap} title="AI accuracy" status={ai.status} delay={0.08}>
           <Progress text={ai.progress} have={ai.judged} need={ai.needed} />
+          <p className="text-xs text-text-secondary"><strong className="text-text-primary">How to fill this: </strong>two people judge each of the 30 AI test cases; a case counts once both have answered.</p>
           <Target text={`At least ${T.ai.passPct}% of ${T.ai.cases} test cases agree with the two human judges.`} />
           {ai.status === "NO DATA" && <p className="text-xs text-text-secondary">No test case has been judged by two people yet.</p>}
           {ai.judged > 0 && <Row label="Agreeing with the judges" value={`${ai.passing} of ${ai.judged}`} sub={ai.passPct != null ? `${ai.passPct}% (target ${T.ai.passPct}%)` : "shown as a percentage after 30 cases"} />}
@@ -94,6 +97,7 @@ export default function SuccessCriteriaPage() {
         </Card>
 
         <Card icon={Clock} title="Speed of main actions (p95)" status={speed.overall} delay={0.11}>
+          <p className="text-xs text-text-secondary"><strong className="text-text-primary">How to fill this: </strong>use the app or run the task script; each action needs at least the number of measurements shown next to it.</p>
           <Target text={`p95 under ${speed.limitMs / 1000} seconds for each main action, from at least ${speed.minSamples} real measurements.`} />
           <div>
             {Object.entries(speed.perAction).map(([action, a]) => (
@@ -113,6 +117,7 @@ export default function SuccessCriteriaPage() {
 
         <Card icon={Server} title="Uptime under stress" status={u.status} delay={0.14}>
           <Progress text={u.progress} have={u.durationMinutes ?? 0} need={u.targetMinutes} />
+          <p className="text-xs text-text-secondary"><strong className="text-text-primary">How to fill this: </strong>keep the app running under load for 2 hours in a row and record the run.</p>
           <Target text={`${u.targetPct}% uptime for at least ${u.targetMinutes / 60} consecutive hours during stress testing.`} />
           {u.uptimePct != null ? <>
             <Row label="Uptime in the last run" value={`${u.uptimePct}%`} sub={`target ${u.targetPct}%`} />

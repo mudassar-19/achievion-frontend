@@ -56,7 +56,7 @@ async function request(path, options = {}) {
   if (viewAs && !["GET", "HEAD"].includes(options.method ?? "GET") && path !== VIEW_AS_EXIT) {
     const err = new Error("Read-only in View as");
     err.status = 403;
-    err.data = { code: "view_as_read_only" };
+    err.data = { code: "VIEW_ONLY" };
     announce(err, path, options);
     throw err;
   }

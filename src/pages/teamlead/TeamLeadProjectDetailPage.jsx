@@ -1,4 +1,5 @@
 import { useEffect, useState, useCallback } from "react";
+import { fmtDate as dateStd } from "@/lib/dates";
 import { useParams, useNavigate }           from "react-router-dom";
 import { motion }                           from "framer-motion";
 import {
@@ -83,7 +84,7 @@ function MilestoneCard({ milestone, projectId, taskCount, doneCount, navigate })
           {milestone.dueDate && (
             <span className="hidden sm:flex items-center gap-1 text-[14px] text-slate-600 shrink-0">
               <Calendar size={9} strokeWidth={2} />
-              {new Date(milestone.dueDate).toLocaleDateString()}
+              {dateStd(milestone.dueDate)}
             </span>
           )}
         </div>

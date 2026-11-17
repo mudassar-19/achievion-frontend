@@ -73,7 +73,7 @@ export const extensionSentence = ({ days, pct, cap }) =>
 export const ALERT_FIELDS = [
   { key: "overloadLimitPct", label: "Overload limit", hint: "A person counts as overloaded above this share of their daily capacity.", unit: "% of capacity", min: 50, max: 150, step: 5 },
   { key: "deadlineWarnPct", label: "Deadline warning point", hint: "Warn when this share of a task's time has passed and it is not done.", unit: "% of the time", min: 50, max: 95, step: 5 },
-  { key: "hpThresholdPct", label: "Burnout warning (HP)", hint: "Tell the Manager when a person's HP falls under this.", unit: "% HP", min: 10, max: 60, step: 5 },
+  { key: "hpThresholdPct", label: "Burnout warning (energy)", hint: "Tell the Manager when a person's energy (their health points, HP) falls under this.", unit: "% HP", min: 10, max: 60, step: 5 },
   { key: "emailDelayMin", label: "Email after inactivity", hint: "Email a notification only when the person has been away this long.", unit: "minutes", min: 1, max: 60, step: 1 },
   { key: "dailyFyiLimit", label: "Daily FYI limit", hint: "Most low-priority (FYI) notifications one person gets in a day.", unit: "per day", min: 1, max: 10, step: 1 },
 ];

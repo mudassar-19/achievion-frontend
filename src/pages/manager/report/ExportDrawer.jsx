@@ -1,5 +1,6 @@
 // Export preview (UX §11, FR10-04): shows exactly what the file holds (server builds both), then downloads.
 import { useCallback, useEffect, useState } from "react";
+import { fmtDate as dateStd } from "@/lib/dates";
 import { Download } from "lucide-react";
 import api from "@/lib/api";
 import useUiStore from "@/stores/uiStore";
@@ -50,7 +51,7 @@ export default function ExportDrawer({ open, onClose, tab, query, base = "/api/m
         <article aria-label="PDF preview" className="rounded-xl border border-border-subtle bg-bg-surface p-6 shadow-sm">
           <h3 className="text-lg font-black text-text-primary">{doc.title}</h3>
           <p className="mt-1 text-xs text-text-secondary">{doc.filters}</p>
-          <p className="text-xs text-text-secondary">Generated {new Date(doc.generatedAt).toLocaleDateString(undefined, { day: "numeric", month: "long", year: "numeric" })}</p>
+          <p className="text-xs text-text-secondary">Generated {dateStd(doc.generatedAt)}</p>
           {doc.aiSummary !== undefined && (
             <section className="mt-5" data-export-ai>
               <h4 className="text-sm font-bold text-text-primary">AI summary</h4>

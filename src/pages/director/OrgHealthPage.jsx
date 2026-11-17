@@ -5,6 +5,7 @@ import { Link } from "react-router-dom";
 import PageHeader from "@/components/ui/PageHeader";
 import api from "@/lib/api";
 import { TabBar, TrendsTab, DepartmentsTab, WellbeingTab } from "./OrgHealthTabs";
+import { fmtDate } from "@/lib/dates";
 
 const ACCENT = "#4B2FC4";
 
@@ -25,7 +26,7 @@ function Ring({ score, size = 100, stroke = 9 }) {
   );
 }
 
-const SUB_LABEL = { delivery: "Delivery", capacity: "Capacity", risk: "Risk", quality: "Quality" };
+const SUB_LABEL = { delivery: "Delivery", capacity: "Capacity", risk: "Risk control", quality: "Quality" };
 const WEIGHTS   = { delivery: 35, capacity: 25, risk: 20, quality: 20 };
 
 export default function OrgHealthPage() {
@@ -148,7 +149,7 @@ export default function OrgHealthPage() {
             <div className="flex flex-col gap-2 shrink-0">
               {aiUnavailable ? (
                 <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold border border-ink/[0.08] text-slate-400 cursor-not-allowed">
-                  <Sparkles size={12} /> AI abhi connected nahi
+                  <Sparkles size={12} /> AI is not connected right now
                 </span>
               ) : (
                 <button onClick={explainHealth} disabled={explaining}
@@ -175,6 +176,7 @@ export default function OrgHealthPage() {
                 <Ring score={val} size={72} stroke={7} />
                 <div className="text-center">
                   <p className="text-sm font-bold text-text-primary">{SUB_LABEL[key]}</p>
+                  {key === "risk" && <p className="text-[11px] text-slate-500">Higher is safer</p>}
                   <p className="text-[11px] text-slate-500">
                     {val == null ? "No data" : live.factors?.[key]?.enough === false ? `Not enough records (${live.factors[key].samples} of ${live.minSamples?.[key] ?? "?"})` : `weight ${WEIGHTS[key]}%`}
                   </p>
@@ -219,7 +221,7 @@ export default function OrgHealthPage() {
                   <tbody>
                     {history.map((s) => (
                       <tr key={s._id} className="border-b border-ink/[0.04] last:border-0 hover:bg-ink/[0.02]">
-                        <td className="px-3 py-2 text-slate-500">{new Date(s.calculatedAt).toLocaleDateString("en-US",{month:"short",day:"numeric",year:"numeric"})}</td>
+                        <td className="px-3 py-2 text-slate-500">{fmtDate(s.calculatedAt)}</td>
                         <td className="px-3 py-2 font-black" style={{ color: ACCENT }}>{s.overall ?? <span className="font-semibold text-slate-500">Not enough data</span>}</td>
                         <td className="px-3 py-2 text-slate-500">{s.subScores?.delivery ?? "—"}</td>
                         <td className="px-3 py-2 text-slate-500">{s.subScores?.capacity ?? "—"}</td>

@@ -2,8 +2,10 @@
 // Long names wrap to two lines (full name in the tooltip and in the conversation header), the community actions are labelled
 // buttons of at least 36 px plus a "..." menu on every community and group; right-click opens the same menu.
 import { useEffect, useRef, useState } from "react";
-import { BellOff, ChevronDown, ChevronRight, Inbox, MessageSquare, MoreHorizontal, PanelRightClose, Plus, Search, Settings, X } from "lucide-react";
+import { BellOff, ChevronDown, ChevronRight, MessageSquare, MoreHorizontal, PanelRightClose, Plus, Search, X } from "lucide-react";
 import { badge, dmName, groupName } from "@/lib/chatFormat";
+import { dayKey, fmtDateShort, fmtTime } from "@/lib/dates";
+import { CommunityTile, GroupGlyph } from "./ChatIcons";
 import { ACCENT, Avatar } from "./ChatSettingsDrawers";
 
 const NAME = "min-w-0 flex-1 break-words text-left [overflow-wrap:anywhere] line-clamp-2";
@@ -50,20 +52,41 @@ function MoreMenu({ label, items, openAt, setOpenAt }) {
   );
 }
 
+// The "Daniel: text" line and time under a group or person; nothing until there is a message.
+function Preview({ last }) {
+  if (!last?.text) return <span className="block truncate text-xs text-text-tertiary">No messages yet</span>;
+  return <span className="block truncate text-xs text-text-secondary">{last.from ? `${last.from}: ` : ""}{last.text}</span>;
+}
+// Today: the time; earlier: the day ("14 Nov"), in the organisation's time zone (X-1).
+const when = (last) => (!last?.at ? "" : dayKey(last.at) === dayKey(new Date()) ? fmtTime(last.at) : fmtDateShort(last.at));
+// "general" -> "General" (group names are stored as slugs).
+const pretty = (n) => String(n ?? "").replace(/[-_]+/g, " ").replace(/^./, (c) => c.toUpperCase());
+
+// Selected row: a light tint and a bar on the left (never a full dark fill).
+const ROW = (active) => `relative flex min-h-12 min-w-0 flex-1 items-center gap-2.5 rounded-lg py-1.5 pl-3 pr-2 text-left transition-colors ${active ? "bg-accent/10" : "hover:bg-ink/[0.05]"}`;
+const Bar = ({ on }) => (on ? <span className="absolute left-0 top-2 bottom-2 w-1 rounded-full" style={{ background: ACCENT }} aria-hidden="true" /> : null);
+
 function GroupRow({ group, community, active, onSelect, onSettings }) {
   const [menu, setMenu] = useState(null);
-  const label = group.type === "announcement" ? "Announcements" : groupName(group.name, community.name);
+  const label = group.type === "announcement" ? "Announcements" : pretty(groupName(group.name, community.name));
   const full = group.type === "announcement" ? "Announcements" : group.name;
   const unread = !group.muted && (group.unread ?? 0) > 0 && !active;
   return (
-    <div className="relative flex items-center gap-1 pl-3 pr-1" onContextMenu={(e) => { e.preventDefault(); setMenu({ top: "100%", right: 8 }); }}>
-      <button type="button" onClick={onSelect} aria-current={active ? "true" : undefined} title={full}
-        className={`flex min-h-9 min-w-0 flex-1 items-center gap-2 rounded-lg px-2 py-1.5 text-sm transition-colors ${active ? "font-bold text-white" : "text-text-secondary hover:bg-ink/[0.05] hover:text-text-primary"}`}
-        style={active ? { background: ACCENT } : undefined}>
-        <span className="shrink-0 text-base" aria-hidden="true">{group.type === "announcement" ? "📢" : group.icon ?? "💬"}</span>
-        <span className={NAME}>{group.type === "announcement" ? label : <><span className="opacity-60" aria-hidden="true">#&nbsp;</span>{label}</>}</span>
-        {group.muted && <BellOff size={12} className="shrink-0 opacity-70" aria-label="Muted" />}
-        {unread && <span className={PILL} style={{ background: ACCENT }} aria-label={`${group.unread} unread`}>{badge(group.unread)}</span>}
+    <div className="relative flex items-center gap-1 pl-2 pr-1" onContextMenu={(e) => { e.preventDefault(); setMenu({ top: "100%", right: 8 }); }}>
+      <button type="button" onClick={onSelect} aria-current={active ? "true" : undefined} title={full} className={ROW(active)}>
+        <Bar on={active} />
+        <span className={active ? "text-accent-text" : "text-text-tertiary"}><GroupGlyph group={group} /></span>
+        <span className="min-w-0 flex-1">
+          <span className="flex items-baseline gap-2">
+            <span className={`min-w-0 flex-1 truncate text-sm ${unread || active ? "font-bold text-text-primary" : "font-medium text-text-primary"}`}>{label}</span>
+            <span className="shrink-0 text-[11px] text-text-tertiary tabular-nums">{when(group.lastMessage)}</span>
+          </span>
+          <span className="flex items-center gap-2">
+            <span className="min-w-0 flex-1"><Preview last={group.lastMessage} /></span>
+            {group.muted && <BellOff size={12} className="shrink-0 text-text-tertiary" aria-label="Muted" />}
+            {unread && <span className={PILL} style={{ background: ACCENT }} aria-label={`${group.unread} unread`}>{badge(group.unread)}</span>}
+          </span>
+        </span>
       </button>
       <MoreMenu label={`${full}: more`} openAt={menu} setOpenAt={setMenu}
         items={[{ label: "Open", run: onSelect }, { label: "Group settings", run: onSettings }]} />
@@ -78,26 +101,20 @@ function Community({ c, collapsed, toggle, activeId, on, search }) {
   const addLabel = c.can?.createGroup ? "New group" : c.can?.requestGroup ? "Request a group" : null;
   const addRun = () => (c.can.createGroup ? on.createGroup(c) : on.requestGroup(c));
   const items = [...(addLabel ? [{ label: addLabel, run: addRun }] : []), { label: "Community settings", run: () => on.openCommunity(c, "about") },
+    ...(pending > 0 ? [{ label: `${pending} group request${pending === 1 ? "" : "s"} to decide`, run: () => on.openCommunity(c, "requests") }] : []),
     { label: collapsed ? "Show groups" : "Hide groups", run: toggle }];
   return (
-    <section className="mb-3 border-b border-ink/[0.06] pb-2" aria-label={c.name}>
-      <div className="relative px-2" onContextMenu={(e) => { e.preventDefault(); setMenu({ top: "100%", right: 8 }); }}>
-        <div className="flex items-start gap-1">
-          <button type="button" onClick={toggle} aria-expanded={!collapsed} title={c.name}
-            className="flex min-h-9 min-w-0 flex-1 items-start gap-1.5 rounded-lg px-1.5 py-2 hover:bg-ink/[0.04]">
-            {collapsed ? <ChevronRight size={14} className="mt-0.5 shrink-0 text-text-tertiary" aria-hidden="true" /> : <ChevronDown size={14} className="mt-0.5 shrink-0 text-text-tertiary" aria-hidden="true" />}
-            <span className="shrink-0 text-base leading-5" aria-hidden="true">{c.icon ?? "💬"}</span>
-            <span className={`${NAME} text-sm font-bold text-text-primary`}>{c.name}</span>
-            {unread > 0 && collapsed && <span className={PILL} style={{ background: ACCENT }}>{badge(unread)}</span>}
-          </button>
-          <MoreMenu label={`${c.name}: more`} openAt={menu} setOpenAt={setMenu} items={items} />
-        </div>
-        <div className="flex flex-wrap items-center gap-1 pb-1 pl-1">
-          {addLabel && <button type="button" onClick={addRun} className={`${BTN} text-accent-text hover:bg-accent/10`} aria-label={`${addLabel} in ${c.name}`}><Plus size={14} aria-hidden="true" />{addLabel}</button>}
-          <button type="button" onClick={() => on.openCommunity(c, "about")} className={`${BTN} text-text-secondary hover:bg-ink/[0.06]`} aria-label={`Community settings: ${c.name}`}><Settings size={14} aria-hidden="true" />Community settings</button>
-          {pending > 0 && <button type="button" onClick={() => on.openCommunity(c, "requests")} aria-label={`${pending} group requests to decide`}
-            className={`${BTN} bg-accent/10 text-accent-text`}><Inbox size={14} aria-hidden="true" />{pending} request{pending === 1 ? "" : "s"}</button>}
-        </div>
+    <section className="mb-2 border-b border-ink/[0.06] pb-2" aria-label={c.name}>
+      <div className="relative flex items-center gap-1 px-2" onContextMenu={(e) => { e.preventDefault(); setMenu({ top: "100%", right: 8 }); }}>
+        <button type="button" onClick={toggle} aria-expanded={!collapsed} title={c.name}
+          className="flex min-h-11 min-w-0 flex-1 items-center gap-2.5 rounded-lg px-1.5 py-1.5 hover:bg-ink/[0.04]">
+          <CommunityTile community={c} />
+          <span className="min-w-0 flex-1 truncate text-left text-sm font-bold text-text-primary">{c.name}</span>
+          {pending > 0 && <span className="shrink-0 rounded-full bg-accent/10 px-1.5 text-[11px] font-bold text-accent-text" aria-label={`${pending} group requests to decide`}>{pending}</span>}
+          {unread > 0 && collapsed && <span className={PILL} style={{ background: ACCENT }} aria-label={`${unread} unread`}>{badge(unread)}</span>}
+          {collapsed ? <ChevronRight size={14} className="shrink-0 text-text-tertiary" aria-hidden="true" /> : <ChevronDown size={14} className="shrink-0 text-text-tertiary" aria-hidden="true" />}
+        </button>
+        <MoreMenu label={`${c.name}: more`} openAt={menu} setOpenAt={setMenu} items={items} />
       </div>
       {!collapsed && c.groups?.map((g) => (
         <GroupRow key={g._id} group={g} community={c} active={activeId === g._id}
@@ -109,8 +126,8 @@ function Community({ c, collapsed, toggle, activeId, on, search }) {
           <p className="py-1 text-[11px] font-semibold text-text-tertiary">Other groups</p>
           {c.joinable.map((g) => (
             <div key={g._id} className="flex min-h-9 items-center gap-2 py-1 text-sm text-text-secondary">
-              <span className="shrink-0 text-base opacity-70" aria-hidden="true">{g.icon ?? "💬"}</span>
-              <span className={NAME} title={g.name}>#&nbsp;{groupName(g.name, c.name)}</span>
+              <span className="text-text-tertiary"><GroupGlyph group={g} /></span>
+              <span className={NAME} title={g.name}>{pretty(groupName(g.name, c.name))}</span>
               {g.requested ? <span className="text-[11px] text-text-tertiary">Requested</span>
                 : <button type="button" onClick={() => on.join(g)} className="min-h-9 px-1 text-xs font-bold text-accent-text hover:underline">{g.joinApproval ? "Ask to join" : "Join"}</button>}
             </div>
@@ -159,13 +176,22 @@ export default function ChatList({ communities, dms, personOf, activeGroupId, us
             {shownDms.map((dm) => {
               const person = personOf(dm), name = dmName(person), active = activeGroupId === dm._id;
               return (
-                <button key={dm._id} type="button" onClick={() => on.selectDm(dm)} aria-current={active ? "true" : undefined} title={name}
-                  className={`flex min-h-10 w-full items-center gap-2.5 rounded-lg px-2 py-1.5 text-left text-sm transition-colors ${active ? "font-bold text-white" : "text-text-secondary hover:bg-ink/[0.05] hover:text-text-primary"}`}
-                  style={active ? { background: ACCENT } : undefined}>
-                  <Avatar user={person ?? { name }} size={26} />
-                  <span className={NAME}>{name}</span>
-                  {(dm.unread ?? 0) > 0 && !active && <span className={PILL} style={{ background: ACCENT }} aria-label={`${dm.unread} unread`}>{badge(dm.unread)}</span>}
-                </button>
+                <div key={dm._id} className="pl-0 pr-1">
+                  <button type="button" onClick={() => on.selectDm(dm)} aria-current={active ? "true" : undefined} title={name} className={`${ROW(active)} w-full`}>
+                    <Bar on={active} />
+                    <Avatar user={person ?? { name }} size={30} />
+                    <span className="min-w-0 flex-1">
+                      <span className="flex items-baseline gap-2">
+                        <span className={`min-w-0 flex-1 truncate text-sm ${(dm.unread ?? 0) > 0 || active ? "font-bold" : "font-medium"} text-text-primary`}>{name}</span>
+                        <span className="shrink-0 text-[11px] text-text-tertiary tabular-nums">{when(dm.lastMessage)}</span>
+                      </span>
+                      <span className="flex items-center gap-2">
+                        <span className="min-w-0 flex-1"><Preview last={dm.lastMessage} /></span>
+                        {(dm.unread ?? 0) > 0 && !active && <span className={PILL} style={{ background: ACCENT }} aria-label={`${dm.unread} unread`}>{badge(dm.unread)}</span>}
+                      </span>
+                    </span>
+                  </button>
+                </div>
               );
             })}
           </section>

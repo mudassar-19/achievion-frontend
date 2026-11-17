@@ -1,4 +1,5 @@
 import { useEffect } from "react";
+import { fmtDate as dateStd } from "@/lib/dates";
 import { motion } from "framer-motion";
 import {
   Star, CheckSquare,
@@ -255,7 +256,7 @@ export default function SeniorDashboard() {
                   {t.deadline && (
                     <span className="flex items-center gap-1 text-[14px] text-text-secondary">
                       <Clock size={9} />
-                      {new Date(t.deadline).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+                      {dateStd(t.deadline, { year: false })}
                     </span>
                   )}
                 </div>

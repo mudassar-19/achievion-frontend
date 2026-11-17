@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
+import { fmtDate as dateStd } from "@/lib/dates";
 import { motion, AnimatePresence } from "framer-motion";
 import { Link } from "react-router-dom";
 import {
@@ -45,7 +46,7 @@ const TRANSITIONS = { "To-Do": "In-Progress", "In-Progress": "In-Review" };
 
 function fmtDate(d) {
   if (!d) return "—";
-  return new Date(d).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+  return dateStd(d);
 }
 
 function daysLeft(d) {

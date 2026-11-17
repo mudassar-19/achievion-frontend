@@ -11,6 +11,7 @@ import ToastContainer from "@/components/ui/ToastContainer";
 import useAuthStore from "@/stores/authStore";
 import api from "@/lib/api";
 import { AI_W } from "./AiPanel";
+import { notifRedirectPath } from "@/utils/notifRoutes";
 import { User, Bell, LogOut, ChevronDown, Pin, PinOff, Menu, X, CheckCheck, Shield, Sparkles } from "lucide-react";
 
 export const D_TOPBAR_H  = 60;
@@ -313,9 +314,8 @@ function ShellTopbar({ cfg, notifSignal, railExpanded, onToggleRail, onAiToggle,
                     </div>
                   ) : (
                     notifs.slice(0, 20).map((n) => {
-                      // Item 77: a DM or @mention notice opens that conversation in this portal's chat
-                      const chatTarget = (n.type === "dm_message" || n.type === "announcement" || (n.type === "mention" && n.meta?.channelId)) && n.deepLink?.startsWith("/") ? { to: n.deepLink } : null;
-                      const target = chatTarget ?? cfg.notifTarget?.(n);
+                      // X-9 (D-QA3B-11): the portal's own target first, else the one shared destination map (chat, announcements, items in their page).
+                      const target = cfg.notifTarget?.(n) ?? (() => { const to = notifRedirectPath(n, user?.role); return to ? { to, label: "Open →" } : null; })();
                       async function handleClick() {
                         if (!n.read) {
                           try {
@@ -602,6 +602,7 @@ export default function PortalShell({ cfg, notifSignal, aiPanel: aiPanelProp, ch
           left:   railW,
           right:  aiOpen ? AI_W : 0,
           bottom: 0,
+          paddingBottom: showDock ? 56 : 0, // G-21: the Messages bar (44 px) never sits on the last row of a page
           transition: "left 0.22s ease, right 0.26s ease",
         }}
       >

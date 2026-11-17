@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { fmtDate as dateStd } from "@/lib/dates";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Send, CheckCircle2, RotateCcw, Clock,
@@ -63,9 +64,7 @@ function timeAgo(iso) {
 
 function fmtDate(iso) {
   if (!iso) return null;
-  return new Date(iso).toLocaleDateString("en-US", {
-    month: "short", day: "numeric", year: "numeric",
-  });
+  return dateStd(iso);
 }
 
 // ── Submission Card ───────────────────────────────────────────────────────────

@@ -1,4 +1,6 @@
 import { useState, useMemo, useEffect } from "react";
+import { fmtDate as dateStd } from "@/lib/dates";
+import { notifTitle } from "@/lib/humanize";
 import useAuthStore from "@/stores/authStore";
 import PageHeader from "@/components/ui/PageHeader";
 import { useNavigate } from "react-router-dom";
@@ -36,7 +38,7 @@ function timeAgo(date) {
   if (h < 24) return `${h}h ago`;
   const d = Math.floor(h / 24);
   if (d < 7)  return `${d}d ago`;
-  return new Date(date).toLocaleDateString("en-US", { month: "short", day: "numeric" });
+  return dateStd(date, { year: false });
 }
 
 // ─── Filter tabs ──────────────────────────────────────────────────────────────
@@ -84,7 +86,7 @@ function NotifRow({ n, onMarkRead, onDelete, onNavigate }) {
       <div className="flex-1 min-w-0">
         <div className="flex items-start justify-between gap-2">
           <p className={["text-sm font-bold leading-tight", !n.read ? "text-text-primary" : "text-slate-400"].join(" ")}>
-            {n.title || n.type}
+            {notifTitle(n)}
           </p>
           <div className="flex items-center gap-1.5 shrink-0 mt-0.5">
             {!n.read && <span className="h-1.5 w-1.5 rounded-full bg-accent" />}

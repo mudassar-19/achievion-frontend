@@ -13,6 +13,7 @@ import EmptyState from "@/components/ui/EmptyState";
 import ErrorState from "@/components/ui/ErrorState";
 import ProjectCelebrationOverlay from "@/components/ui/ProjectCelebrationOverlay";
 import { avatarUrl } from "@/lib/avatar";
+import { fmtDate } from "@/lib/dates";
 
 // ── Config ────────────────────────────────────────────────────────────────────
 const PAGE_SIZE = 10;
@@ -389,14 +390,16 @@ export default function ProjectManagementPage() {
               {["", ...ALL_STATUSES].map(s => {
                 const active = statusF === s;
                 const cfg = s ? STATUS_CFG[s] : null;
+                const n = s ? projects.filter((p) => p.status === s).length : projects.length; // C-23: counts, empty chips dimmed
                 return (
                   <button key={s||"all"} onClick={()=>applyFilter(s)}
                     className={["px-3 py-1.5 rounded-xl text-xs font-bold border transition-[background-color,color,border-color]",
                       active && cfg ? `${cfg.text} ${cfg.bg} ${cfg.border}` :
                       active ? "bg-[#4B2FC4]/10 text-[#4B2FC4] border-[#4B2FC4]/25" :
-                      "text-slate-500 bg-ink/[0.03] border-ink/[0.07] hover:text-text-primary"
+                      "text-slate-500 bg-ink/[0.03] border-ink/[0.07] hover:text-text-primary",
+                      n === 0 && !active ? "opacity-50" : ""
                     ].join(" ")}>
-                    {s || "All"}
+                    {s || "All"} <span className="tabular-nums opacity-70">{n}</span>
                   </button>
                 );
               })}
@@ -476,7 +479,7 @@ export default function ProjectManagementPage() {
                     <div className="flex items-center min-w-0">
                       {proj.deadline
                         ? <span className="text-sm text-text-primary tabular-nums">
-                            {new Date(proj.deadline).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })}
+                            {fmtDate(proj.deadline)}
                           </span>
                         : <span className="text-sm text-slate-500">No deadline set</span>
                       }

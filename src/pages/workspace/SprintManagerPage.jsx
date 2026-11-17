@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
+import { fmtDate as dateStd } from "@/lib/dates";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Gauge, Plus, Loader2, ChevronRight, Zap, Calendar, Flag,
@@ -35,7 +36,7 @@ const TYPE_CFG = {
 
 function fmtDate(d) {
   if (!d) return "—";
-  return new Date(d).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+  return dateStd(d);
 }
 
 function daysLeft(endDate) {

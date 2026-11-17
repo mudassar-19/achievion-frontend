@@ -1,4 +1,5 @@
 import FileLink from "@/components/ui/FileLink";
+import { fmtDate as dateStd } from "@/lib/dates";
 import { useState, useEffect } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
@@ -61,7 +62,7 @@ function daysLabel(date) {
 
 function formatDate(d) {
   if (!d) return "—";
-  return new Date(d).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" });
+  return dateStd(d);
 }
 
 function formatBytes(b) {

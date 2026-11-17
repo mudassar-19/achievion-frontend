@@ -112,10 +112,10 @@ export default function TeamWorkloadPage() {
                 <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${
                   t.noMembers ? "bg-ink/[0.06] text-text-secondary" :
                   t.pct > 100 ? "bg-rose-500/10 text-rose-700" :
-                  t.pct > 85  ? "bg-amber-500/10 text-amber-700" :
+                  t.pct > 80  ? "bg-amber-500/10 text-amber-700" :
                                 "bg-emerald-500/10 text-emerald-700"
                 }`}>
-                  {t.noMembers ? "No members" : t.pct > 100 ? "Overloaded" : t.pct > 85 ? "High load" : "Healthy"}
+                  {t.noMembers ? "No members" : !t.planned ? "No work planned" : t.pct > 100 ? "Over capacity" : t.pct > 80 ? "Busy" : t.pct > 40 ? "Moderate" : "Light"}
                 </span>
               </div>
               {!t.noMembers && <WorkloadBar pct={t.pct}/>}

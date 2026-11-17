@@ -74,7 +74,7 @@ function OrgSnapshot({ data, loading, theme }) {
       link:  "/director/projects",
     },
     {
-      label: "Pending Approvals",
+      label: "Decisions waiting",
       value: data?.pendingApprovals ?? 0,
       icon: ClipboardCheck,
       color: "#7A5200",
@@ -100,10 +100,10 @@ function OrgSnapshot({ data, loading, theme }) {
 }
 
 // ── Needs Your Decision (widget 2) ───────────────────────────────────────────
-function NeedsDecision({ actionApprovals, loading }) {
+function NeedsDecision({ decisions, loading }) {
   if (loading) return <Widget title="Needs Your Decision" icon={ClipboardCheck} iconColor="#7A5200" delay={0.1}><SkeletonCard className="m-4" /></Widget>;
 
-  const total = actionApprovals.length ?? 0;
+  const approvals = decisions?.approvals ?? 0, extensions = decisions?.extensions ?? 0, total = approvals + extensions; // C-5: one count
 
   return (
     <Widget
@@ -116,20 +116,23 @@ function NeedsDecision({ actionApprovals, loading }) {
       {total === 0 ? (
         <div className="flex flex-col items-center justify-center py-10">
           <CheckCircle2 size={24} className="text-[#0E6A30] mb-2" strokeWidth={1.5} />
-          <p className="text-sm text-slate-500">No approvals waiting.</p>
+          <p className="text-sm text-slate-500">Nothing is waiting for you.</p>
           <p className="text-xs text-slate-400 mt-0.5">Requests will appear here.</p>
         </div>
       ) : (
         <div className="flex flex-col divide-y divide-ink/[0.04]">
-          <Link
-            to="/director/approvals"
-            className="flex items-center justify-between px-5 py-3 hover:bg-ink/[0.06] transition-colors"
-          >
-            <span className="text-xs font-semibold text-text-secondary">
-              {total === 1 ? "1 account request" : `${total} account requests`}
-            </span>
-            <span className="text-[12px] font-bold" style={{ color: "var(--accent)" }}>Review →</span>
-          </Link>
+          {approvals > 0 && (
+            <Link to="/director/approvals" className="flex items-center justify-between px-5 py-3 hover:bg-ink/[0.06] transition-colors">
+              <span className="text-xs font-semibold text-text-secondary">{approvals === 1 ? "1 account request" : `${approvals} account requests`}</span>
+              <span className="text-[12px] font-bold" style={{ color: "var(--accent)" }}>Review →</span>
+            </Link>
+          )}
+          {extensions > 0 && (
+            <Link to="/director/extensions" className="flex items-center justify-between px-5 py-3 hover:bg-ink/[0.06] transition-colors">
+              <span className="text-xs font-semibold text-text-secondary">{extensions === 1 ? "1 extension request" : `${extensions} extension requests`}</span>
+              <span className="text-[12px] font-bold" style={{ color: "var(--accent)" }}>Review →</span>
+            </Link>
+          )}
         </div>
       )}
     </Widget>
@@ -158,7 +161,7 @@ function TeamWellbeing({ data, xpDist, loading }) {
             {/* Risk bar */}
             <div>
               <div className="flex items-center justify-between mb-1.5">
-                <span className="text-xs font-semibold text-slate-500">HP below threshold</span>
+                <span className="text-xs font-semibold text-slate-500">Energy below the warning level</span>
                 <span className="text-xs font-black" style={{ color: atRisk > 0 ? "#B01F17" : "#0E6A30" }}>
                   {atRisk > 0 ? `${atRisk} at risk` : "All healthy"}
                 </span>
@@ -347,7 +350,6 @@ export default function DirectorDashboard() {
   const { log } = usePerfLog();
 
   const [data,            setData]            = useState(null);
-  const [actionApprovals, setActionApprovals] = useState([]);
   const [auditLogs,       setAuditLogs]       = useState([]);
   const [xpDist,          setXpDist]          = useState([]);
   const [duesData,        setDuesData]        = useState(null);
@@ -359,18 +361,16 @@ export default function DirectorDashboard() {
     setError(null);
     setLoading(true);
     try {
-      const [dash, auditRes, xpRes, actionRes, duesRes, gardenRes] = await Promise.all([
+      const [dash, auditRes, xpRes, duesRes, gardenRes] = await Promise.all([
         api.get("/api/director/dashboard"),
         api.get("/api/director/audit-log?limit=6"),
         api.get("/api/director/xp-distribution"),
-        api.get("/api/approvals").catch(() => ({ approvals: [] })),
         api.get("/api/director/dues").catch(() => null),
         api.get("/api/director/garden").catch(() => null),
       ]);
       setData(dash);
       setAuditLogs(auditRes.logs ?? []);
       setXpDist(Array.isArray(xpRes) ? xpRes : []);
-      setActionApprovals(actionRes.approvals ?? []);
       setDuesData(duesRes);
       setGardenData(gardenRes);
     } catch (e) {
@@ -429,6 +429,7 @@ export default function DirectorDashboard() {
             projects={gardenData?.projects ?? []}
             onTrackPct={gardenData?.onTrackPct ?? 0}
             totalCount={gardenData?.totalCount}
+            variant="mini"
           />
         </motion.div>
       )}
@@ -437,7 +438,7 @@ export default function DirectorDashboard() {
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
         <div className="lg:col-span-3">
           <NeedsDecision
-            actionApprovals={actionApprovals}
+            decisions={data?.decisions}
             loading={loading}
           />
         </div>
@@ -468,7 +469,7 @@ export default function DirectorDashboard() {
           <MessageSquare size={16} strokeWidth={1.75} className="shrink-0" style={{ color: theme.accent }} />
           <div className="min-w-0">
             <p className="text-sm font-bold text-text-primary">Share Team Feedback</p>
-            <p className="text-xs text-slate-500">12 quick questions, about 3 minutes. Helps measure success criteria.</p>
+            <p className="text-xs text-slate-500">12 quick questions, about 3 minutes. Helps us improve Achievion.</p>
           </div>
         </div>
         <Link

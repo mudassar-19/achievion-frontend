@@ -8,6 +8,7 @@ import ApprovalExportModal from "@/components/org/ApprovalExportModal";
 
 import TallyLoader from "@/components/ui/TallyLoader";
 import DecisionHistory from "@/components/ui/DecisionHistory";
+import { fmtDate as dateStd } from "@/lib/dates";
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 function timeAgo(iso) {
@@ -21,9 +22,7 @@ function timeAgo(iso) {
 
 function formatDate(iso) {
   if (!iso) return "—";
-  return new Date(iso).toLocaleDateString("en-GB", {
-    day: "2-digit", month: "short", year: "numeric",
-  });
+  return dateStd(iso);
 }
 
 const ACTION_META = {
@@ -136,7 +135,10 @@ function ApprovalCard({ approval }) {
             <StatusBadge status={approval.status} />
           </div>
           <p className="text-sm font-semibold text-text-primary">{describeApproval(approval)}</p>
-          <p className="text-xs text-text-disabled mt-0.5">Submitted {timeAgo(approval.createdAt)}</p>
+          <p className="text-xs text-text-secondary mt-0.5">Requested by the Org admin {timeAgo(approval.createdAt)}</p>
+          {["DELETE_EMPLOYEE", "SUSPEND_EMPLOYEE", "REACTIVATE_EMPLOYEE", "ROLE_CHANGE"].includes(approval.actionType) && (
+            <p className="text-xs text-text-secondary"><span className="font-bold text-text-primary">Why it was asked: </span>{approval.payload?.reason || "No reason given"}</p>
+          )}
 
           {/* Rejection reason / resolved date inline */}
           {approval.status === "REJECTED" && approval.rejectionReason && (
@@ -220,7 +222,9 @@ export default function OrgApprovalsPage() {
     return () => socket.off("approval:resolved", handleApprovalResolved);
   }, []);
 
-  const list = allData[activeTab] ?? [];
+  const [shown, setShown] = useState(10); // A-10: ten rows, then "Show more"
+  const list = (allData[activeTab] ?? []).slice(0, shown);
+  const more = (allData[activeTab]?.length ?? 0) - list.length;
 
   return (
     <div className="flex flex-col gap-6 px-4 sm:px-8 py-8 min-h-full">
@@ -260,7 +264,7 @@ export default function OrgApprovalsPage() {
           <TabBtn
             key={t.key}
             active={activeTab === t.key}
-            onClick={() => setActiveTab(t.key)}
+            onClick={() => { setActiveTab(t.key); setShown(10); }}
             icon={t.icon}
             label={t.label}
             count={loading ? null : allData[t.key]?.length ?? 0}
@@ -278,7 +282,7 @@ export default function OrgApprovalsPage() {
           <p className="text-sm text-rose-400">{error}</p>
         </div>
       ) : list.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-20 gap-3">
+        <div className="flex flex-col items-center justify-center py-8 gap-3">
           <div className="flex h-14 w-14 items-center justify-center rounded-2xl border border-ink/8 bg-ink/[0.03]">
             <ClipboardList size={24} className="text-text-disabled" strokeWidth={1.5} />
           </div>
@@ -297,6 +301,7 @@ export default function OrgApprovalsPage() {
               <ApprovalCard key={a._id} approval={a} />
             ))}
           </AnimatePresence>
+          {more > 0 && <button type="button" onClick={() => setShown((n) => n + 10)} className="self-center min-h-9 rounded-xl border border-ink/10 px-4 text-xs font-bold text-text-primary hover:bg-ink/5">Show more ({more} more)</button>}
         </motion.div>
       )}
 
@@ -308,6 +313,7 @@ export default function OrgApprovalsPage() {
           allData={allData}
           orgName={org?.name ?? "Organization"}
           orgCreatedAt={org?.createdAt ?? null}
+          timeZone={org?.timezone ?? undefined}
           onClose={() => setShowExport(false)}
         />
       )}
